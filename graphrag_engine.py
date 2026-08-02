@@ -4,10 +4,10 @@ Wash Friends Vietnam — Neo4j GraphRAG Pipeline
 
 Flow:
   user_message
-    → entity_extractor  (Claude Haiku: fast, cheap entity extraction)
+    → entity_extractor  (GPT-4o-mini: fast, cheap entity extraction)
     → query_router      (select which of 14 Cypher queries to run)
     → neo4j_query       (fetch graph context)
-    → llm_responder     (Claude Sonnet: build Vietnamese answer from graph data)
+    → llm_responder     (GPT-4o-mini: build Vietnamese answer from graph data)
     → formatted_response
 
 The LLM NEVER invents chemical information — it only narrates what the graph returns.
@@ -19,14 +19,14 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from neo4j import GraphDatabase, Driver
-from anthropic import Anthropic
+from openai import OpenAI
 
 from entity_extractor import extract_entities
 
 # ─── Clients ─────────────────────────────────────────────────────────────────
 
 _neo4j: Optional[Driver] = None
-_anthropic = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+_openai = OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
 
 def _get_driver() -> Driver:
     global _neo4j
@@ -374,13 +374,15 @@ def generate_response_from_entities(
     base_prompt = _build_llm_prompt(user_caption or "", graph_context)
     llm_prompt  = prefix + base_prompt if prefix else base_prompt
 
-    response = _anthropic.messages.create(
-        model="claude-sonnet-4-5",
+    response = _openai.chat.completions.create(
+        model="gpt-4o-mini",
         max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": llm_prompt}],
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": llm_prompt},
+        ],
     )
-    return response.content[0].text.strip()
+    return response.choices[0].message.content.strip()
 
 
 def generate_response(user_message: str) -> str:
@@ -416,12 +418,14 @@ def generate_response(user_message: str) -> str:
     # Step 4: Build LLM prompt
     llm_prompt = _build_llm_prompt(user_message, graph_context)
 
-    # Step 5: Call Claude Sonnet for final response
-    response = _anthropic.messages.create(
-        model="claude-sonnet-4-5",
+    # Step 5: Call GPT-4o-mini for final response
+    response = _openai.chat.completions.create(
+        model="gpt-4o-mini",
         max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": llm_prompt}],
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": llm_prompt},
+        ],
     )
 
-    return response.content[0].text.strip()
+    return response.choices[0].message.content.strip()
