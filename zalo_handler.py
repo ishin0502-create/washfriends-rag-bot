@@ -1,14 +1,14 @@
 """
 zalo_handler.py
-Wash Friends Vietnam â Zalo OA OpenAPI Webhook Handler
+Wash Friends Vietnam — Zalo OA OpenAPI Webhook Handler
 
 Zalo OA OpenAPI v3:
-  POST /oa/message/cs  â send reply to user
-  GET  /oa/getoa       â verify OA info
+  POST /oa/message/cs  — send reply to user
+  GET  /oa/getoa       — verify OA info
 
 Webhook events received (POST /webhook/zalo):
-  - user_send_text   â extract message â graphrag_engine â reply
-  - user_send_image  â Claude Vision â graphrag_engine â reply
+  - user_send_text   → extract message → graphrag_engine → reply
+  - user_send_image  → Claude Vision → graphrag_engine → reply
 
 Docs: https://developers.zalo.me/docs/official-account/messages/send-message-to-follower
 """
@@ -54,7 +54,7 @@ def _verify_zalo_signature(body_bytes: bytes, mac_header: str) -> bool:
 
 
 def _is_duplicate(event_id: str) -> bool:
-    """Dedup check â Zalo may send the same webhook twice."""
+    """Dedup check — Zalo may send the same webhook twice."""
     now = time.time()
     # Expire old entries
     expired = [k for k, ts in _processed_events.items() if now - ts > _DEDUP_TTL]
@@ -137,7 +137,7 @@ async def handle_zalo_webhook(request: Request) -> dict:
     from concurrent.futures import ThreadPoolExecutor
     loop = asyncio.get_event_loop()
 
-    # 5. Route: image vs text â wrap in try/except so Zalo always gets 200 OK
+    # 5. Route: image vs text — wrap in try/except so Zalo always gets 200 OK
     try:
         if event_name == "user_send_image":
             # Zalo image message: attachments[0].payload.url
@@ -147,7 +147,7 @@ async def handle_zalo_webhook(request: Request) -> dict:
                 image_url = attachments[0].get("payload", {}).get("url")
 
             if not image_url:
-                await _send_zalo_reply(user_id, "ð¸ áº¢nh khÃ´ng táº£i ÄÆ°á»£c. Vui lÃ²ng gá»­i láº¡i áº£nh hoáº·c mÃ´ táº£ váº¿t báº©n báº±ng chá»¯.")
+                await _send_zalo_reply(user_id, "📸 Ảnh không tải được. Vui lòng gửi lại ảnh hoặc mô tả vết bẩn bằng chữ.")
                 return {"status": "image_url_missing"}
 
             def _run_image_pipeline():
@@ -178,7 +178,7 @@ async def handle_zalo_webhook(request: Request) -> dict:
 
 
 async def get_zalo_oa_info() -> dict:
-    """Health check â verify OA token is valid."""
+    """Health check — verify OA token is valid."""
     url = f"{ZALO_API_BASE}/oa/getoa"
     headers = {"access_token": ZALO_OA_TOKEN}
     async with httpx.AsyncClient(timeout=10) as client:
