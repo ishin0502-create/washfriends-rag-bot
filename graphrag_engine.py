@@ -26,7 +26,7 @@ from entity_extractor import extract_entities
 # ─── Clients ─────────────────────────────────────────────────────────────────
 
 _neo4j: Optional[Driver] = None
-_anthropic = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+_anthropic = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
 
 def _get_driver() -> Driver:
     global _neo4j
