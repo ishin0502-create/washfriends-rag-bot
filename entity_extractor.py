@@ -24,7 +24,7 @@ import json
 import re
 from anthropic import Anthropic
 
-_client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
 
 EXTRACTION_SYSTEM = """You are an entity extractor for a Vietnamese laundry shop chatbot.
 Extract structured data from the user's message. Output ONLY valid JSON, nothing else.
