@@ -67,6 +67,21 @@ app.add_middleware(
 
 # ─── Health ───────────────────────────────────────────────────────────────────
 
+@app.get("/zalo_verifierKC6ODPNWCGyMvA0nySeN5YF3jXVFjMDEE3Wt.html")
+async def zalo_domain_verify():
+    """Zalo domain verification file."""
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(content="""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta property="zalo-platform-site-verification" content="KC6ODPNWCGyMvA0nySeN5YF3jXVFjMDEE3Wt" />
+</head>
+<body>
+There Is No Limit To What You Can Accomplish Using Zalo!
+</body>
+</html>""")
+
+
 @app.get("/health")
 async def health():
     """Health check — verifies Neo4j connection and env vars."""
