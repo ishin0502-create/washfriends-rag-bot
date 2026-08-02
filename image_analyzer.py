@@ -133,4 +133,9 @@ def build_image_entity_context(analysis):
     if notes:
         parts.append("Notes: " + notes)
 
+
     return ". ".join(parts) + "."
+
+
+# backward-compatibility alias used by zalo_handler and facebook_handler
+build_image_context_prefix = build_image_entity_context
