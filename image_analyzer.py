@@ -19,9 +19,9 @@ import re
 from typing import Optional
 from urllib.request import urlopen, Request
 
-from anthropic import Anthropic
+from openai import OpenAI
 
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
 
 VISION_PROMPT = """You are a laundry expert AI assistant specializing in stain identification.
 
@@ -73,19 +73,17 @@ def analyze_stain_image(image_url=None, image_base64=None, media_type="image/jpe
             "care_notes": "No image provided",
         }
 
-    message = client.messages.create(
-        model="claude-haiku-4-5",
+    message = client.chat.completions.create(
+        model="gpt-4o-mini",
         max_tokens=512,
         messages=[
             {
                 "role": "user",
                 "content": [
                     {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": image_base64,
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{media_type};base64,{image_base64}",
                         },
                     },
                     {
@@ -97,7 +95,7 @@ def analyze_stain_image(image_url=None, image_base64=None, media_type="image/jpe
         ],
     )
 
-    raw = message.content[0].text.strip()
+    raw = message.choices[0].message.content.strip()
     json_match = re.search(r"\{[\s\S]*\}", raw)
     if json_match:
         import json
