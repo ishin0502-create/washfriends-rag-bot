@@ -25,9 +25,8 @@ from fastapi import Request, HTTPException
 
 from graphrag_engine import generate_response, generate_response_from_entities
 from image_analyzer import analyze_stain_image, build_image_context_prefix
-from zalo_token import get_access_token, is_token_error, refresh_tokens
+from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret
 
-ZALO_APP_SECRET = os.environ.get("ZALO_APP_SECRET", "")
 ZALO_API_BASE   = "https://openapi.zalo.me/v3.0"
 
 _processed_events: dict[str, float] = {}
@@ -40,12 +39,13 @@ def _verify_zalo_signature(body_bytes: bytes, mac_header: str) -> bool:
     Verify Zalo webhook HMAC-SHA256 signature.
     Accepts headers like: mac=<hex> or raw hex.
     """
-    if not ZALO_APP_SECRET:
+    secret = _app_secret()
+    if not secret:
         print("[ZALO SIG] ZALO_APP_SECRET not set — skipping verification")
         return True
 
     expected = hmac.new(
-        ZALO_APP_SECRET.encode(),
+        secret.encode(),
         body_bytes,
         hashlib.sha256
     ).hexdigest()

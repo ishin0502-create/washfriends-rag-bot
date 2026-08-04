@@ -21,8 +21,6 @@ import httpx
 
 from graphrag_engine import _get_driver
 
-ZALO_APP_ID = os.environ.get("ZALO_APP_ID", "519523987326492768")
-ZALO_APP_SECRET = os.environ.get("ZALO_APP_SECRET", "")
 ZALO_TOKEN_URL = "https://oauth.zaloapp.com/v4/oa/access_token"
 
 # In-memory cache
@@ -38,6 +36,15 @@ def _clean_token(value: Optional[str]) -> str:
     if not value:
         return ""
     return value.strip().replace("\r", "").replace("\n", "")
+
+
+def _app_id() -> str:
+    return _clean_token(os.environ.get("ZALO_APP_ID", "519523987326492768"))
+
+
+def _app_secret() -> str:
+    # Read at call-time + strip — module-level cache kept stale/spaced secrets
+    return _clean_token(os.environ.get("ZALO_APP_SECRET", ""))
 
 
 def _load_from_neo4j() -> None:
@@ -87,20 +94,22 @@ def _save_to_neo4j() -> None:
 
 
 async def _call_refresh(refresh_token: str) -> dict:
-    if not ZALO_APP_SECRET:
+    secret = _app_secret()
+    app_id = _app_id()
+    if not secret:
         raise RuntimeError("ZALO_APP_SECRET is empty — cannot refresh")
-    if not ZALO_APP_ID:
+    if not app_id:
         raise RuntimeError("ZALO_APP_ID is empty — cannot refresh")
     if not refresh_token:
         raise RuntimeError("refresh_token is empty — cannot refresh")
 
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
-        "secret_key": ZALO_APP_SECRET,
+        "secret_key": secret,
     }
     data = {
         "refresh_token": refresh_token,
-        "app_id": ZALO_APP_ID,
+        "app_id": app_id,
         "grant_type": "refresh_token",
     }
     async with httpx.AsyncClient(timeout=20) as client:
