@@ -204,15 +204,25 @@ async def get_zalo_oa_info() -> dict:
         return {"error": f"token: {e}"}
 
     url = f"{ZALO_API_BASE}/oa/getoa"
-    headers = {"access_token": token}
     async with httpx.AsyncClient(timeout=10) as client:
         try:
-            r = await client.get(url, headers=headers)
+            r = await client.get(url, headers={"access_token": token})
             data = r.json()
-            if data.get("error") and is_token_error(data.get("error")):
-                token = await refresh_tokens(force=True)
-                r = await client.get(url, headers={"access_token": token})
-                data = r.json()
+            err = data.get("error")
+            # Invalid/expired token → force refresh once and retry
+            if err and err != 0:
+                print(f"[ZALO INFO] error={err} msg={data.get('message')} — trying refresh")
+                try:
+                    token = await refresh_tokens(force=True)
+                    r = await client.get(url, headers={"access_token": token})
+                    data = r.json()
+                except Exception as refresh_err:
+                    return {
+                        "error": err,
+                        "message": data.get("message"),
+                        "refresh_error": str(refresh_err),
+                        "hint": "Re-copy ZALO_OA_ACCESS_TOKEN + ZALO_OA_REFRESH_TOKEN + ZALO_APP_SECRET from Zalo Tools (OA Access Token for Nhượng Quyền OA). Do not press Enter after paste.",
+                    }
             return data
         except Exception as e:
             return {"error": str(e)}
