@@ -26,11 +26,18 @@ ZALO_APP_SECRET = os.environ.get("ZALO_APP_SECRET", "")
 ZALO_TOKEN_URL = "https://oauth.zaloapp.com/v4/oa/access_token"
 
 # In-memory cache
-_access_token: str = os.environ.get("ZALO_OA_ACCESS_TOKEN", "")
-_refresh_token: str = os.environ.get("ZALO_OA_REFRESH_TOKEN", "")
+_access_token: str = os.environ.get("ZALO_OA_ACCESS_TOKEN", "").strip()
+_refresh_token: str = os.environ.get("ZALO_OA_REFRESH_TOKEN", "").strip()
 _expires_at: float = 0.0  # unix time; 0 = unknown → refresh soon if refresh_token exists
 _lock = asyncio.Lock()
 _REFRESH_MARGIN_SEC = 30 * 60  # refresh 30 min before expiry
+
+
+def _clean_token(value: Optional[str]) -> str:
+    """Strip whitespace/newlines — Railway paste often adds trailing \\n."""
+    if not value:
+        return ""
+    return value.strip().replace("\r", "").replace("\n", "")
 
 
 def _load_from_neo4j() -> None:
@@ -46,9 +53,9 @@ def _load_from_neo4j() -> None:
             if not row:
                 return
             if row.get("a"):
-                _access_token = row["a"]
+                _access_token = _clean_token(row["a"])
             if row.get("r"):
-                _refresh_token = row["r"]
+                _refresh_token = _clean_token(row["r"])
             if row.get("e"):
                 _expires_at = float(row["e"])
             print("[ZALO TOKEN] Loaded tokens from Neo4j")
@@ -140,10 +147,10 @@ async def refresh_tokens(force: bool = False) -> str:
 
         print("[ZALO TOKEN] Refreshing OA access token…")
         payload = await _call_refresh(_refresh_token)
-        _access_token = payload["access_token"]
+        _access_token = _clean_token(payload["access_token"])
         # Zalo rotates refresh_token — MUST keep the new one
         new_refresh = payload.get("refresh_token") or _refresh_token
-        _refresh_token = new_refresh
+        _refresh_token = _clean_token(new_refresh)
         try:
             expires_in = int(payload.get("expires_in") or 90000)
         except (TypeError, ValueError):
@@ -161,9 +168,9 @@ async def get_access_token() -> str:
     if not _access_token and not _refresh_token:
         _load_from_neo4j()
         if not _access_token:
-            _access_token = os.environ.get("ZALO_OA_ACCESS_TOKEN", "")
+            _access_token = _clean_token(os.environ.get("ZALO_OA_ACCESS_TOKEN", ""))
         if not _refresh_token:
-            _refresh_token = os.environ.get("ZALO_OA_REFRESH_TOKEN", "")
+            _refresh_token = _clean_token(os.environ.get("ZALO_OA_REFRESH_TOKEN", ""))
 
     if not _access_token and _refresh_token:
         return await refresh_tokens(force=True)
