@@ -25,8 +25,8 @@ from fastapi import Request, HTTPException
 
 from graphrag_engine import generate_response, generate_response_from_entities
 from image_analyzer import analyze_stain_image, build_image_context_prefix
+from zalo_token import get_access_token, is_token_error, refresh_tokens
 
-ZALO_OA_TOKEN   = os.environ.get("ZALO_OA_ACCESS_TOKEN", "")
 ZALO_APP_SECRET = os.environ.get("ZALO_APP_SECRET", "")
 ZALO_API_BASE   = "https://openapi.zalo.me/v3.0"
 
@@ -69,32 +69,41 @@ def _is_duplicate(event_id: str) -> bool:
 
 
 async def _send_zalo_reply(user_id: str, text: str) -> bool:
-    """Send a text reply to a Zalo user via OA API."""
-    if not ZALO_OA_TOKEN:
-        print("[ZALO SEND ERROR] ZALO_OA_ACCESS_TOKEN is empty")
+    """Send a text reply to a Zalo user via OA API (auto-refreshes token on expiry)."""
+    token = await get_access_token()
+    if not token:
+        print("[ZALO SEND ERROR] access token is empty — set ZALO_OA_ACCESS_TOKEN / REFRESH_TOKEN")
         return False
 
     url = f"{ZALO_API_BASE}/oa/message/cs"
-    headers = {
-        "access_token": ZALO_OA_TOKEN,
-        "Content-Type": "application/json",
-    }
     payload = {
         "recipient": {"user_id": user_id},
         "message": {"text": text[:2000]},
     }
+
     async with httpx.AsyncClient(timeout=15) as client:
-        try:
-            r = await client.post(url, headers=headers, json=payload)
-            data = r.json()
-            if data.get("error") and data["error"] != 0:
-                print(f"[ZALO SEND ERROR] code={data.get('error')} msg={data.get('message')}")
+        for attempt in range(2):
+            headers = {
+                "access_token": token,
+                "Content-Type": "application/json",
+            }
+            try:
+                r = await client.post(url, headers=headers, json=payload)
+                data = r.json()
+                err = data.get("error")
+                if err and err != 0:
+                    if attempt == 0 and is_token_error(err):
+                        print(f"[ZALO SEND] token error {err} — refreshing and retrying")
+                        token = await refresh_tokens(force=True)
+                        continue
+                    print(f"[ZALO SEND ERROR] code={err} msg={data.get('message')}")
+                    return False
+                print(f"[ZALO SEND OK] user={user_id[:8]}… chars={len(text)}")
+                return True
+            except Exception as e:
+                print(f"[ZALO HTTP ERROR] {e}")
                 return False
-            print(f"[ZALO SEND OK] user={user_id[:8]}… chars={len(text)}")
-            return True
-        except Exception as e:
-            print(f"[ZALO HTTP ERROR] {e}")
-            return False
+    return False
 
 
 async def _process_zalo_event(event_name: str, user_id: str, text: str, image_url: Optional[str]) -> None:
@@ -188,12 +197,22 @@ async def handle_zalo_webhook(request: Request) -> dict:
 
 
 async def get_zalo_oa_info() -> dict:
-    """Health check — verify OA token is valid."""
+    """Health check — verify OA token is valid (uses auto-refresh)."""
+    try:
+        token = await get_access_token()
+    except Exception as e:
+        return {"error": f"token: {e}"}
+
     url = f"{ZALO_API_BASE}/oa/getoa"
-    headers = {"access_token": ZALO_OA_TOKEN}
+    headers = {"access_token": token}
     async with httpx.AsyncClient(timeout=10) as client:
         try:
             r = await client.get(url, headers=headers)
-            return r.json()
+            data = r.json()
+            if data.get("error") and is_token_error(data.get("error")):
+                token = await refresh_tokens(force=True)
+                r = await client.get(url, headers={"access_token": token})
+                data = r.json()
+            return data
         except Exception as e:
             return {"error": str(e)}

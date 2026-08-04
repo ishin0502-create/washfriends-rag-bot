@@ -15,11 +15,12 @@ Start:
 Environment variables required:
   NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD
   OPENAI_API_KEY
-  ZALO_OA_ACCESS_TOKEN, ZALO_APP_SECRET
+  ZALO_OA_ACCESS_TOKEN, ZALO_OA_REFRESH_TOKEN, ZALO_APP_SECRET, ZALO_APP_ID
   FB_PAGE_TOKEN, FB_VERIFY_TOKEN, FB_APP_SECRET
 """
 
 import os
+import asyncio
 from contextlib import asynccontextmanager
 
 # Load .env for local development (no-op in Railway/Render where vars are set directly)
@@ -37,6 +38,7 @@ from pydantic import BaseModel
 from graphrag_engine import generate_response, close_driver
 from zalo_handler import handle_zalo_webhook, get_zalo_oa_info
 from facebook_handler import handle_fb_verify, handle_fb_webhook
+from zalo_token import token_refresh_loop
 
 
 # ─── App lifecycle ────────────────────────────────────────────────────────────
@@ -45,9 +47,19 @@ from facebook_handler import handle_fb_verify, handle_fb_webhook
 async def lifespan(app: FastAPI):
     """Startup / shutdown hooks."""
     print("🚀 Wash Friends Vietnam chatbot backend starting...")
-    yield
-    print("🛑 Shutting down — closing Neo4j driver...")
-    close_driver()
+    stop = asyncio.Event()
+    refresh_task = asyncio.create_task(token_refresh_loop(stop))
+    try:
+        yield
+    finally:
+        stop.set()
+        refresh_task.cancel()
+        try:
+            await refresh_task
+        except asyncio.CancelledError:
+            pass
+        print("🛑 Shutting down — closing Neo4j driver...")
+        close_driver()
 
 
 app = FastAPI(
