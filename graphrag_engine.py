@@ -281,30 +281,31 @@ def _fetch_graph_context(entities: dict) -> dict:
     month   = _vn_month()
     context = {"intent": intent, "entities": entities}
 
-    stain_input  = _normalize_text(
-        entities.get("stain_type") or entities.get("stain_id") or ""
-    )
+    stain_raw = entities.get("stain_type") or entities.get("stain_id") or ""
+    stain_input = _normalize_text(stain_raw)
     fabric_input = _normalize_text(entities.get("fabric_type") or "")
-    stain_id     = entities.get("stain_id") or ""
-    raw_msg      = _normalize_text(entities.get("_raw") or "")
+    stain_id = entities.get("stain_id") or ""
+    raw_msg = _normalize_text(entities.get("_raw") or "")
 
-    # Common franchise phrasing → seed name keys (accent-insensitive)
-    _ALIASES = {
-        "laterite": "dat do laterite",
-        "dat do": "dat do laterite",
-        "dat do laterite": "dat do laterite",
-        "dau nhot xe may": "dau nhot xe may",
-        "xe may": "dau nhot xe may",
-        "nam moc": "nam moc",
-        "moc": "nam moc",
-        "ri set": "ri set",
-        "gỉ sét": "ri set",
-    }
-    for key, canon in _ALIASES.items():
-        if key in stain_input or (raw_msg and key in raw_msg):
-            stain_input = canon
+    # Prefer franchise phrasing in the raw message over a wrong LLM entity guess
+    _ALIASES = (
+        ("laterite", "dat do laterite"),
+        ("dat do laterite", "dat do laterite"),
+        ("dat do", "dat do laterite"),
+        ("dau nhot xe may", "dau nhot xe may"),
+        ("dau nhot", "dau nhot xe may"),
+        ("nam moc", "nam moc"),
+        ("ri set", "ri set"),
+    )
+    alias_hit = None
+    haystack = f"{raw_msg} {stain_input}".strip()
+    for key, canon in _ALIASES:
+        if key in haystack:
+            alias_hit = canon
             break
-    if not stain_input and raw_msg:
+    if alias_hit:
+        stain_input = alias_hit
+    elif not stain_input and raw_msg:
         stain_input = raw_msg
 
     if intent == "daily":
