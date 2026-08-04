@@ -156,7 +156,8 @@ async def refresh_tokens(force: bool = False) -> str:
 
 async def get_access_token() -> str:
     """Return a valid access token, refreshing if needed."""
-    global _access_token
+    global _access_token, _refresh_token, _expires_at
+
     if not _access_token and not _refresh_token:
         _load_from_neo4j()
         if not _access_token:
