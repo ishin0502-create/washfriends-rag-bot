@@ -1,0 +1,6 @@
+﻿__pycache__/
+*.pyc
+kb/reference_guides/*.pdf
+kb/reference_guides/*.html
+.env
+credentials.json

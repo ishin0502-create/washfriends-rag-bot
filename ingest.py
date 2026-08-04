@@ -46,15 +46,18 @@ KB_FILES = [
     ("stains_tannin",      KB_DIR / "laundry_kb_v3_stains_tannin.md",      "stains"),
     ("stains_protein",     KB_DIR / "laundry_kb_v3_stains_protein.md",     "stains"),
     ("stains_special",     KB_DIR / "laundry_kb_v3_stains_special.md",     "stains"),
+    ("stains_dye",         KB_DIR / "laundry_kb_v3_stains_dye.md",         "stains"),
     ("prototype",          KB_DIR / "laundry_kb_v3_prototype.md",           "stains"),
     # Layer 2: Item-type protocols
     ("items_clothing",     KB_DIR / "laundry_kb_v3_items_clothing.md",     "items"),
     ("items_home",         KB_DIR / "laundry_kb_v3_items_home.md",         "items"),
     ("items_ironing",      KB_DIR / "laundry_kb_v3_items_ironing.md",      "items"),
     ("items_business",     KB_DIR / "laundry_kb_v3_items_business.md",     "business"),
-    # Layer 3: Context & localization
+    # Layer 3: Context & localization + advanced field cases
     ("localization",       KB_DIR / "laundry_kb_v3_localization.md",       "context"),
     ("protocol_framework", KB_DIR / "laundry_kb_v3_protocol.md",           "context"),
+    ("advanced_field",     KB_DIR / "laundry_kb_v3_advanced_field.md",     "context"),
+    ("ops_gold",           KB_DIR / "laundry_kb_v3_ops_gold.md",           "context"),
 ]
 
 # Chunking settings
