@@ -38,7 +38,7 @@ JSON schema (all fields optional -- use null if absent):
   "stain_color": "red|yellow|brown|black|blue|green|white|null",
   "smell": "food|sweet|sour|fishy|chemical|none|null",
   "water_spreads": "true|false|null",
-  "group_id": "group_oil|group_tannin|group_protein|group_dye|group_special|null",
+  "group_id": "G1|G2|G3|G4|G5|null",
   "stain_id": "string or null",
   "attempt_number": "1|2|null",
   "lang": "vi|ko|en"
@@ -55,13 +55,15 @@ Intent rules:
 - hardest: user asks which stains are hardest, "vet nao kho nhat"
 
 Stain IDs (use exact ID if confident):
-oil-1=cooking oil, oil-2=machine oil, oil-3=cosmetic oil, lip-1=lipstick,
-blood-1=fresh blood, blood-2=old blood, egg-1=egg, milk-1=milk, sweat-1=sweat,
-coffee-1=coffee, tea-1=tea, wine-1=wine, sauce-1=soy sauce, tan-9=nuocmam,
-ink-1=ballpoint pen, ink-2=permanent marker, grass-1=grass/chlorophyll,
-rust-1=rust, mold-1=mold/mildew
+S_COOKING_OIL=cooking oil/dau an, S_ENGINE_OIL=machine oil, S_LIPSTICK=lipstick/son moi,
+S_BLOOD_FRESH=fresh blood/mau tuoi, S_BLOOD_DRY=old blood/mau kho, S_EGG=egg/trung,
+S_MILK=milk/sua, S_SWEAT_FRESH=sweat/mo hoi, S_SWEAT_YELLOW=armpit yellow,
+S_BLACK_COFFEE=black coffee/ca phe den, S_MILK_COFFEE=milk coffee/ca phe sua,
+S_TEA=tea/tra, S_RED_WINE=wine, S_SOY_SAUCE=soy sauce/nuoc tuong, S_FISH_SAUCE=nuoc mam,
+S_INK_PEN=ballpoint ink/muc, S_INK_PERMANENT=permanent marker, S_GRASS=grass/co,
+S_MUD=mud/bun, S_CURRY=curry/nghe, S_MUSTARD=mustard
 
-Group IDs: group_oil, group_tannin, group_protein, group_dye, group_special
+Group IDs: G1=protein, G2=oil, G3=tannin, G4=dye, G5=complex
 
 Language detection:
 - vi: Vietnamese words (vet, giat, ao, quan, chat, tay, nuoc, lua, etc.)

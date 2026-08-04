@@ -2,15 +2,12 @@
 zalo_handler.py
 Wash Friends Vietnam — Zalo OA OpenAPI Webhook Handler
 
+Webhook path (do not change — registered in Zalo OA console):
+  POST /webhook/zalo
+
 Zalo OA OpenAPI v3:
   POST /oa/message/cs  — send reply to user
-  GET  /oa/getoa       — verify OA infoh
-
-Webhook events received (POST /webhook/zalo):
-  - user_send_text   → extract message → graphrag_engine → reply
-  - user_send_image  → Claude Vision → graphrag_engine → reply
-
-Docs: https://developers.zalo.me/docs/official-account/messages/send-message-to-follower
+  GET  /oa/getoa       — verify OA info
 """
 
 import os
@@ -18,6 +15,9 @@ import hmac
 import hashlib
 import json
 import time
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
 from typing import Optional
 
 import httpx
@@ -30,18 +30,19 @@ ZALO_OA_TOKEN   = os.environ.get("ZALO_OA_ACCESS_TOKEN", "")
 ZALO_APP_SECRET = os.environ.get("ZALO_APP_SECRET", "")
 ZALO_API_BASE   = "https://openapi.zalo.me/v3.0"
 
-# Simple in-memory dedup: track processed event IDs (last 5 min)
 _processed_events: dict[str, float] = {}
-_DEDUP_TTL = 300  # seconds
+_DEDUP_TTL = 300
+_executor = ThreadPoolExecutor(max_workers=4)
 
 
 def _verify_zalo_signature(body_bytes: bytes, mac_header: str) -> bool:
     """
     Verify Zalo webhook HMAC-SHA256 signature.
-    Header format: mac=<hex_signature>
+    Accepts headers like: mac=<hex> or raw hex.
     """
     if not ZALO_APP_SECRET:
-        return True  # Skip verification in dev mode if secret not set
+        print("[ZALO SIG] ZALO_APP_SECRET not set — skipping verification")
+        return True
 
     expected = hmac.new(
         ZALO_APP_SECRET.encode(),
@@ -49,14 +50,14 @@ def _verify_zalo_signature(body_bytes: bytes, mac_header: str) -> bool:
         hashlib.sha256
     ).hexdigest()
 
-    received = mac_header.replace("mac=", "").strip()
+    received = (mac_header or "").replace("mac=", "").replace("sha256=", "").strip()
+    if not received:
+        return False
     return hmac.compare_digest(expected, received)
 
 
 def _is_duplicate(event_id: str) -> bool:
-    """Dedup check — Zalo may send the same webhook twice."""
     now = time.time()
-    # Expire old entries
     expired = [k for k, ts in _processed_events.items() if now - ts > _DEDUP_TTL]
     for k in expired:
         del _processed_events[k]
@@ -69,6 +70,10 @@ def _is_duplicate(event_id: str) -> bool:
 
 async def _send_zalo_reply(user_id: str, text: str) -> bool:
     """Send a text reply to a Zalo user via OA API."""
+    if not ZALO_OA_TOKEN:
+        print("[ZALO SEND ERROR] ZALO_OA_ACCESS_TOKEN is empty")
+        return False
+
     url = f"{ZALO_API_BASE}/oa/message/cs"
     headers = {
         "access_token": ZALO_OA_TOKEN,
@@ -76,34 +81,76 @@ async def _send_zalo_reply(user_id: str, text: str) -> bool:
     }
     payload = {
         "recipient": {"user_id": user_id},
-        "message": {"text": text[:2000]},  # Zalo text limit
+        "message": {"text": text[:2000]},
     }
-    async with httpx.AsyncClient(timeout=10) as client:
+    async with httpx.AsyncClient(timeout=15) as client:
         try:
             r = await client.post(url, headers=headers, json=payload)
             data = r.json()
             if data.get("error") and data["error"] != 0:
                 print(f"[ZALO SEND ERROR] code={data.get('error')} msg={data.get('message')}")
                 return False
+            print(f"[ZALO SEND OK] user={user_id[:8]}… chars={len(text)}")
             return True
         except Exception as e:
             print(f"[ZALO HTTP ERROR] {e}")
             return False
 
 
+async def _process_zalo_event(event_name: str, user_id: str, text: str, image_url: Optional[str]) -> None:
+    """Heavy AI work — runs after webhook ACK."""
+    loop = asyncio.get_event_loop()
+    try:
+        if event_name == "user_send_image":
+            if not image_url:
+                await _send_zalo_reply(
+                    user_id,
+                    "Anh khong tai duoc. Vui long gui lai anh hoac mo ta vet ban bang chu.",
+                )
+                return
+
+            def _run_image_pipeline():
+                entities = analyze_stain_image(image_url=image_url, user_caption=text)
+                prefix = build_image_context_prefix(entities)
+                caption = text or entities.get("stain_type") or ""
+                return generate_response_from_entities(
+                    entities, user_caption=caption, prefix=prefix
+                )
+
+            reply_text = await loop.run_in_executor(_executor, _run_image_pipeline)
+        else:
+            if not text:
+                return
+            reply_text = await loop.run_in_executor(_executor, generate_response, text)
+
+        await _send_zalo_reply(user_id, reply_text)
+    except Exception as exc:
+        print(f"[ZALO HANDLER ERROR] {type(exc).__name__}: {exc}")
+        try:
+            await _send_zalo_reply(
+                user_id,
+                "Xin loi, he thong tam thoi gap su co. Vui long thu lai sau it phut.",
+            )
+        except Exception:
+            pass
+
+
 async def handle_zalo_webhook(request: Request) -> dict:
     """
-    Main Zalo webhook handler.
-    Called by FastAPI route: POST /webhook/zalo
-
-    Zalo sends JSON body with event_name, user_id_by_app, message.text, etc.
-    Returns {"status": "ok"} immediately (Zalo expects fast ACK).
+    POST /webhook/zalo — ACK quickly, process GraphRAG in background.
     """
     body_bytes = await request.body()
 
-    # 1. Verify signature
-    mac_header = request.headers.get("mac", "")
+    # Signature: accept multiple header names Zalo may send
+    mac_header = (
+        request.headers.get("mac")
+        or request.headers.get("X-ZaloOA-Signature")
+        or request.headers.get("x-zalooa-signature")
+        or ""
+    )
     if not _verify_zalo_signature(body_bytes, mac_header):
+        # Temporary: allow through so OA keeps delivering while secret is corrected.
+        # Still logs loudly — restore hard 403 after ZALO_APP_SECRET is fixed.
         print(f"[ZALO SIG WARNING] mac_header={mac_header!r} - allowing through")
 
     try:
@@ -111,69 +158,32 @@ async def handle_zalo_webhook(request: Request) -> dict:
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON")
 
-    # 2. Extract event info
     event_name = payload.get("event_name", "")
-    app_id     = payload.get("app_id", "")
-    timestamp  = payload.get("timestamp", "")
-    event_id   = f"{app_id}_{timestamp}"
+    app_id = payload.get("app_id", "")
+    timestamp = payload.get("timestamp", "")
+    event_id = f"{app_id}_{timestamp}"
 
-    # Only handle text and image messages
     if event_name not in ("user_send_text", "user_send_image"):
         return {"status": "ignored", "event": event_name}
 
-    # 3. Dedup
     if _is_duplicate(event_id):
         return {"status": "duplicate"}
 
-    # 4. Extract user info + message
-    user_id  = payload.get("sender", {}).get("id", "")
-    message  = payload.get("message", {})
-    text     = message.get("text", "").strip()
+    user_id = payload.get("sender", {}).get("id", "")
+    message = payload.get("message", {})
+    text = (message.get("text") or "").strip()
 
     if not user_id:
         return {"status": "empty_message"}
 
-    import asyncio
-    from concurrent.futures import ThreadPoolExecutor
-    loop = asyncio.get_event_loop()
+    image_url = None
+    if event_name == "user_send_image":
+        attachments = message.get("attachments") or []
+        if attachments:
+            image_url = attachments[0].get("payload", {}).get("url")
 
-    # 5. Route: image vs text — wrap in try/except so Zalo always gets 200 OK
-    try:
-        if event_name == "user_send_image":
-            # Zalo image message: attachments[0].payload.url
-            attachments = message.get("attachments", [])
-            image_url   = None
-            if attachments:
-                image_url = attachments[0].get("payload", {}).get("url")
-
-            if not image_url:
-                await _send_zalo_reply(user_id, "📸 Ảnh không tải được. Vui lòng gửi lại ảnh hoặc mô tả vết bẩn bằng chữ.")
-                return {"status": "image_url_missing"}
-
-            def _run_image_pipeline():
-                entities = analyze_stain_image(image_url=image_url, user_caption=text)
-                prefix   = build_image_context_prefix(entities)
-                response = generate_response_from_entities(entities, user_caption=text, prefix=prefix)
-                return response
-
-            with ThreadPoolExecutor() as pool:
-                reply_text = await loop.run_in_executor(pool, _run_image_pipeline)
-
-        else:
-            # Text message
-            if not text:
-                return {"status": "empty_message"}
-
-            with ThreadPoolExecutor() as pool:
-                reply_text = await loop.run_in_executor(pool, generate_response, text)
-
-        # 6. Send reply
-        await _send_zalo_reply(user_id, reply_text)
-
-    except Exception as exc:
-        # Log the error but always return 200 so Zalo keeps the webhook registered
-        print(f"[ZALO HANDLER ERROR] {type(exc).__name__}: {exc}")
-
+    # ACK immediately — Zalo times out slow handlers
+    asyncio.create_task(_process_zalo_event(event_name, user_id, text, image_url))
     return {"status": "ok"}
 
 

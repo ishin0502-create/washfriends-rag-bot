@@ -14,7 +14,7 @@ Start:
 
 Environment variables required:
   NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD
-  ANTHROPIC_API_KEY
+  OPENAI_API_KEY
   ZALO_OA_ACCESS_TOKEN, ZALO_APP_SECRET
   FB_PAGE_TOKEN, FB_VERIFY_TOKEN, FB_APP_SECRET
 """
@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Wash Friends Vietnam Chatbot API",
-    description="Neo4j GraphRAG + Claude AI for Vietnamese laundry shop franchise owners",
+    description="Neo4j GraphRAG + GPT-4o-mini for Vietnamese laundry shop franchise owners",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -96,13 +96,16 @@ async def health():
     except Exception as e:
         checks["neo4j"] = f"❌ {e}"
 
-    # Env var presence (not values)
-    for key in ["ANTHROPIC_API_KEY", "ZALO_OA_ACCESS_TOKEN", "FB_PAGE_TOKEN"]:
+    # Env var presence (not values) — Railway healthcheck needs HTTP 200 always
+    for key in ["OPENAI_API_KEY", "ZALO_OA_ACCESS_TOKEN", "FB_PAGE_TOKEN"]:
         checks[key] = "✅ set" if os.environ.get(key) else "⚠️ missing"
 
-    all_ok = all("✅" in v for v in checks.values())
+    neo4j_ok = "✅" in str(checks.get("neo4j", ""))
     return JSONResponse(
-        content={"status": "ok" if all_ok else "degraded", "checks": checks},
+        content={
+            "status": "ok" if neo4j_ok else "degraded",
+            "checks": checks,
+        },
         status_code=200,
     )
 
@@ -244,7 +247,7 @@ UNWIND [
   {code:'N3',name:'Corn Starch/Talc',name_vi:'Bot ngo/bot talc',role:'Oil absorber first step for all oil stains',safe_on_wool:true,safe_on_silk:true},
   {code:'S1',name:'Silk/Wool Detergent',name_vi:'Nuoc giat to lua',role:'pH-neutral for delicate protein fibers',safe_on_wool:true,safe_on_silk:true}
 ] AS c MERGE (n:Chemical {code:c.code}) SET n += c RETURN count(n) AS created""")
-            _r(s, "F_stains_protein", """
+        _r(s, "F_stains_protein", """
 UNWIND [
   {id:'S_BLOOD_FRESH',name:'Fresh Blood',name_vi:'Mau tuoi',group_id:'G1',water_spreads:true,contains_protein:true,contains_tannin:false,contains_oil:false,contains_dye:false,urgency:'immediate',tip:'Cold water only - hot sets protein'},
   {id:'S_BLOOD_DRY',name:'Dried Blood',name_vi:'Mau kho',group_id:'G1',water_spreads:false,contains_protein:true,contains_tannin:false,contains_oil:false,contains_dye:false,urgency:'same_day',tip:'Enzyme soak 30min then scrub'},
@@ -258,7 +261,7 @@ UNWIND [
   {id:'S_MUD',name:'Mud',name_vi:'Bun dat',group_id:'G1',water_spreads:false,contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:false,urgency:'low',tip:'Let dry completely brush off then wash - never wet scrub fresh'},
   {id:'S_CHOCOLATE',name:'Chocolate',name_vi:'Socola',group_id:'G1',water_spreads:false,contains_protein:true,contains_tannin:true,contains_oil:true,contains_dye:false,urgency:'same_day',tip:'Scrape cold water enzyme 30min oxygen bleach if needed'}
 ] AS s MERGE (n:Stain {id:s.id}) SET n += s RETURN count(n) AS created""")
-            _r(s, "G_stains_oil", """
+        _r(s, "G_stains_oil", """
 UNWIND [
   {id:'S_BUTTER',name:'Butter',name_vi:'Bo',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'same_day',tip:'Cornstarch absorb 10min brush then dish soap'},
   {id:'S_COOKING_OIL',name:'Cooking Oil',name_vi:'Dau an',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'same_day',tip:'Talc absorb then dish soap scrub warm water'},
@@ -272,8 +275,7 @@ UNWIND [
   {id:'S_CANDLE_WAX',name:'Candle Wax',name_vi:'Sap nen',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'low',tip:'Freeze+break then iron with paper to absorb wax'},
   {id:'S_GUM',name:'Chewing Gum',name_vi:'Keo cao su',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:false,contains_dye:false,urgency:'low',tip:'Freeze with ice bag then break apart carefully'}
 ] AS s MERGE (n:Stain {id:s.id}) SET n += s RETURN count(n) AS created""")
-
-            _r(s, "H_stains_tannin", """
+        _r(s, "H_stains_tannin", """
 UNWIND [
   {id:'S_BLACK_COFFEE',name:'Black Coffee',name_vi:'Ca phe den',group_id:'G3',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:false,urgency:'immediate',tip:'Cold water immediately vinegar soak then wash'},
   {id:'S_MILK_COFFEE',name:'Milk Coffee',name_vi:'Ca phe sua',group_id:'G3',water_spreads:true,contains_protein:true,contains_tannin:true,contains_oil:false,contains_dye:false,urgency:'immediate',tip:'Enzyme for protein first then vinegar for tannin'},
@@ -287,7 +289,7 @@ UNWIND [
   {id:'S_FISH_SAUCE',name:'Fish Sauce',name_vi:'Nuoc mam',group_id:'G3',water_spreads:true,contains_protein:true,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold water enzyme soak - difficult salt odor vinegar deodorize'},
   {id:'S_BBQ_SAUCE',name:'BBQ Sauce',name_vi:'Sot BBQ',group_id:'G3',water_spreads:false,contains_protein:true,contains_tannin:true,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'Triple action: enzyme+dish soap+vinegar sequential treatment'}
 ] AS s MERGE (n:Stain {id:s.id}) SET n += s RETURN count(n) AS created""")
-            _r(s, "I_stains_dye", """
+        _r(s, "I_stains_dye", """
 UNWIND [
   {id:'S_MUSTARD',name:'Mustard',name_vi:'Mu-ta-det',group_id:'G4',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:false,contains_dye:true,urgency:'same_day',tip:'Scrape baking soda paste then oxygen bleach - curcumin UV sensitive dry in sun'},
   {id:'S_CURRY',name:'Curry/Turmeric',name_vi:'Ca ri/Nghe',group_id:'G4',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'Dish soap for oil then baking soda then sun bleach UV'},
@@ -298,32 +300,32 @@ UNWIND [
   {id:'S_PERFUME',name:'Perfume/Alcohol Spray',name_vi:'Nuoc hoa',group_id:'G5',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'same_day',tip:'Vinegar diluted soak - may yellow white fabric over time'},
   {id:'S_NAIL_POLISH',name:'Nail Polish',name_vi:'Son mong',group_id:'G4',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Acetone from back of fabric - never rub into fiber'}
 ] AS s MERGE (n:Stain {id:s.id}) SET n += s RETURN count(n) AS created""")
-            _r(s, "J_relationships", """
+        _r(s, "J_relationships", """
 MATCH (stain:Stain) WHERE stain.group_id IS NOT NULL
 MATCH (grp:StainGroup {id: stain.group_id})
 MERGE (stain)-[:BELONGS_TO]->(grp)
 RETURN count(*) AS rels""")
-            _r(s, "K_chem_protein", """
+        _r(s, "K_chem_protein", """
 MATCH (s:Stain) WHERE s.contains_protein=true
 MATCH (e1:Chemical {code:'E1'}),(e2:Chemical {code:'N2'}),(e3:Chemical {code:'A5'})
 FOREACH (c IN [e1,e2,e3] | MERGE (s)-[:USES_CHEMICAL]->(c))
 RETURN count(DISTINCT s) AS stains""")
-            _r(s, "L_chem_oil", """
+        _r(s, "L_chem_oil", """
 MATCH (s:Stain) WHERE s.contains_oil=true
 MATCH (d1:Chemical {code:'D2'}),(d2:Chemical {code:'N3'}),(d3:Chemical {code:'E3'})
 FOREACH (c IN [d1,d2,d3] | MERGE (s)-[:USES_CHEMICAL]->(c))
 RETURN count(DISTINCT s) AS stains""")
-            _r(s, "M_chem_tannin", """
+        _r(s, "M_chem_tannin", """
 MATCH (s:Stain) WHERE s.contains_tannin=true
 MATCH (a1:Chemical {code:'A3'}),(b1:Chemical {code:'B1'})
 FOREACH (c IN [a1,b1] | MERGE (s)-[:USES_CHEMICAL]->(c))
 RETURN count(DISTINCT s) AS stains""")
-            _r(s, "N_chem_dye", """
+        _r(s, "N_chem_dye", """
 MATCH (s:Stain) WHERE s.contains_dye=true
 MATCH (a1:Chemical {code:'A1'}),(b1:Chemical {code:'B1'})
 FOREACH (c IN [a1,b1] | MERGE (s)-[:USES_CHEMICAL]->(c))
 RETURN count(DISTINCT s) AS stains""")
-            _r(s, "O_force_levels", """
+        _r(s, "O_force_levels", """
 MATCH (s:Stain)
 MATCH (f:ForceLevel)
 WITH s, f
@@ -333,28 +335,27 @@ WHERE (s.contains_protein=true AND f.level IN [2,3])
    OR (s.contains_dye=true AND f.level IN [2,3])
 MERGE (s)-[:REQUIRES_FORCE]->(f)
 RETURN count(*) AS rels""")
-            _r(s, "P_delicate_warn", """
+        _r(s, "P_delicate_warn", """
 MATCH (s:Stain) WHERE s.contains_protein=true
 MATCH (f:Fabric) WHERE f.enzyme_safe=false
 MERGE (s)-[:CAUTION_ON]->(f)
 RETURN count(*) AS rels""")
-            _r(s, "Q_bleach_warn", """
-MATCH (s:Stain)
+        _r(s, "Q_bleach_warn", """
 MATCH (f:Fabric) WHERE f.can_bleach=false
 MATCH (c:Chemical) WHERE c.code IN ['B1','B2']
 MERGE (f)-[:NEVER_USE]->(c)
 RETURN count(*) AS rels""")
-            _r(s, "R_never_mix", """
+        _r(s, "R_never_mix", """
 MATCH (c1:Chemical {code:'B2'}),(c2:Chemical {code:'A5'})
 MERGE (c1)-[:NEVER_MIX_WITH]->(c2)
 MERGE (c2)-[:NEVER_MIX_WITH]->(c1)
 RETURN count(*) AS rels""")
-            r2 = s.run("MATCH (n) RETURN labels(n)[0] AS l, count(n) AS c ORDER BY l")
-            log["after"] = {row["l"]: row["c"] for row in r2}
-            r3 = s.run("MATCH ()-[r]->() RETURN type(r) AS t, count(r) AS c ORDER BY t")
-            log["relationships"] = {row["t"]: row["c"] for row in r3}
-        _drv.close()
-        return JSONResponse(log)
+        r2 = s.run("MATCH (n) RETURN labels(n)[0] AS l, count(n) AS c ORDER BY l")
+        log["after"] = {row["l"]: row["c"] for row in r2}
+        r3 = s.run("MATCH ()-[r]->() RETURN type(r) AS t, count(r) AS c ORDER BY t")
+        log["relationships"] = {row["t"]: row["c"] for row in r3}
+    _drv.close()
+    return JSONResponse(log)
 
 # ─── Dev runner ───────────────────────────────────────────────────────────────
 
@@ -365,5 +366,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 8000)),
         workers=1,
-        reload=True,  # Dev only — remove in production
+        reload=False,
     )

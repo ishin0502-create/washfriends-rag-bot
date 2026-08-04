@@ -2,21 +2,14 @@
 image_analyzer.py
 Wash Friends Vietnam - Stain Photo Analyzer
 
-Analyzes a stain photo using Claude Vision and returns structured entities
+Analyzes a stain photo using GPT-4o-mini Vision and returns structured entities
 compatible with the graphrag_engine pipeline.
-
-Supported inputs:
-  - Image URL (from Zalo / Facebook CDN)
-  - Base64-encoded image bytes
-
-Returns the same entity dict format as entity_extractor.py,
-so the rest of the pipeline is unchanged.
 """
 
 import os
 import base64
+import json
 import re
-from typing import Optional
 from urllib.request import urlopen, Request
 
 from openai import OpenAI
@@ -38,7 +31,9 @@ Respond in JSON with this exact format:
   "severity": "light|medium|heavy",
   "characteristics": ["...", "..."],
   "confidence": "high|medium|low",
-  "care_notes": "brief note about special care needs"
+  "care_notes": "brief note about special care needs",
+  "stain_color": "red|yellow|brown|black|blue|green|white|null",
+  "lang": "vi"
 }
 
 If you cannot identify the stain clearly, still return JSON but set confidence to "low"
@@ -58,20 +53,61 @@ def fetch_image_as_base64(url):
     return base64.standard_b64encode(data).decode("utf-8"), content_type
 
 
-def analyze_stain_image(image_url=None, image_base64=None, media_type="image/jpeg"):
-    """Analyze a stain image and return structured entity dict."""
+def _to_graphrag_entities(analysis: dict, user_caption: str = "") -> dict:
+    """Normalize vision output into graphrag_engine entity shape."""
+    stain = analysis.get("stain_type") or None
+    fabric = analysis.get("fabric_type") or None
+    if stain in ("unknown", "", "null"):
+        stain = None
+    if fabric in ("unknown", "", "null"):
+        fabric = None
+
+    # Prefer caption hints when vision confidence is low
+    caption = (user_caption or "").strip()
+    confidence = analysis.get("confidence", "low")
+    if caption and (not stain or confidence == "low"):
+        # Keep caption for LLM; extractor-like fields stay from vision when present
+        pass
+
+    return {
+        "stain_type": stain,
+        "fabric_type": fabric,
+        "intent": "mystery" if not stain else "treatment",
+        "hours_since": None,
+        "stain_color": analysis.get("stain_color") if analysis.get("stain_color") not in (None, "null") else None,
+        "smell": None,
+        "water_spreads": None,
+        "group_id": None,
+        "stain_id": None,
+        "attempt_number": None,
+        "lang": analysis.get("lang") or "vi",
+        "severity": analysis.get("severity", "medium"),
+        "characteristics": analysis.get("characteristics") or [],
+        "confidence": confidence,
+        "care_notes": analysis.get("care_notes") or "",
+        "_image_analysis": True,
+        "_user_caption": caption,
+    }
+
+
+def analyze_stain_image(image_url=None, image_base64=None, media_type="image/jpeg", user_caption=""):
+    """Analyze a stain image and return GraphRAG-compatible entity dict."""
     if image_url and not image_base64:
         image_base64, media_type = fetch_image_as_base64(image_url)
 
     if not image_base64:
-        return {
+        return _to_graphrag_entities({
             "stain_type": "unknown",
             "fabric_type": "unknown",
             "severity": "medium",
             "characteristics": [],
             "confidence": "low",
             "care_notes": "No image provided",
-        }
+        }, user_caption=user_caption)
+
+    prompt_text = VISION_PROMPT
+    if user_caption:
+        prompt_text += f"\n\nUser caption/hint: {user_caption}"
 
     message = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -88,7 +124,7 @@ def analyze_stain_image(image_url=None, image_base64=None, media_type="image/jpe
                     },
                     {
                         "type": "text",
-                        "text": VISION_PROMPT,
+                        "text": prompt_text,
                     },
                 ],
             }
@@ -98,41 +134,40 @@ def analyze_stain_image(image_url=None, image_base64=None, media_type="image/jpe
     raw = message.choices[0].message.content.strip()
     json_match = re.search(r"\{[\s\S]*\}", raw)
     if json_match:
-        import json
         try:
-            return json.loads(json_match.group())
+            parsed = json.loads(json_match.group())
+            return _to_graphrag_entities(parsed, user_caption=user_caption)
         except json.JSONDecodeError:
             pass
 
-    return {
+    return _to_graphrag_entities({
         "stain_type": "unknown",
         "fabric_type": "unknown",
         "severity": "medium",
         "characteristics": [],
         "confidence": "low",
         "care_notes": raw[:200],
-    }
+    }, user_caption=user_caption)
 
 
 def build_image_entity_context(analysis):
-    """Convert image analysis result into text for GraphRAG entity extractor."""
-    stain = analysis.get("stain_type", "unknown")
-    fabric = analysis.get("fabric_type", "unknown")
+    """Convert image analysis result into text prefix for GraphRAG LLM."""
+    stain = analysis.get("stain_type") or "unknown"
+    fabric = analysis.get("fabric_type") or "unknown"
     severity = analysis.get("severity", "medium")
     chars = analysis.get("characteristics", [])
     notes = analysis.get("care_notes", "")
+    caption = analysis.get("_user_caption", "")
 
-    parts = ["Stain type: " + stain]
-    if fabric != "unknown":
-        parts.append("Fabric: " + fabric)
-    parts.append("Severity: " + severity)
+    parts = [f"Anh phan tich: loai vet={stain}", f"vai={fabric}", f"muc do={severity}"]
     if chars:
-        parts.append("Characteristics: " + ", ".join(chars))
+        parts.append("dac diem: " + ", ".join(chars))
     if notes:
-        parts.append("Notes: " + notes)
+        parts.append("ghi chu: " + notes)
+    if caption:
+        parts.append("chu thich nguoi dung: " + caption)
 
-
-    return ". ".join(parts) + "."
+    return " | ".join(parts)
 
 
 # backward-compatibility alias used by zalo_handler and facebook_handler

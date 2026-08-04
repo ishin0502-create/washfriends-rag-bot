@@ -57,7 +57,7 @@ def _verify_fb_signature(body_bytes: bytes, sig_header: str) -> bool:
 
 def _is_duplicate(mid: str) -> bool:
     now = time.time()
-    expired = [k for k, ts in _processed_mids.items() if now - ts > _DEDUP_TTX]
+    expired = [k for k, ts in _processed_mids.items() if now - ts > _DEDUP_TTL]
     for k in expired:
         del _processed_mids[k]
     if mid in _processed_mids:
