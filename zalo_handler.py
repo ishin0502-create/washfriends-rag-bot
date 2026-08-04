@@ -25,7 +25,7 @@ from fastapi import Request, HTTPException
 
 from graphrag_engine import generate_response, generate_response_from_entities
 from image_analyzer import analyze_stain_image, build_image_context_prefix
-from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret
+from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret, _app_id
 
 ZALO_API_BASE   = "https://openapi.zalo.me/v3.0"
 
@@ -198,10 +198,15 @@ async def handle_zalo_webhook(request: Request) -> dict:
 
 async def get_zalo_oa_info() -> dict:
     """Health check — verify OA token is valid (uses auto-refresh)."""
+    diag = {
+        "app_id_len": len(_app_id()),
+        "secret_len": len(_app_secret()),
+    }
     try:
         token = await get_access_token()
+        diag["access_token_len"] = len(token or "")
     except Exception as e:
-        return {"error": f"token: {e}"}
+        return {"error": f"token: {e}", "diag": diag}
 
     url = f"{ZALO_API_BASE}/oa/getoa"
     async with httpx.AsyncClient(timeout=10) as client:
@@ -209,20 +214,24 @@ async def get_zalo_oa_info() -> dict:
             r = await client.get(url, headers={"access_token": token})
             data = r.json()
             err = data.get("error")
-            # Invalid/expired token → force refresh once and retry
             if err and err != 0:
                 print(f"[ZALO INFO] error={err} msg={data.get('message')} — trying refresh")
                 try:
                     token = await refresh_tokens(force=True)
+                    diag["refresh"] = "ok"
+                    diag["access_token_len"] = len(token or "")
                     r = await client.get(url, headers={"access_token": token})
                     data = r.json()
                 except Exception as refresh_err:
+                    diag["refresh"] = f"fail: {refresh_err}"
                     return {
                         "error": err,
                         "message": data.get("message"),
-                        "refresh_error": str(refresh_err),
-                        "hint": "Re-copy ZALO_OA_ACCESS_TOKEN + ZALO_OA_REFRESH_TOKEN + ZALO_APP_SECRET from Zalo Tools (OA Access Token for Nhượng Quyền OA). Do not press Enter after paste.",
+                        "diag": diag,
+                        "hint": "Refresh failed. Check ZALO_OA_REFRESH_TOKEN + ZALO_APP_SECRET.",
                     }
+            if isinstance(data, dict):
+                data = {**data, "diag": diag}
             return data
         except Exception as e:
-            return {"error": str(e)}
+            return {"error": str(e), "diag": diag}
