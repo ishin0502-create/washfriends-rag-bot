@@ -281,9 +281,31 @@ def _fetch_graph_context(entities: dict) -> dict:
     month   = _vn_month()
     context = {"intent": intent, "entities": entities}
 
-    stain_input  = entities.get("stain_type") or entities.get("stain_id") or ""
-    fabric_input = entities.get("fabric_type") or ""
+    stain_input  = _normalize_text(
+        entities.get("stain_type") or entities.get("stain_id") or ""
+    )
+    fabric_input = _normalize_text(entities.get("fabric_type") or "")
     stain_id     = entities.get("stain_id") or ""
+    raw_msg      = _normalize_text(entities.get("_raw") or "")
+
+    # Common franchise phrasing → seed name keys (accent-insensitive)
+    _ALIASES = {
+        "laterite": "dat do laterite",
+        "dat do": "dat do laterite",
+        "dat do laterite": "dat do laterite",
+        "dau nhot xe may": "dau nhot xe may",
+        "xe may": "dau nhot xe may",
+        "nam moc": "nam moc",
+        "moc": "nam moc",
+        "ri set": "ri set",
+        "gỉ sét": "ri set",
+    }
+    for key, canon in _ALIASES.items():
+        if key in stain_input or (raw_msg and key in raw_msg):
+            stain_input = canon
+            break
+    if not stain_input and raw_msg:
+        stain_input = raw_msg
 
     if intent == "daily":
         rows = _run_query(Q_DAILY, {"month": month})
@@ -463,6 +485,7 @@ def generate_response_from_entities(
 def generate_response(user_message: str) -> str:
     """Main entry point: given a user message, return a Vietnamese chatbot response."""
     entities = extract_entities(user_message)
+    entities["_raw"] = user_message
     graph_context = _fetch_graph_context(entities)
     graph_data = graph_context.get("graph")
 
