@@ -437,6 +437,13 @@ def _infer_fabric_from_text(text: str) -> str:
         return ""
     raw = text
     t = _normalize_text(text)
+    # Suede / nubuck before generic leather
+    if any(k in raw for k in ("스웨이드", "누벅")) or "suede" in t or "nubuck" in t or "da lon" in t:
+        return "suede"
+    if any(k in raw for k in ("가죽",)) or re.search(r"(^|[^a-z])da([^a-z]|$)", t) or "leather" in t:
+        # avoid false hit on common VI words containing 'da' as substring inside longer tokens — use word-ish check
+        if "leather" in t or "가죽" in raw or "da bong" in t or "ao da" in t or "giay da" in t or "tui da" in t or "gang da" in t or t.strip() == "da" or " vai da" in f" {t}" or t.startswith("da "):
+            return "leather"
     if any(k in raw for k in ("비단", "실크")) or "silk" in t or "lua" in t or "ao dai" in t or "aodai" in t:
         return "silk"
     if "울" in raw or "wool" in t or "vai len" in t or re.search(r"(^|[^a-z])len([^a-z]|$)", t):
@@ -464,7 +471,9 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
     fname = f"{fabric.get('name') or ''} {fabric.get('name_vi') or ''}".lower()
     is_silk = fid == "F4" or "silk" in fname or "lua" in fname or "lụa" in fname
     is_wool = fid == "F3" or "wool" in fname or " len" in f" {fname}" or fname.strip() == "len"
-    delicate = is_silk or is_wool
+    is_leather = fid == "F8" or "leather" in fname or ("da (" in fname) or fname.strip() == "da"
+    is_suede = fid == "F9" or "suede" in fname or "nubuck" in fname or "da lon" in fname
+    delicate = is_silk or is_wool or is_leather or is_suede
 
     chems = [c for c in (graph.get("chemicals") or []) if c]
     safe, blocked = [], []
@@ -475,9 +484,14 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
             reasons.append("not_safe_on_silk")
         if is_wool and c.get("safe_on_wool") is False:
             reasons.append("not_safe_on_wool")
+        if (is_leather or is_suede) and code in {"B1", "B2", "A4", "E1", "E2", "E3", "D3", "A3", "A5"}:
+            reasons.append("not_safe_on_leather_suede")
+        if is_suede and code in {"A1", "D2"}:
+            # Suede: avoid wet chemistry by default — professional path
+            reasons.append("suede_prefer_dry_pro")
         if fabric.get("can_bleach") is False and code in {"B1", "B2", "A4"}:
             reasons.append("fabric_no_bleach")
-        if fabric.get("acid_safe") is False and code in {"A3", "A5"}:
+        if fabric.get("acid_safe") is False and code in {"A3", "A5"} and not (is_leather or is_suede):
             reasons.append("fabric_no_acid")
         if fabric.get("enzyme_safe") is False and code in {"E1", "E2", "E3"}:
             reasons.append("fabric_no_enzyme")
@@ -496,41 +510,76 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
     if blocked:
         out["chemicals_blocked_for_fabric"] = blocked
         out["delicate_chem_rule"] = (
-            "Chi dung chemicals[] con lai. Neu rong: uu tien washfriends_supply S1 + nuoc lanh + luc nhe. "
-            "Cam khuyen nghi chemicals_blocked_for_fabric. Bo qua tip/dried_path neu chung ke chat bi chan."
+            "Chi dung chemicals[] con lai. Neu rong: uu tien washfriends_supply neu phu hop + luc nhe. "
+            "Cam khuyen nghi chemicals_blocked_for_fabric. Bo qua tip/dried_path neu chung ke chat bi chan. "
+            "Cam goi y tay oxy / B1 tren da hoac suede."
         )
 
-    # Delicate fabrics: overwrite path text so tip cannot reintroduce bleach/acid/enzyme
     if delicate and isinstance(out.get("stain_context"), dict):
         stain = dict(out["stain_context"])
-        if is_silk:
+        if is_suede:
+            stain["why_vi"] = (
+                "Suede/da lon: NUOC va tay oxy de de lai vet vinh vien. "
+                "Uu tien chai kho / tay kho; nang → chuyen chuyen nghiep. CAM may giat, CAM say."
+            )
+            stain["fresh_path_vi"] = (
+                "Ngoai troi thong gio, khau trang + gang. Chai kho nhe ngoai→trong. "
+                "KHONG nuoc, KHONG tay oxy. Neu sau: gui chuyen nghiep."
+            )
+            stain["dried_path_vi"] = (
+                "Chi chai kho / tay kho. Khong het → bao khach gui chuyen. "
+                "KHONG ngam, KHONG may, KHONG tay oxy."
+            )
+            stain["aftercare_vi"] = (
+                "De kho tu nhien bong mat. Khong say, khong ui. Thong bao khach neu con vet."
+            )
+            stain["tip"] = stain["why_vi"]
+        elif is_leather:
+            stain["why_vi"] = (
+                "Da bong: CAM may giat, CAM tay oxy/javel, CAM nhiet/nang gay. "
+                "It nuoc toi da; sau xu ly can boi kem da. Nam moc: uu tien kho + con nhe (test)."
+            )
+            stain["fresh_path_vi"] = (
+                "Thong gio ngoai troi, khau trang + gang. Chai/kho khan kho quet nam. "
+                "Da bong: khan + con sat khuan (70%) nhe, TEST goc khuat. "
+                "KHONG tay oxy. Xong: boi kem duong da, phoi bong mat."
+            )
+            stain["dried_path_vi"] = (
+                "Lap chai kho + lau con nhe neu da bong cho phep. "
+                "Nam sau long / dien rong → tu choi xu ly sau, chuyen chuyen nghiep. CAM may giat."
+            )
+            stain["aftercare_vi"] = (
+                "Kiem tra mau/be mat TRUOC khi giao. Phoi bong mat, boi kem da. KHONG say may."
+            )
+            stain["tip"] = stain["why_vi"]
+        elif is_silk:
             stain["why_vi"] = (
                 "Lua (silk) nhay cam axit, enzyme va tay. "
-                "Uu tien nuoc LANH + nuoc giat trung tinh Wash Friends (S1) + luc nhe. "
+                "Uu tien nuoc LANH + nuoc giat trung tinh Wash Friends + luc nhe. "
                 "Khong dung giam manh, tay oxy, enzyme."
             )
             stain["fresh_path_vi"] = (
-                "Tham/xa nuoc lanh mat trai ngay → cham S1 pha loang nhe → "
+                "Tham/xa nuoc lanh mat trai ngay → cham nuoc giat trung tinh Wash Friends pha loang nhe → "
                 "tham bang khan trang ngoai→trong. Khong cha manh."
             )
             stain["dried_path_vi"] = (
-                "Ngam lanh nhe + S1. Neu khong het: bao khach, khong dung tay oxy/giam dam/enzyme. "
-                "Kiem tra truoc khi say/ui."
+                "Ngam lanh nhe + nuoc giat trung tinh Wash Friends. Neu khong het: bao khach, "
+                "khong dung tay oxy/giam dam/enzyme. Kiem tra truoc khi say/ui."
             )
             stain["aftercare_vi"] = (
-                "Kiem tra anh sang manh TRUOC say/ui. Con vet → xu ly lai bang S1, khong say."
+                "Kiem tra anh sang manh TRUOC say/ui. Con vet → xu ly lai bang nuoc giat trung tinh, khong say."
             )
             stain["tip"] = stain["why_vi"]
         elif is_wool:
             stain["why_vi"] = (
                 "Len (wool) la so protein tu nhien — enzyme/tay/axit de hong soi. "
-                "Uu tien S1 + nuoc lanh + luc rat nhe."
+                "Uu tien nuoc giat trung tinh Wash Friends + nuoc lanh + luc rat nhe."
             )
             stain["fresh_path_vi"] = (
-                "Tham lanh + S1 nhe, khong cha. Khong enzyme, khong tay oxy."
+                "Tham lanh + nuoc giat trung tinh nhe, khong cha. Khong enzyme, khong tay oxy."
             )
             stain["dried_path_vi"] = (
-                "Ngam lanh ngan + S1. Khong het → bao khach, khong dung E1/B1/A3 manh."
+                "Ngam lanh ngan + nuoc giat trung tinh. Khong het → bao khach, khong dung enzyme/tay/axit manh."
             )
             stain["aftercare_vi"] = (
                 "Kiem tra truoc say. Uu tien phoi phang, khong say may."
@@ -539,6 +588,23 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
         out["stain_context"] = stain
 
     return out
+
+
+def _scrub_internal_codes(text: str) -> str:
+    """Remove leftover internal chem codes from owner-facing replies."""
+    if not text:
+        return text
+    # Parenthetical codes first: (S1), (A3)
+    text = re.sub(r"\s*\((?:S1|WF_SOFT|WF_FRAG|A[1-5]|B[12]|D[1-3]|E[1-3]|N[1-3])\)", "", text)
+    # Standalone tokens
+    text = re.sub(
+        r"(?<![A-Za-z0-9])(?:S1|WF_SOFT|WF_FRAG|A[1-5]|B[12]|D[1-3]|E[1-3]|N[1-3])(?![A-Za-z0-9])",
+        "",
+        text,
+    )
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r" ?،", ",", text)
+    return text.strip()
 
 
 # ─── LLM Responder ────────────────────────────────────────────────────────────
@@ -572,7 +638,9 @@ HÓA CHẤT (bắt buộc):
   Mua ngoài → siêu thị/약국/cửa hóa chất (buy_where_*). Hàng WF → "kho / cung ứng Wash Friends".
 - KHÔNG đọc mã nội bộ (A3, B1, E1, S1…) như mã kỹ thuật. Nói tên dùng hàng ngày:
   name_ko (Hàn) hoặc shop_name_vi / name_vi (Việt). Ví dụ: "워시프렌즈 중성세제", "giấm trắng 5%".
-  Có thể nhắc "본사 공급 중성세제" — không viết "S1" / "A3" trừ khi bắt buộc cực ngắn.
+- Có thể nhắc tên hàng ngày — tuyệt đối không viết mã S1 / A3 / B1 / E1…
+- Da (leather) / suede: CAM máy giặt, CAM tẩy oxy/javel, CAM nhiệt/nắng gắt.
+  Da bóng: ít nước + cồn nhẹ (test) + kem dưỡng. Suede: không nước → chải khô / chuyên nghiệp.
 - Pha loãng: CHỈ dùng dilution_ko (Hàn) hoặc dilution_vi (Việt) nếu có.
   Không có dilution_* → "병 라벨·본사 안내 따름" / "theo hướng dẫn trên chai / kho WF" — CẤM bịa tỷ lệ (vd 1:4 cho S1).
   Hàn tự nhiên: "식초 1 : 물 4". Việt: "1 phần giấm + 4 phần nước". CẤM "1부분…4부분".
@@ -644,7 +712,7 @@ def _call_llm(llm_prompt: str) -> str:
             {"role": "user", "content": llm_prompt},
         ],
     )
-    return response.choices[0].message.content.strip()
+    return _scrub_internal_codes(response.choices[0].message.content.strip())
 
 
 def _empty_graph_reply(entities: dict, *, image: bool = False) -> str:

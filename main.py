@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-05-owner-lang-v4",
+            "build": "2026-08-05-leather-safe-v1",
             "checks": checks,
         },
         status_code=200,
@@ -251,7 +251,9 @@ UNWIND [
   {id:'F4',name:'Silk',name_vi:'Vai lua',max_temp:30,can_bleach:false,enzyme_safe:false,acid_safe:false},
   {id:'F5',name:'Linen',name_vi:'Vai linen',max_temp:40,can_bleach:false,enzyme_safe:true,acid_safe:true},
   {id:'F6',name:'Denim',name_vi:'Vai denim',max_temp:40,can_bleach:false,enzyme_safe:true,acid_safe:true},
-  {id:'F7',name:'Rayon',name_vi:'Vai rayon',max_temp:30,can_bleach:false,enzyme_safe:false,acid_safe:false}
+  {id:'F7',name:'Rayon',name_vi:'Vai rayon',max_temp:30,can_bleach:false,enzyme_safe:false,acid_safe:false},
+  {id:'F8',name:'Leather',name_vi:'Da (da bong)',max_temp:30,can_bleach:false,enzyme_safe:false,acid_safe:false},
+  {id:'F9',name:'Suede',name_vi:'Da lon / suede / nubuck',max_temp:30,can_bleach:false,enzyme_safe:false,acid_safe:false}
 ] AS f MERGE (n:Fabric {id:f.id}) SET n += f RETURN count(n) AS created""")
         _r(s, "E_chemicals", """
 UNWIND [
@@ -497,11 +499,18 @@ UNWIND [
   {id:'F4',dry_hint_vi:'KHONG say may — bong mat',iron_hint_vi:'110C mat trai + lot, TAT hoi'},
   {id:'F5',dry_hint_vi:'Phoi/say vua; ui khi am',iron_hint_vi:'Ui cao 200-220C khi am'},
   {id:'F6',dry_hint_vi:'Say vua; lan dau giat rieng mau',iron_hint_vi:'Ui vua neu can'},
-  {id:'F7',dry_hint_vi:'KHONG say may neu co the',iron_hint_vi:'Nhiet thap, can than'}
+  {id:'F7',dry_hint_vi:'KHONG say may neu co the',iron_hint_vi:'Nhiet thap, can than'},
+  {id:'F8',dry_hint_vi:'KHONG say may / KHONG nang truc tiep — phoi bong mat, boi kem da sau',iron_hint_vi:'KHONG ui'},
+  {id:'F9',dry_hint_vi:'KHONG nuoc / KHONG say — chi kho, chuyen chuyen nghiep neu uot',iron_hint_vi:'KHONG ui'}
 ] AS h
 MATCH (f:Fabric {id:h.id})
 SET f.dry_hint_vi = h.dry_hint_vi, f.iron_hint_vi = h.iron_hint_vi
 RETURN count(f) AS updated""")
+        _r(s, "X2_leather_never_bleach", """
+MATCH (f:Fabric) WHERE f.id IN ['F8','F9']
+MATCH (c:Chemical) WHERE c.code IN ['B1','B2','A4','E1','E2','E3','D3']
+MERGE (f)-[:NEVER_USE]->(c)
+RETURN count(*) AS rels""")
         # Category explain paths — KB principles only; never invent folk tips
         _r(s, "Y_paths_protein", """
 MATCH (s:Stain) WHERE s.contains_protein = true
