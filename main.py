@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-05-kb-deploy-check",
+            "build": "2026-08-05-ask-errdetail",
             "checks": checks,
         },
         status_code=200,
@@ -176,11 +176,22 @@ async def ask(body: AskRequest):
     import asyncio
     from concurrent.futures import ThreadPoolExecutor
 
-    loop = asyncio.get_event_loop()
-    with ThreadPoolExecutor() as pool:
-        reply = await loop.run_in_executor(pool, generate_response, body.message)
-
-    return AskResponse(response=reply, user_id=body.user_id)
+    try:
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as pool:
+            reply = await loop.run_in_executor(pool, generate_response, body.message)
+        return AskResponse(response=reply, user_id=body.user_id)
+    except Exception as e:
+        # Surface error for debugging (franchise test endpoint only)
+        print(f"[ASK ERROR] {type(e).__name__}: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": type(e).__name__,
+                "detail": str(e)[:500],
+                "user_id": body.user_id,
+            },
+        )
 
 
 
