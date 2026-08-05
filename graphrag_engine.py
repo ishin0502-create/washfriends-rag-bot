@@ -564,17 +564,21 @@ QUY TẮC TRẢ LỜI:
    (6) Sau xử lý — kiểm tra TRƯỚC sấy/ủi
 6. WF_SOFT / WF_FRAG chỉ khi đúng when_use_vi
 7. CẤM mẹo dân gian, thương hiệu ngoài, viện/web/AI/PDF
-8. Không markdown **, ## — Zalo plain text
+8. Không markdown **, ##, *, _ — Zalo plain text thuần (không in dấu ** quanh tiêu đề)
+9. Không trộn tiếng Anh vụng (cấm: external, internal, soft brush…). Lực/hướng viết đủ ngôn ngữ trả lời (Hàn: 바깥→안 / Việt: ngoài→trong)
 
 HÓA CHẤT (bắt buộc):
 - Người nghe đã là chủ tiệm: CẤM nói "mua ở tiệm giặt / 세탁소에서 구입".
   Mua ngoài → siêu thị/약국/cửa hóa chất (buy_where_*). Hàng WF → "kho / cung ứng Wash Friends".
-- KHÔNG đọc mã nội bộ (A3, B1, E1…) cho chủ cửa hàng. Nói tên dùng hàng ngày:
-  name_ko (Hàn) hoặc shop_name_vi / name_vi (Việt). Ví dụ A3 → giấm trắng 5% / 흰 식초.
-- Pha loãng: viết tự nhiên. Hàn: "식초 1 : 물 4" hoặc "식초 1컵에 물 4컵". Việt: "1 phần giấm + 4 phần nước". CẤM dịch máy kiểu "1부분…4부분" gượng.
+- KHÔNG đọc mã nội bộ (A3, B1, E1, S1…) như mã kỹ thuật. Nói tên dùng hàng ngày:
+  name_ko (Hàn) hoặc shop_name_vi / name_vi (Việt). Ví dụ: "워시프렌즈 중성세제", "giấm trắng 5%".
+  Có thể nhắc "본사 공급 중성세제" — không viết "S1" / "A3" trừ khi bắt buộc cực ngắn.
+- Pha loãng: CHỈ dùng dilution_ko (Hàn) hoặc dilution_vi (Việt) nếu có.
+  Không có dilution_* → "병 라벨·본사 안내 따름" / "theo hướng dẫn trên chai / kho WF" — CẤM bịa tỷ lệ (vd 1:4 cho S1).
+  Hàn tự nhiên: "식초 1 : 물 4". Việt: "1 phần giấm + 4 phần nước". CẤM "1부분…4부분".
 - B1 = thuốc tẩy oxy (KHÔNG phải "세제 axit"). A3 = giấm / axit nhẹ.
 - Vải lụa/len HOẶC chemical.safe_on_silk/safe_on_wool = false HOẶC fabric enzyme_safe/acid_safe/can_bleach = false:
-  → KHÔNG khuyến nghị hóa chất không an toàn. Ưu tiên S1 (nước giặt trung tính Wash Friends) + nước lạnh + lực nhẹ.
+  → KHÔNG khuyến nghị hóa chất không an toàn. Ưu tiên nước giặt trung tính Wash Friends + nước lạnh + lực nhẹ.
   → Nếu chỉ còn cảnh báo: nói rõ "không dùng trên lụa/len" thay vì vẫn bảo dùng.
 - Nếu có chemicals_blocked_for_fabric / delicate_chem_rule: tuân thủ tuyệt đối — không lấy bước tẩy/axit/enzyme từ tip nếu đã bị chặn.
 
@@ -597,11 +601,12 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     query_type = graph_context.get("query_type", "unknown")
     if lang == "ko":
         lang_rule = (
-            "청자: 워시프렌즈 점주(동료). 한국어만. "
-            "약품은 name_ko·일상명만 (A3/B1 같은 내부코드 말하지 말 것). "
-            "희석은 '식초 1:물 4'처럼 자연스럽게. "
+            "청자: 워시프렌즈 점주(동료). 한국어만. 마크다운(** ##) 금지. "
+            "힘·방향은 '바깥→안'처럼 한국어만 (external/internal 금지). "
+            "약품은 name_ko·일상명만 (A3/B1/S1 코드 말하지 말 것). "
+            "희석은 dilution_ko만 사용; 없으면 '병 라벨·본사 안내 따름' — 비율 지어내기 금지. "
             "'세탁소에서 구입' 금지 — 슈퍼/약국/화공, WF는 본사·창고 공급. "
-            "실크·울이면 safe_on_silk/wool=false 약품 추천 금지, S1 중성세제 우선. "
+            "실크·울이면 비안전 약품 추천 금지, 워시프렌즈 중성세제 우선. "
             "B1=산소계 표백제(산성 세제 아님). "
             "why/신선·굳음 내용만 쓰고 필드명 출력 금지. 민간요법·다른 오염법 금지. "
             "1)오염·원단 2)도구(name_ko) 3)힘·방향 4)약품 5)수온 6)건조 전 확인."
@@ -609,11 +614,12 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     else:
         lang_rule = (
             "Người nghe: chủ cửa hàng Wash Friends (đồng nghiệp). CHỈ tiếng Việt. "
-            "Hóa chất: nói shop_name_vi / tên thường dùng — CẤM đọc mã A3/B1/E1 cho chủ tiệm. "
-            "Pha loãng tự nhiên: '1 phần giấm + 4 phần nước'. "
+            "CẤM markdown ** ##. Lực/hướng: 'ngoài→trong' — không xen English. "
+            "Hóa chất: shop_name_vi / tên thường — CẤM mã A3/B1/E1/S1. "
+            "Pha loãng: CHỈ dilution_vi; không có → 'theo hướng dẫn trên chai / kho WF' — không bịa tỷ lệ. "
             "CẤM 'mua ở tiệm giặt' — siêu thị/nhà thuốc/cửa hóa chất; hàng WF = kho cung ứng. "
-            "Lụa/len: không khuyến nghị chất safe_on_silk/wool=false; ưu tiên S1. "
-            "B1 = tẩy oxy (không gọi là chất tẩy axit). "
+            "Lụa/len: không khuyến nghị chất bị chặn; ưu tiên nước giặt trung tính Wash Friends. "
+            "B1 = tẩy oxy (không gọi chất tẩy axit). "
             "Không in tên field. Không mẹo dân gian. "
             "1)-6) nhận diện / dụng cụ / lực / hóa chất / nhiệt độ / sau xử lý."
         )
