@@ -418,7 +418,57 @@ def _fetch_graph_context(entities: dict) -> dict:
         context["graph"] = rows[0]
         context["query_type"] = "full_context"
 
+    if isinstance(context.get("graph"), dict):
+        context["graph"] = _apply_fabric_chem_safety(context["graph"])
+
     return context
+
+
+def _apply_fabric_chem_safety(graph: dict) -> dict:
+    """Drop chemicals unsafe for the matched fabric so the LLM cannot recommend them."""
+    fabric = graph.get("fabric_context") or {}
+    if not fabric:
+        return graph
+
+    fid = str(fabric.get("id") or "").upper()
+    fname = f"{fabric.get('name') or ''} {fabric.get('name_vi') or ''}".lower()
+    is_silk = fid == "F4" or "silk" in fname or "lua" in fname or "lụa" in fname
+    is_wool = fid == "F3" or "wool" in fname or " len" in f" {fname}" or fname.strip() == "len"
+
+    chems = [c for c in (graph.get("chemicals") or []) if c]
+    safe, blocked = [], []
+    for c in chems:
+        code = str(c.get("code") or "").upper()
+        reasons = []
+        if is_silk and c.get("safe_on_silk") is False:
+            reasons.append("not_safe_on_silk")
+        if is_wool and c.get("safe_on_wool") is False:
+            reasons.append("not_safe_on_wool")
+        if fabric.get("can_bleach") is False and code in {"B1", "B2", "A4"}:
+            reasons.append("fabric_no_bleach")
+        if fabric.get("acid_safe") is False and code in {"A3", "A5"}:
+            reasons.append("fabric_no_acid")
+        if fabric.get("enzyme_safe") is False and code in {"E1", "E2", "E3"}:
+            reasons.append("fabric_no_enzyme")
+        if reasons:
+            blocked.append({
+                "name_vi": c.get("name_vi"),
+                "name_ko": c.get("name_ko"),
+                "shop_name_vi": c.get("shop_name_vi"),
+                "reason": ",".join(reasons),
+            })
+        else:
+            safe.append(c)
+
+    out = dict(graph)
+    out["chemicals"] = safe
+    if blocked:
+        out["chemicals_blocked_for_fabric"] = blocked
+        out["delicate_chem_rule"] = (
+            "Chi dung chemicals[] con lai. Neu rong: uu tien washfriends_supply S1 + nuoc lanh + luc nhe. "
+            "Cam khuyen nghi chemicals_blocked_for_fabric. Bo qua tip/dried_path neu chung ke chat bi chan."
+        )
+    return out
 
 
 # ─── LLM Responder ────────────────────────────────────────────────────────────
@@ -456,6 +506,7 @@ HÓA CHẤT (bắt buộc):
 - Vải lụa/len HOẶC chemical.safe_on_silk/safe_on_wool = false HOẶC fabric enzyme_safe/acid_safe/can_bleach = false:
   → KHÔNG khuyến nghị hóa chất không an toàn. Ưu tiên S1 (nước giặt trung tính Wash Friends) + nước lạnh + lực nhẹ.
   → Nếu chỉ còn cảnh báo: nói rõ "không dùng trên lụa/len" thay vì vẫn bảo dùng.
+- Nếu có chemicals_blocked_for_fabric / delicate_chem_rule: tuân thủ tuyệt đối — không lấy bước tẩy/axit/enzyme từ tip nếu đã bị chặn.
 
 CẤP LỰC: Cap1 Rat nhe | Cap2 Nhe | Cap3 Vua | Cap4 Manh
 Tối đa 900 từ."""
