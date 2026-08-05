@@ -71,7 +71,8 @@ def _normalize_text(value: str) -> str:
 
 Q_FULL_CONTEXT = """
 MATCH (s:Stain)
-WHERE toLower(coalesce(s.name_vi, '')) CONTAINS toLower($stain_input)
+WHERE ($stain_id <> '' AND s.id = $stain_id)
+   OR toLower(coalesce(s.name_vi, '')) CONTAINS toLower($stain_input)
    OR toLower(coalesce(s.name, '')) CONTAINS toLower($stain_input)
    OR toLower(coalesce(s.id, '')) CONTAINS toLower($stain_input)
 WITH s LIMIT 1
@@ -305,7 +306,6 @@ def _fetch_graph_context(entities: dict) -> dict:
             break
     if alias_hit:
         stain_input = alias_hit
-        # Do not let LLM "mystery/red" routing win over a known franchise phrase
         intent = "treatment"
         context["intent"] = "treatment"
         if alias_hit == "dat do laterite":
@@ -318,13 +318,6 @@ def _fetch_graph_context(entities: dict) -> dict:
             stain_id = "S_RUST"
     elif not stain_input and raw_msg:
         stain_input = raw_msg
-
-    # If we have an exact stain id, prefer id match via full context input
-    if stain_id and not alias_hit:
-        # keep extractor id, but still normalize name path below
-        pass
-    if stain_id and alias_hit:
-        stain_input = stain_id  # Cypher matches s.id CONTAINS / equality via CONTAINS on id
 
     if intent == "daily":
         rows = _run_query(Q_DAILY, {"month": month})
@@ -375,17 +368,18 @@ def _fetch_graph_context(entities: dict) -> dict:
 
     # Default: full treatment protocol
     rows = _run_query(Q_FULL_CONTEXT, {
-        "stain_input":  stain_input,
+        "stain_id": stain_id or "",
+        "stain_input": stain_input,
         "fabric_input": fabric_input,
     })
 
     if not rows or rows[0].get("stain_context") is None:
-        fallback = _fallback_search(stain_input)
+        fallback = _fallback_search(stain_input or stain_id or raw_msg)
         if fallback:
-            # Re-fetch full context using best matched stain id/name
             best = fallback[0]
             rows = _run_query(Q_FULL_CONTEXT, {
-                "stain_input": best.get("id") or best.get("name_vi") or stain_input,
+                "stain_id": best.get("id") or "",
+                "stain_input": best.get("name_vi") or best.get("id") or stain_input,
                 "fabric_input": fabric_input,
             })
             if rows and rows[0].get("stain_context") is not None:
