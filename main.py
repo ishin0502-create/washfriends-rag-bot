@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-05-six-elements-v1",
+            "build": "2026-08-05-rich-safe-v1",
             "checks": checks,
         },
         status_code=200,
@@ -477,6 +477,69 @@ UNWIND [
 MATCH (f:Fabric {id:h.id})
 SET f.dry_hint_vi = h.dry_hint_vi, f.iron_hint_vi = h.iron_hint_vi
 RETURN count(f) AS updated""")
+        # Category explain paths — KB principles only; never invent folk tips
+        _r(s, "Y_paths_protein", """
+MATCH (s:Stain) WHERE s.contains_protein = true
+SET s.why_vi = coalesce(s.why_vi,
+  'Protein bien tinh tren ~40C: nhiet/say lam vet dong cung gan soi — KHONG dao nguoc. Uu tien nuoc lanh + enzyme E1 (khong dung E1 tren len/lua).'),
+    s.fresh_path_vi = coalesce(s.fresh_path_vi,
+  'Vet TUOI: lat mat trai, xa nuoc LANH day protein ra ngoai; co the ngam N2 (muoi) nuoc lanh; roi E1 theo dilution neu con vet. Khong xa phong banh kiem manh neu khong can.'),
+    s.dried_path_vi = coalesce(s.dried_path_vi,
+  'Vet KHO/CU: ngam/cham E1 nuoc lanh 15-60 phut; con mau tren cotton trang co the A4 3% test goc khuat; len/lua: S1 trung tinh, tranh E1/A4 manh.')
+RETURN count(s) AS updated""")
+        _r(s, "Y_paths_oil", """
+MATCH (s:Stain) WHERE s.contains_oil = true AND coalesce(s.contains_protein,false) = false
+SET s.why_vi = coalesce(s.why_vi,
+  'Dau/mo bam soi: can hut (N3) + pha tan (D1/D2) truoc khi giat. Say khi con dau se khoa vet.'),
+    s.fresh_path_vi = coalesce(s.fresh_path_vi,
+  'Vet TUOI: thấm bot N3 hut dau → D2/D1 cham mat trai → xa → giat. Thong gio khi dung dung moi.'),
+    s.dried_path_vi = coalesce(s.dried_path_vi,
+  'Vet KHO: N3 day 1-2 lan → D1/D2 lap lai → D3/giat. Kiem tra het nhon truoc say.')
+RETURN count(s) AS updated""")
+        _r(s, "Y_paths_tannin", """
+MATCH (s:Stain) WHERE s.contains_tannin = true AND coalesce(s.contains_protein,false) = false AND coalesce(s.contains_oil,false) = false
+SET s.why_vi = coalesce(s.why_vi,
+  'Tannin (ca phe/tra/ruou...): xu ly SOM + nuoc lanh; acid nhe (A3) ho tro; nhiet som co the khoa mau.'),
+    s.fresh_path_vi = coalesce(s.fresh_path_vi,
+  'Vet TUOI: tham mat trai nuoc lanh → A3 pha 1:4 neu can → giat. Test goc khuat truoc khi tay manh.'),
+    s.dried_path_vi = coalesce(s.dried_path_vi,
+  'Vet KHO: A3 → neu con mau B1 (khong len/lua) → kiem tra truoc say.')
+RETURN count(s) AS updated""")
+        _r(s, "Y_paths_dye", """
+MATCH (s:Stain) WHERE s.contains_dye = true AND coalesce(s.contains_oil,false) = false AND coalesce(s.contains_protein,false) = false AND coalesce(s.contains_tannin,false) = false
+SET s.why_vi = coalesce(s.why_vi,
+  'Mau muc/but: de lan. Chi CHAM/THAM mat trai; nhiet say khoa mau muc.'),
+    s.fresh_path_vi = coalesce(s.fresh_path_vi,
+  'Vet TUOI: lot giay tham, cham A1/A2 mat trai, thay khan lien — khong cha.'),
+    s.dried_path_vi = coalesce(s.dried_path_vi,
+  'Vet KHO: lap A1/A2 nhe; thong bao khach neu khong het 100%; het muc moi say.')
+RETURN count(s) AS updated""")
+        _r(s, "Z_paths_overrides", """
+UNWIND [
+  {id:'S_BLOOD_FRESH',
+   why_vi:'Mau = hemoglobin (protein + sat). Nuoc nong/say bien tinh protein, sat bam soi tao vet nau vinh vien. Chi nuoc LANH ban dau.',
+   fresh_path_vi:'LAT mat trai, xa nuoc LANH manh day mau ra; N2 ngam neu can; con nhat → E1. KHONG nuoc nong, KHONG say khi con vet.',
+   dried_path_vi:'Da kho/nau: E1 ngam lanh; cotton TRANG con mau co the A4 3% test goc khuat 10-15 phut; len/lua tranh E1/A4 — dung S1 + bao khach.'},
+  {id:'S_BLOOD_DRY',
+   why_vi:'Mau kho: protein da gan soi. Can enzyme pha chuoi protein; nhiet van cam truoc khi sach.',
+   fresh_path_vi:'Neu con am: xu ly nhu mau tuoi — xa lanh mat trai truoc.',
+   dried_path_vi:'E1 ngam/cham; A4 chi vai trang sau khi test; kiem tra ky truoc say.'},
+  {id:'S_MOTORBIKE_OIL',
+   why_vi:'Dau nhot xe may: dau kho + carbon. Can hut N3 + dung moi D1, thong gio.',
+   fresh_path_vi:'N3 day → D1 cham → A1 neu can → D3/giat cotton-poly.',
+   dried_path_vi:'N3 2 lan → D1 lap → kiem tra nhon truoc say. Khong silk/wool nhiet cao.'},
+  {id:'S_BLACK_COFFEE',
+   why_vi:'Ca phe den = tannin + mau. Xu ly som nuoc lanh; A3 ho tro; say som khoa mau.',
+   fresh_path_vi:'Tham/xa lanh mat trai → A3 1:4 → giat.',
+   dried_path_vi:'A3 → B1 neu con mau (khong len/lua) → kiem tra truoc say.'},
+  {id:'S_MILK_COFFEE',
+   why_vi:'Ca phe sua: tannin + protein sua. Xu ly protein (E1/lanh) truoc, roi tannin (A3).',
+   fresh_path_vi:'Xa lanh → E1 neu can cho phan sua → A3 cho tannin → giat.',
+   dried_path_vi:'E1 ngam lanh → A3 → kiem tra truoc say; B1 chi khi con mau va vai cho phep.'}
+] AS o
+MATCH (s:Stain {id:o.id})
+SET s.why_vi = o.why_vi, s.fresh_path_vi = o.fresh_path_vi, s.dried_path_vi = o.dried_path_vi
+RETURN count(s) AS updated""")
         _r(s, "S_clear_answer_cache", """
 MATCH (c:AnswerCache)
 WITH collect(c) AS nodes

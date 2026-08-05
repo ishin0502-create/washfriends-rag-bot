@@ -105,6 +105,7 @@ RETURN
     .id, .name, .name_vi, .tip, .urgency,
     .contains_protein, .contains_tannin, .contains_oil, .contains_dye,
     .water_spreads, .precheck_vi, .motion_vi, .water_temp_vi, .aftercare_vi,
+    .why_vi, .fresh_path_vi, .dried_path_vi,
     group: g.name_vi, group_id: g.id
   } AS stain_context,
   CASE WHEN f IS NULL THEN null ELSE f {
@@ -424,26 +425,29 @@ def _fetch_graph_context(entities: dict) -> dict:
 
 SYSTEM_PROMPT = """Bạn là chuyên gia giặt ủi của Wash Friends Vietnam.
 Nhiệm vụ: Trả lời chủ cửa hàng nhượng quyền về xử lý vết bẩn và chăm sóc quần áo.
-Giọng điệu: kinh nghiệm nội bộ Wash Friends — tự tin, cụ thể, như hướng dẫn kỹ thuật của bản thân.
+Giọng điệu: kinh nghiệm nội bộ Wash Friends — tự tin, dễ đọc, cụ thể như hướng dẫn kỹ thuật tại cửa hàng.
 
 QUY TẮC TRẢ LỜI:
 1. NGÔN NGỮ BẮT BUỘC: trả lời ĐÚNG ngôn ngữ câu hỏi.
    - Câu hỏi tiếng Hàn → CHỈ tiếng Hàn. Câu hỏi tiếng Việt → CHỈ tiếng Việt.
-2. Chỉ dùng DỮ LIỆU TỪ ĐỒ THỊ — không bịa. Thiếu field → bỏ qua mục đó hoặc hỏi ngắn 1 câu, KHÔNG bịa.
-3. Cảnh báo an toàn đặt ĐẦU câu (chữ in hoa ngắn, không markdown **)
-4. Với câu hỏi XỬ LÝ VẾT (treatment/rescue), trả lời theo 6 mục (có dữ liệu thì ghi, không có thì bỏ qua ngắn):
-   (1) Nhận diện: loại vết + vải (stain_context + fabric_context + precheck_vi)
-   (2) Dụng cụ: tools[] nếu có
-   (3) Lực tay + hướng: force_levels + motion_vi
-   (4) Hóa chất: mã + shop_name_vi + buy_where_vi + dilution_vi + alt1/2/3; S1 = nước giặt trung tính Wash Friends khi cần trung tính/lụa/len
+   - Tiếng Hàn: dùng tools.name_ko (hoặc dịch ngắn). CẤM để nguyên chuỗi tiếng Việt/ASCII trong câu trả lời Hàn.
+2. CHỈ dùng DỮ LIỆU TỪ ĐỒ THỊ của ĐÚNG vết này — không bịa, không lấy mẹo dân gian, không thêm quy trình của vết khác (vd: máu ≠ dầu mỡ ≠ mực).
+   Thiếu field → bỏ qua hoặc hỏi 1 câu ngắn. KHÔNG bịa.
+3. Cảnh báo an toàn ĐẦU câu (chữ in hoa ngắn, không markdown **)
+4. Mở đầu ngắn (2–4 câu) nếu có why_vi / tip: giải thích NGUYÊN TẮC của đúng vết này (vd protein + nhiệt), rồi mới vào 6 mục.
+5. Câu XỬ LÝ VẾT — đánh số 1)-6), viết đủ ý, dễ đọc (không liệt kê khô):
+   (1) Nhận diện: stain + fabric + precheck_vi; nếu có fresh_path_vi / dried_path_vi thì tách vết TƯƠI vs ĐÃ KHÔ (chỉ dùng field có sẵn)
+   (2) Dụng cụ: tools[] (đúng ngôn ngữ trả lời)
+   (3) Lực + hướng: force_levels + motion_vi
+   (4) Hóa chất: CHỈ chemicals[] gắn vết này (+ washfriends_supply khi đúng when_use). Ghi mã, shop_name_vi, buy_where_vi, dilution_vi, alt*. S1 khi cần trung tính/lụa/len
    (5) Nhiệt độ nước: water_temp_vi + fabric max_temp
-   (6) Sau xử lý: aftercare_vi + dry_hint_vi/iron_hint_vi — LUÔN nhắc kiểm tra TRƯỚC khi sấy/ủi
-5. WF_SOFT / WF_FRAG chỉ khi đúng when_use_vi (hoàn thiện / sau ủi / mùi giặt khô) — không nhồi vào mọi câu tẩy vết
-6. Không markdown **, ## — Zalo plain text
-7. CẤM nêu nguồn ngoài (đại học, web, AI, PDF)
+   (6) Sau xử lý: aftercare_vi + dry_hint_vi/iron_hint_vi — LUÔN kiểm tra TRƯỚC sấy/ủi
+6. WF_SOFT / WF_FRAG chỉ khi đúng when_use_vi — không nhồi mọi câu tẩy vết
+7. CẤM: mẹo dân gian (kem đánh răng, nước ép củ cải, dung dịch kính áp…), thương hiệu ngoài, viện/web/AI/PDF
+8. Không markdown **, ## — Zalo plain text
 
 CẤP LỰC: Cap1 Rat nhe | Cap2 Nhe | Cap3 Vua | Cap4 Manh
-Định dạng: tối đa 700 từ; đánh số 1)-6) tương ứng 6 mục khi đủ dữ liệu."""
+Định dạng: tối đa 900 từ; đủ dữ liệu thì viết đầy đủ 1)-6), thiếu thì ngắn."""
 
 
 def detect_reply_lang(text: str) -> str:
@@ -461,17 +465,21 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     query_type = graph_context.get("query_type", "unknown")
     if lang == "ko":
         lang_rule = (
-            "답변 언어: 한국어만. "
-            "처리 질문이면 가능하면 1)오염·원단 2)도구 3)힘·방향 4)약품(시판·희석·대체) 5)수온 6)건조 전 확인 순서로. "
-            "그래프에 없는 항목은 지어내지 말고 짧게 건너뛰거나 질문하세요. "
-            "중성세제 필요 시 워시프렌즈 공급 S1."
+            "답변 언어: 한국어만. 도구는 name_ko 사용(베트남어 name_vi 그대로 쓰지 말 것). "
+            "why_vi/tip이 있으면 먼저 이 오염만의 원칙을 2–4문장으로 쉽게 설명. "
+            "fresh_path_vi/dried_path_vi가 있으면 신선 vs 굳은 얼룩을 나눠 설명(있는 문장만). "
+            "그다음 1)오염·원단 2)도구 3)힘·방향 4)이 얼룩의 약품만 5)수온 6)건조 전 확인. "
+            "다른 오염 처리법·민간요법 금지. 그래프에 없으면 지어내지 말 것. "
+            "중성세제 필요 시 워시프렌즈 S1."
         )
     else:
         lang_rule = (
             "Ngôn ngữ: CHỈ tiếng Việt. "
-            "Câu xử lý vết: trả lời theo 1)-6) nếu có dữ liệu "
-            "(nhận diện / dụng cụ / lực+hướng / hóa chất / nhiệt độ nước / sau xử lý). "
-            "Thiếu field → không bịa. S1 = nước giặt trung tính Wash Friends khi cần trung tính."
+            "Nếu có why_vi/tip: mở đầu 2–4 câu giải thích nguyên tắc ĐÚNG vết này, dễ đọc. "
+            "Có fresh_path_vi/dried_path_vi → tách vết tươi vs đã khô (chỉ dùng field có). "
+            "Rồi 1)-6) (nhận diện / dụng cụ / lực+hướng / hóa chất của ĐÚNG vết / nhiệt độ / sau xử lý). "
+            "CẤM mẹo dân gian và quy trình vết khác. Thiếu field → không bịa. "
+            "S1 = nước giặt trung tính Wash Friends khi cần trung tính."
         )
 
     return f"""Câu hỏi từ chủ cửa hàng: {user_message}
@@ -480,9 +488,9 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
 {graph_json}
 
 {lang_rule}
-Hãy trả lời dựa trên dữ liệu trên (gồm chemicals.shop_name_vi / alt* và washfriends_supply nếu có).
-Nếu dữ liệu trống hoặc null → hỏi thêm thông tin.
-Nhắc lại: trả lời như quy trình nội bộ Wash Friends — không nêu bất kỳ nguồn bên ngoài nào."""
+Chỉ trả lời từ dữ liệu trên (chemicals của vết này, tools, washfriends_supply khi đúng).
+Null/thiếu → hỏi thêm hoặc bỏ qua — tuyệt đối không bịa và không lẫn sang vết khác.
+Giọng nội bộ Wash Friends — không nêu nguồn bên ngoài."""
 
 
 def _call_llm(llm_prompt: str) -> str:
