@@ -387,6 +387,13 @@ def _fetch_graph_context(entities: dict) -> dict:
             fabric_input = _ITEM_FABRIC_TOKEN.get(item_id, "")
             if fabric_input:
                 entities["fabric_type"] = fabric_input
+        # "Can I wash this fur/suit?" must not early-exit as price/safety with empty graph
+        if intent in ("price", "safety", "mystery", "browse") and not (
+            entities.get("stain_id") or (entities.get("stain_type") or "").strip()
+        ):
+            intent = "treatment"
+            context["intent"] = "treatment"
+            entities["intent"] = "treatment"
 
     # Prefer franchise phrasing in the raw message over a wrong LLM entity guess
     _ALIASES = (
@@ -551,12 +558,28 @@ def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
         context["query_type"] = "item_care"
         return context
     g = dict(g)
-    g["item_context"] = item_graph.get("item_context")
+    ic = item_graph.get("item_context") or {}
+    g["item_context"] = ic
     if not g.get("fabric_context") and item_graph.get("fabric_context"):
         g["fabric_context"] = item_graph["fabric_context"]
-    # Prefer item tools/chems when stain chem list empty
-    if not g.get("tools") and item_graph.get("tools"):
+    # Overlay item care SOP onto stain fields so 1)-6) follows the garment, not a generic stain
+    sc = dict(g.get("stain_context") or {})
+    for key in (
+        "precheck_vi", "why_vi", "fresh_path_vi", "dried_path_vi",
+        "motion_vi", "water_temp_vi", "aftercare_vi",
+    ):
+        if ic.get(key):
+            sc[key] = ic[key]
+    if ic.get("why_vi"):
+        sc["tip"] = ic.get("why_vi")
+    g["stain_context"] = sc
+    # Prefer item tools/chems for specialty garments
+    if item_graph.get("tools"):
         g["tools"] = item_graph.get("tools")
+    if item_graph.get("chemicals"):
+        g["chemicals"] = item_graph.get("chemicals")
+    if item_graph.get("never_use_on_fabric"):
+        g["never_use_on_fabric"] = item_graph.get("never_use_on_fabric")
     context["graph"] = g
     return context
 

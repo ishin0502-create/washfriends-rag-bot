@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-specialty-v1",
+            "build": "2026-08-06-specialty-v2",
             "checks": checks,
         },
         status_code=200,
@@ -799,8 +799,10 @@ WITH cloth, soft, ultra, hard, shoe
 MATCH (d2:Chemical {code:'D2'}), (d3:Chemical {code:'D3'}), (a1:Chemical {code:'A1'}), (n1:Chemical {code:'N1'})
 WITH cloth, soft, ultra, hard, shoe, d2, d3, a1, n1
 MATCH (i:Item)
-FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_LEATHER_SHOE','I_GLOVE_LEATHER','I_GOLF_GLOVE_LEATHER'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_LEATHER_SHOE','I_GLOVE_LEATHER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(a1))
+FOREACH (_ IN CASE WHEN i.id = 'I_GOLF_GLOVE_LEATHER' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth))
 FOREACH (_ IN CASE WHEN i.id IN ['I_SUEDE_GARMENT','I_SUEDE_BAG','I_SUEDE_SHOE'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth))
 FOREACH (_ IN CASE WHEN i.id IN ['I_SNEAKER','I_RUNNING_MESH','I_SNEAKER_WHITE','I_GOLF_SHOE','I_HIKING_SHOE'] THEN [1] ELSE [] END |
