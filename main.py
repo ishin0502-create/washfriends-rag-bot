@@ -116,6 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
+            "build": "2026-08-04-kb-v3-da815",
             "checks": checks,
         },
         status_code=200,
@@ -375,6 +376,12 @@ RETURN count(*) AS rels""")
         log["after"] = {row["l"]: row["c"] for row in r2}
         r3 = s.run("MATCH ()-[r]->() RETURN type(r) AS t, count(r) AS c ORDER BY t")
         log["relationships"] = {row["t"]: row["c"] for row in r3}
+        r4 = s.run(
+            "MATCH (s:Stain) WHERE s.id IN "
+            "['S_LATERITE','S_MOTORBIKE_OIL','S_MILDEW','S_RUST'] "
+            "RETURN s.id AS id, s.name_vi AS name_vi ORDER BY id"
+        )
+        log["vn_specialty_stains"] = [dict(row) for row in r4]
     _drv.close()
     return JSONResponse(log)
 

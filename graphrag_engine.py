@@ -499,6 +499,18 @@ def generate_response(user_message: str) -> str:
     """Main entry point: given a user message, return a Vietnamese chatbot response."""
     entities = extract_entities(user_message)
     entities["_raw"] = user_message
+    # Hard override for high-value VN franchise phrases (before graph routing)
+    raw_n = _normalize_text(user_message)
+    if "laterite" in raw_n or "dat do" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_LATERITE"
+        entities["stain_type"] = "dat do laterite"
+    elif "dau nhot xe may" in raw_n or (
+        "dau nhot" in raw_n and "xe may" in raw_n
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_MOTORBIKE_OIL"
+        entities["stain_type"] = "dau nhot xe may"
     graph_context = _fetch_graph_context(entities)
     graph_data = graph_context.get("graph")
 
