@@ -436,7 +436,7 @@ QUY TẮC TRẢ LỜI:
 3. Cảnh báo an toàn ĐẦU câu (chữ in hoa ngắn, không markdown **)
 4. Mở đầu ngắn (2–4 câu) nếu có why_vi / tip: giải thích NGUYÊN TẮC của đúng vết này (vd protein + nhiệt), rồi mới vào 6 mục.
 5. Câu XỬ LÝ VẾT — đánh số 1)-6), viết đủ ý, dễ đọc (không liệt kê khô):
-   (1) Nhận diện: stain + fabric + precheck_vi; nếu có fresh_path_vi / dried_path_vi thì tách vết TƯƠI vs ĐÃ KHÔ (chỉ dùng field có sẵn)
+   (1) Nhận diện: stain + fabric + precheck_vi; nếu có fresh_path_vi / dried_path_vi thì tách vết TƯƠI vs ĐÃ KHÔ — viết NỘI DUNG hướng dẫn, CẤM in tên field (vd: không viết chữ "fresh_path_vi")
    (2) Dụng cụ: tools[] (đúng ngôn ngữ trả lời)
    (3) Lực + hướng: force_levels + motion_vi
    (4) Hóa chất: CHỈ chemicals[] gắn vết này (+ washfriends_supply khi đúng when_use). Ghi mã, shop_name_vi, buy_where_vi, dilution_vi, alt*. S1 khi cần trung tính/lụa/len
@@ -467,7 +467,7 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
         lang_rule = (
             "답변 언어: 한국어만. 도구는 name_ko 사용(베트남어 name_vi 그대로 쓰지 말 것). "
             "why_vi/tip이 있으면 먼저 이 오염만의 원칙을 2–4문장으로 쉽게 설명. "
-            "fresh_path_vi/dried_path_vi가 있으면 신선 vs 굳은 얼룩을 나눠 설명(있는 문장만). "
+            "fresh_path_vi/dried_path_vi가 있으면 신선 vs 굳은 얼룩을 나눠 설명(필드 이름 출력 금지, 내용만). "
             "그다음 1)오염·원단 2)도구 3)힘·방향 4)이 얼룩의 약품만 5)수온 6)건조 전 확인. "
             "다른 오염 처리법·민간요법 금지. 그래프에 없으면 지어내지 말 것. "
             "중성세제 필요 시 워시프렌즈 S1."
@@ -476,7 +476,7 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
         lang_rule = (
             "Ngôn ngữ: CHỈ tiếng Việt. "
             "Nếu có why_vi/tip: mở đầu 2–4 câu giải thích nguyên tắc ĐÚNG vết này, dễ đọc. "
-            "Có fresh_path_vi/dried_path_vi → tách vết tươi vs đã khô (chỉ dùng field có). "
+            "Có fresh_path_vi/dried_path_vi → tách vết tươi vs đã khô bằng NỘI DUNG (không in tên field). "
             "Rồi 1)-6) (nhận diện / dụng cụ / lực+hướng / hóa chất của ĐÚNG vết / nhiệt độ / sau xử lý). "
             "CẤM mẹo dân gian và quy trình vết khác. Thiếu field → không bịa. "
             "S1 = nước giặt trung tính Wash Friends khi cần trung tính."
