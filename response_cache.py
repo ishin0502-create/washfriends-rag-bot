@@ -68,8 +68,8 @@ def max_entries() -> int:
 
 
 def cache_version() -> str:
-    # v2: reply language must match question (ko/vi) — invalidate mixed-language cache
-    return os.getenv("ANSWER_CACHE_VERSION", "v2")
+    # v3: shop names + WF supply products in answers
+    return os.getenv("ANSWER_CACHE_VERSION", "v3")
 
 
 def _normalize_key(text: str) -> str:

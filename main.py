@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-05-lang-match-v1",
+            "build": "2026-08-05-wf-products-v1",
             "checks": checks,
         },
         status_code=200,
@@ -255,23 +255,25 @@ UNWIND [
 ] AS f MERGE (n:Fabric {id:f.id}) SET n += f RETURN count(n) AS created""")
         _r(s, "E_chemicals", """
 UNWIND [
-  {code:'E1',name:'Protease Enzyme',name_vi:'Enzyme protease',role:'Breaks protein chains',safe_on_wool:false,safe_on_silk:false},
-  {code:'E2',name:'Amylase Enzyme',name_vi:'Enzyme amylase',role:'Breaks starch',safe_on_wool:false,safe_on_silk:false},
-  {code:'E3',name:'Lipase Enzyme',name_vi:'Enzyme lipase',role:'Breaks fat/oil',safe_on_wool:false,safe_on_silk:false},
-  {code:'D1',name:'Solvent Degreaser',name_vi:'Dung moi tay dau',role:'Dissolves heavy oil - use with ventilation',safe_on_wool:false,safe_on_silk:false},
-  {code:'D2',name:'Dish Soap',name_vi:'Nuoc rua chen',role:'Mild surfactant safe for most fabrics',safe_on_wool:true,safe_on_silk:true},
-  {code:'D3',name:'Strong Detergent',name_vi:'Bot giat manh',role:'Heavy-duty washing detergent',safe_on_wool:false,safe_on_silk:false},
-  {code:'B1',name:'Oxygen Bleach',name_vi:'Tay oxy',role:'Color-safe bleach',safe_on_wool:false,safe_on_silk:false},
-  {code:'B2',name:'Chlorine Bleach',name_vi:'Javel',role:'Strong bleach WHITE cotton ONLY',safe_on_wool:false,safe_on_silk:false},
-  {code:'A1',name:'Isopropyl Alcohol',name_vi:'Con isopropyl',role:'Dissolves pigments ink polish curcumin',safe_on_wool:false,safe_on_silk:false},
-  {code:'A2',name:'Acetone',name_vi:'Acetone',role:'Strong solvent for polymer stains gum nail polish',safe_on_wool:false,safe_on_silk:false},
-  {code:'A3',name:'White Vinegar 5%',name_vi:'Giam trang 5%',role:'Mild acid breaks tannin bonds neutralizes alkali odor',safe_on_wool:false,safe_on_silk:false},
-  {code:'A4',name:'Hydrogen Peroxide 3%',name_vi:'Hydrogen peroxide 3%',role:'Light oxidizer for white fabrics',safe_on_wool:false,safe_on_silk:false},
-  {code:'A5',name:'Diluted Ammonia',name_vi:'Ammonia pha loang',role:'Mild alkali for old protein - NEVER mix with bleach',safe_on_wool:false,safe_on_silk:false},
-  {code:'N1',name:'Baking Soda',name_vi:'Baking soda',role:'Mild abrasive odor absorber alkaline for curcumin',safe_on_wool:true,safe_on_silk:false},
-  {code:'N2',name:'Table Salt',name_vi:'Muoi an',role:'Draws out fresh blood and tannin',safe_on_wool:true,safe_on_silk:true},
-  {code:'N3',name:'Corn Starch/Talc',name_vi:'Bot ngo/bot talc',role:'Oil absorber first step for all oil stains',safe_on_wool:true,safe_on_silk:true},
-  {code:'S1',name:'Silk/Wool Detergent',name_vi:'Nuoc giat to lua',role:'pH-neutral for delicate protein fibers',safe_on_wool:true,safe_on_silk:true}
+  {code:'E1',name:'Protease Enzyme',name_vi:'Enzyme protease',role:'Breaks protein chains',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Nuoc giat co enzyme / bot ngam enzyme',buy_where_vi:'Sieu thi',alt1_vi:'Ngam nuoc giat enzyme',alt2_vi:'Khong dung len/lua — chuyen S1',alt3_vi:'',example_brands_vi:'Nuoc giat ghi enzyme tren nhan',wf_supply:false,when_use_vi:''},
+  {code:'E2',name:'Amylase Enzyme',name_vi:'Enzyme amylase',role:'Breaks starch',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Nuoc giat enzyme (tinh bot)',buy_where_vi:'Sieu thi',alt1_vi:'E1 combo neu co',alt2_vi:'',alt3_vi:'',example_brands_vi:'',wf_supply:false,when_use_vi:''},
+  {code:'E3',name:'Lipase Enzyme',name_vi:'Enzyme lipase',role:'Breaks fat/oil',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Nuoc giat enzyme (dau mo)',buy_where_vi:'Sieu thi',alt1_vi:'D2 + E1',alt2_vi:'',alt3_vi:'',example_brands_vi:'',wf_supply:false,when_use_vi:''},
+  {code:'D1',name:'Solvent Degreaser',name_vi:'Dung moi tay dau',role:'Dissolves heavy oil - use with ventilation',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Dung moi tay dau / tay nhot',buy_where_vi:'Cua o to, cua hoa chat — THONG GIO',alt1_vi:'D2 dac + kien nhan',alt2_vi:'San pham tay dau xe may',alt3_vi:'',example_brands_vi:'',wf_supply:false,when_use_vi:''},
+  {code:'D2',name:'Dish Soap',name_vi:'Nuoc rua chen',role:'Mild surfactant safe for most fabrics',safe_on_wool:true,safe_on_silk:true,shop_name_vi:'Nuoc rua chen',buy_where_vi:'Sieu thi',alt1_vi:'Nuoc rua chen dam dac',alt2_vi:'',alt3_vi:'',example_brands_vi:'Sunlight, Mama, My Hao (vi du)',wf_supply:false,when_use_vi:''},
+  {code:'D3',name:'Strong Detergent',name_vi:'Bot giat manh',role:'Heavy-duty washing detergent',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Nuoc giat / bot giat dam',buy_where_vi:'Sieu thi',alt1_vi:'Nuoc giat liquid dam',alt2_vi:'',alt3_vi:'',example_brands_vi:'',wf_supply:false,when_use_vi:''},
+  {code:'B1',name:'Oxygen Bleach',name_vi:'Tay oxy',role:'Color-safe bleach',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Bot tay oxy / tay mau an toan',buy_where_vi:'Sieu thi ke giat',alt1_vi:'Bot tay vai mau',alt2_vi:'Khong dung len/lua',alt3_vi:'',example_brands_vi:'',wf_supply:false,when_use_vi:''},
+  {code:'B2',name:'Chlorine Bleach',name_vi:'Javel',role:'Strong bleach WHITE cotton ONLY',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Nuoc Javel / nuoc tay trang',buy_where_vi:'Sieu thi',alt1_vi:'CHI cotton trang',alt2_vi:'Khong mau/len/lua',alt3_vi:'',example_brands_vi:'',wf_supply:false,when_use_vi:''},
+  {code:'A1',name:'Isopropyl Alcohol',name_vi:'Con isopropyl',role:'Dissolves pigments ink polish curcumin',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Con sat khuan / con y te 70-90%',buy_where_vi:'Nha thuoc, sieu thi',alt1_vi:'Alcohol sat trung 70%',alt2_vi:'Nuoc tay trang co con (test goc khuat)',alt3_vi:'Chat tay muc chuyen dung',example_brands_vi:'Con y te 70% / 90% (vi du)',wf_supply:false,when_use_vi:''},
+  {code:'A2',name:'Acetone',name_vi:'Acetone',role:'Strong solvent for polymer stains gum nail polish',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Acetone / dung moi son mong',buy_where_vi:'Nha thuoc, cua hoa chat',alt1_vi:'Nuoc tay son mong khong dau',alt2_vi:'A1 neu vet nhe',alt3_vi:'Mang do chuyen sau',example_brands_vi:'',wf_supply:false,when_use_vi:''},
+  {code:'A3',name:'White Vinegar 5%',name_vi:'Giam trang 5%',role:'Mild acid breaks tannin bonds neutralizes alkali odor',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Giam trang nau an / giam tinh',buy_where_vi:'Sieu thi',alt1_vi:'Giam an pha loang',alt2_vi:'Nuoc cot chanh pha (test mau)',alt3_vi:'',example_brands_vi:'',wf_supply:false,when_use_vi:''},
+  {code:'A4',name:'Hydrogen Peroxide 3%',name_vi:'Hydrogen peroxide 3%',role:'Light oxidizer for white fabrics',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Oxy gia 3% / hydrogen peroxide',buy_where_vi:'Nha thuoc',alt1_vi:'Oxy gia 3% pharmacy',alt2_vi:'B1 nhe tren trang',alt3_vi:'',example_brands_vi:'',wf_supply:false,when_use_vi:''},
+  {code:'A5',name:'Diluted Ammonia',name_vi:'Ammonia pha loang',role:'Mild alkali for old protein - NEVER mix with bleach',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Nuoc ammonia / amoniac pha',buy_where_vi:'Cua hoa chat',alt1_vi:'KHONG tron B2',alt2_vi:'E1 cho protein cu neu an toan vai',alt3_vi:'',example_brands_vi:'',wf_supply:false,when_use_vi:''},
+  {code:'N1',name:'Baking Soda',name_vi:'Baking soda',role:'Mild abrasive odor absorber alkaline for curcumin',safe_on_wool:true,safe_on_silk:false,shop_name_vi:'Bot baking soda / muoi no',buy_where_vi:'Sieu thi, bakery',alt1_vi:'',alt2_vi:'',alt3_vi:'',example_brands_vi:'',wf_supply:false,when_use_vi:''},
+  {code:'N2',name:'Table Salt',name_vi:'Muoi an',role:'Draws out fresh blood and tannin',safe_on_wool:true,safe_on_silk:true,shop_name_vi:'Muoi tinh',buy_where_vi:'Sieu thi',alt1_vi:'',alt2_vi:'',alt3_vi:'',example_brands_vi:'',wf_supply:false,when_use_vi:''},
+  {code:'N3',name:'Corn Starch/Talc',name_vi:'Bot ngo/bot talc',role:'Oil absorber first step for all oil stains',safe_on_wool:true,safe_on_silk:true,shop_name_vi:'Bot bap / phan rom / bot nang',buy_where_vi:'Sieu thi',alt1_vi:'Phan em be (khong dau)',alt2_vi:'',alt3_vi:'',example_brands_vi:'',wf_supply:false,when_use_vi:''},
+  {code:'S1',name:'Wash Friends Neutral Detergent',name_vi:'Nuoc giat trung tinh Wash Friends',role:'WF supply pH-neutral for silk wool delicate',safe_on_wool:true,safe_on_silk:true,shop_name_vi:'Nuoc giat trung tinh do Wash Friends cung cap',buy_where_vi:'Kho hang / cung ung Wash Friends',alt1_vi:'Wool shampoo neu het hang WF',alt2_vi:'Giat tay nuoc lanh rat nhe',alt3_vi:'Khong dung enzyme',example_brands_vi:'Wash Friends supply',wf_supply:true,when_use_vi:'Bat buoc uu tien khi can chat giat trung tinh / lua / len'},
+  {code:'WF_SOFT',name:'Wash Friends Softener',name_vi:'Nuoc xa Softener Wash Friends',role:'WF fabric softener - popular fragrance',safe_on_wool:true,safe_on_silk:true,shop_name_vi:'Nuoc xa / lam mem vai Wash Friends',buy_where_vi:'Kho hang Wash Friends',alt1_vi:'Giam lieu neu khach ghet huong dam',alt2_vi:'Bo qua neu khach yeu cau khong xa',alt3_vi:'',example_brands_vi:'Wash Friends supply',wf_supply:true,when_use_vi:'Chi khi hoan thien / xa vai — khong nhac moi cau vet ban'},
+  {code:'WF_FRAG',name:'Wash Friends German Fragrance Spray',name_vi:'Xit huong Duc Wash Friends',role:'Premium fragrance spray after dry or before dry',safe_on_wool:true,safe_on_silk:true,shop_name_vi:'Xit huong (Duc) Wash Friends',buy_where_vi:'Kho hang Wash Friends',alt1_vi:'Xit nhe — dung qua nhieu',alt2_vi:'',alt3_vi:'',example_brands_vi:'Wash Friends supply',wf_supply:true,when_use_vi:'CHI: do cao cap / sau ui / khach ghet mui giat kho — xit nhe. Khong nhac neu chi hoi xu ly vet ban'}
 ] AS c MERGE (n:Chemical {code:c.code}) SET n += c RETURN count(n) AS created""")
         _r(s, "F_stains_protein", """
 UNWIND [

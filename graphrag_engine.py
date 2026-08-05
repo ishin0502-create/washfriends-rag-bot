@@ -97,6 +97,8 @@ OPTIONAL MATCH (f)-[:NEVER_USE]->(blocked:Chemical)
 OPTIONAL MATCH (chem)-[:NEVER_MIX_WITH]->(dangerous:Chemical)
 OPTIONAL MATCH (cr:ClimateRule)
   WHERE cr.id STARTS WITH 'CR'
+OPTIONAL MATCH (wf:Chemical)
+  WHERE wf.wf_supply = true OR wf.code IN ['S1','WF_SOFT','WF_FRAG']
 RETURN
   s {
     .id, .name, .name_vi, .tip, .urgency,
@@ -107,8 +109,14 @@ RETURN
     .id, .name, .name_vi, .max_temp, .can_bleach, .enzyme_safe, .acid_safe
   } END AS fabric_context,
   COLLECT(DISTINCT chem {
-    .code, .name, .name_vi, .role, .safe_on_wool, .safe_on_silk
+    .code, .name, .name_vi, .role, .safe_on_wool, .safe_on_silk,
+    .shop_name_vi, .buy_where_vi, .alt1_vi, .alt2_vi, .alt3_vi,
+    .example_brands_vi, .wf_supply, .when_use_vi
   }) AS chemicals,
+  COLLECT(DISTINCT wf {
+    .code, .name, .name_vi, .role, .shop_name_vi, .buy_where_vi,
+    .alt1_vi, .alt2_vi, .when_use_vi, .wf_supply
+  }) AS washfriends_supply,
   COLLECT(DISTINCT force {
     .level, .name, .description
   }) AS force_levels,
@@ -145,7 +153,9 @@ WHERE s.id = $stain_id
 WITH s LIMIT 1
 OPTIONAL MATCH (s)-[:USES_CHEMICAL]->(chem:Chemical)
 RETURN s.name_vi AS stain_vi, s.tip AS tip, s.urgency AS urgency,
-  COLLECT(DISTINCT chem {.code, .name_vi, .role}) AS chemicals,
+  COLLECT(DISTINCT chem {
+    .code, .name_vi, .role, .shop_name_vi, .buy_where_vi, .alt1_vi, .alt2_vi, .alt3_vi, .wf_supply
+  }) AS chemicals,
   CASE $attempt_number
     WHEN 1 THEN 'Thu lai: ngam enzyme/giấm them 20-30 phut, khong dung nhiet cao.'
     WHEN 2 THEN 'Phuong an C: chuyen sang oxy bleach (B1) neu vai cho phep, hoac thong bao khach.'
@@ -414,24 +424,27 @@ QUY TẮC TRẢ LỜI:
 1. NGÔN NGỮ BẮT BUỘC: trả lời ĐÚNG ngôn ngữ câu hỏi.
    - Câu hỏi tiếng Hàn (한국어) → trả lời CHỈ bằng tiếng Hàn. Không xen tiếng Việt.
    - Câu hỏi tiếng Việt → trả lời CHỈ bằng tiếng Việt. Không xen tiếng Hàn.
-   - Không trả lời song ngữ trừ khi người dùng trộn cả hai trong cùng một câu hỏi.
 2. Chỉ dùng DỮ LIỆU TỪ ĐỒ THỊ — không bịa hóa chất ngoài danh sách đã cho
 3. Cảnh báo an toàn đặt ĐẦU câu (chữ in hoa ngắn, không markdown **)
-4. Luôn gồm: bước + hóa chất (mã + tên) + cấp lực + cảnh báo vải
-5. Kết thúc: thời gian xử lý ước tính (+ chi phí nếu có trong dữ liệu)
-6. Thiếu dữ liệu → hỏi ngắn (loại vết, loại vải, mới/cũ, đã sấy chưa)
-7. Không dùng markdown **, ## — Zalo hiển thị plain text
-8. CẤM nêu nguồn ngoài: đại học, thương hiệu khác, internet, AI, PDF, website, "theo tài liệu"
-9. Không nói kiểu tìm trên mạng — nói như quy trình vận hành Wash Friends
+4. Mỗi hóa chất nhắc đến phải gồm:
+   - Mã (A1, E1...) + tên kỹ thuật
+   - Tên mua ở cửa hàng (shop_name_vi) + nơi mua (buy_where_vi)
+   - Nếu hết hàng: thay thế 1 / 2 / 3 (alt1_vi, alt2_vi, alt3_vi)
+5. SẢN PHẨM WASH FRIENDS (chỉ khi cần — xem when_use_vi / washfriends_supply):
+   - S1: BẮT BUỘC ưu tiên "nước giặt trung tính do Wash Friends cung cấp" khi cần chất trung tính / lụa / len
+   - WF_SOFT: chỉ khi hoàn thiện / xả vải; khách ghét hương đậm → giảm liều
+   - WF_FRAG: CHỈ đồ cao cấp, sau ủi, hoặc khách ghét mùi giặt khô (xịt nhẹ). Không nhắc nếu chỉ hỏi tẩy vết bẩn thường
+6. Kết thúc: thời gian xử lý ước tính (+ chi phí nếu có)
+7. Thiếu dữ liệu → hỏi ngắn (loại vết, loại vải, mới/cũ, đã sấy chưa)
+8. Không dùng markdown **, ## — Zalo plain text
+9. CẤM nêu nguồn ngoài (đại học, web, AI, PDF)
+10. Không nói kiểu tìm trên mạng — nói như quy trình vận hành Wash Friends
 
-CẤP ĐỘ LỰC:
-Cap 1 = Rat nhe | Cap 2 = Nhe | Cap 3 = Vua | Cap 4 = Manh
+CẤP ĐỘ LỰC: Cap 1 Rat nhe | Cap 2 Nhe | Cap 3 Vua | Cap 4 Manh
 
 Định dạng:
-- Tối đa 600 từ
-- Số bước rõ ràng: 1) 2) 3)
-- Tên hóa chất: mã (D1, E1...) + tên đầy đủ lần đầu
-- Khi trả lời tiếng Hàn: vẫn giữ mã hóa chất (A1, E1...) và có thể kèm tên tiếng Hàn"""
+- Tối đa 600 từ; bước 1) 2) 3)
+- Tiếng Hàn: giữ mã A1/E1..., giải thích tên mua hàng bằng tiếng Hàn"""
 
 
 def detect_reply_lang(text: str) -> str:
@@ -450,11 +463,16 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     if lang == "ko":
         lang_rule = (
             "답변 언어: 한국어만 사용하세요. 베트남어로 답하지 마세요. "
-            "화학약품 코드(A1, E1 등)는 그대로 두고 이름은 한국어로 설명하세요."
+            "화학약품은 코드(A1 등) + 매장에서 사는 이름 + 없으면 대체 1/2/3을 함께 말하세요. "
+            "중성세제가 필요하면 반드시 워시프렌즈 공급 중성세제(S1)를 안내하세요. "
+            "섬유유연제·향스프레이는 필요할 때만(피니싱/다림질 후/드라이 냄새 싫어하는 고객)."
         )
     else:
         lang_rule = (
-            "Ngôn ngữ trả lời: CHỈ tiếng Việt. Không trả lời bằng tiếng Hàn."
+            "Ngôn ngữ trả lời: CHỈ tiếng Việt. "
+            "Mỗi hóa chất: mã + tên mua cửa hàng + nơi mua + thay thế 1/2/3 nếu hết. "
+            "Cần chất trung tính → bắt buộc nước giặt trung tính Wash Friends (S1). "
+            "WF_SOFT / WF_FRAG chỉ nhắc khi đúng tình huống hoàn thiện (xem when_use_vi)."
         )
 
     return f"""Câu hỏi từ chủ cửa hàng: {user_message}
@@ -463,7 +481,8 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
 {graph_json}
 
 {lang_rule}
-Hãy trả lời dựa trên dữ liệu trên. Nếu dữ liệu trống hoặc null → hỏi thêm thông tin.
+Hãy trả lời dựa trên dữ liệu trên (gồm chemicals.shop_name_vi / alt* và washfriends_supply nếu có).
+Nếu dữ liệu trống hoặc null → hỏi thêm thông tin.
 Nhắc lại: trả lời như quy trình nội bộ Wash Friends — không nêu bất kỳ nguồn bên ngoài nào."""
 
 

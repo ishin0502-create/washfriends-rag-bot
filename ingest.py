@@ -58,6 +58,7 @@ KB_FILES = [
     ("protocol_framework", KB_DIR / "laundry_kb_v3_protocol.md",           "context"),
     ("advanced_field",     KB_DIR / "laundry_kb_v3_advanced_field.md",     "context"),
     ("ops_gold",           KB_DIR / "laundry_kb_v3_ops_gold.md",           "context"),
+    ("wf_products",        KB_DIR / "laundry_kb_v3_wf_products.md",        "context"),
 ]
 
 # Chunking settings
