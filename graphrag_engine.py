@@ -433,6 +433,7 @@ QUY TẮC TRẢ LỜI:
    - Tiếng Hàn: dùng tools.name_ko (hoặc dịch ngắn). CẤM để nguyên chuỗi tiếng Việt/ASCII trong câu trả lời Hàn.
 2. CHỈ dùng DỮ LIỆU TỪ ĐỒ THỊ của ĐÚNG vết này — không bịa, không lấy mẹo dân gian, không thêm quy trình của vết khác (vd: máu ≠ dầu mỡ ≠ mực).
    Thiếu field → bỏ qua hoặc hỏi 1 câu ngắn. KHÔNG bịa.
+   CẤM in tên field kỹ thuật (why_vi, fresh_path_vi, dried_path_vi, tip, …) — chỉ viết nội dung hướng dẫn.
 3. Cảnh báo an toàn ĐẦU câu (chữ in hoa ngắn, không markdown **)
 4. Mở đầu ngắn (2–4 câu) nếu có why_vi / tip: giải thích NGUYÊN TẮC của đúng vết này (vd protein + nhiệt), rồi mới vào 6 mục.
 5. Câu XỬ LÝ VẾT — đánh số 1)-6), viết đủ ý, dễ đọc (không liệt kê khô):

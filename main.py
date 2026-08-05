@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-05-rich-safe-v2",
+            "build": "2026-08-05-rich-safe-v3",
             "checks": checks,
         },
         status_code=200,
@@ -517,28 +517,29 @@ RETURN count(s) AS updated""")
         _r(s, "Z_paths_overrides", """
 UNWIND [
   {id:'S_BLOOD_FRESH',
-   why_vi:'Mau = hemoglobin (protein + sat). Nuoc nong/say bien tinh protein, sat bam soi tao vet nau vinh vien. Chi nuoc LANH ban dau.',
-   fresh_path_vi:'LAT mat trai, xa nuoc LANH manh day mau ra; N2 ngam neu can; con nhat → E1. KHONG nuoc nong, KHONG say khi con vet.',
-   dried_path_vi:'Da kho/nau: E1 ngam lanh; cotton TRANG con mau co the A4 3% test goc khuat 10-15 phut; len/lua tranh E1/A4 — dung S1 + bao khach.'},
+   why_vi:'Mau = hemoglobin (protein + sat). Nuoc lanh giu protein hoa tan; nuoc nong/say bien tinh → sat bam soi tao vet nau vinh vien. E1 cat chuoi protein; A4 (vai trang) oxy hoa hemoglobin.',
+   fresh_path_vi:'(1) Lat mat trai, xa nuoc LANH 2-3 phut den khi nuoc hong→trong. (2) Ngam N2 2 muong/1L lanh 15-30 phut. (3) Con nhat: nho E1 len vet 15 phut. (4) Giat D3 nuoc lanh. KHONG cha manh, KHONG say khi con vet.',
+   dried_path_vi:'Neu da kho: cao nhe vay kho → ngam lanh 30-60 phut → E1 pha loang 30-60 phut → chai mem Cap2. Cotton TRANG: A4 3% test goc khuat 10 phut. Len/lua: KHONG E1/A4 — N2 + S1, bao khach.'},
   {id:'S_BLOOD_DRY',
-   why_vi:'Mau kho: protein da gan soi. Can enzyme pha chuoi protein; nhiet van cam truoc khi sach.',
-   fresh_path_vi:'Neu con am: xu ly nhu mau tuoi — xa lanh mat trai truoc.',
-   dried_path_vi:'E1 ngam/cham; A4 chi vai trang sau khi test; kiem tra ky truoc say.'},
+   why_vi:'Mau kho: protein da gan soi. Can enzyme pha chuoi; nhiet van CAM truoc khi sach hoan toan.',
+   fresh_path_vi:'Neu con am: xu ly nhu mau tuoi — xa lanh mat trai truoc moi buoc khac.',
+   dried_path_vi:'Cao nhe → ngam lanh → E1 30-60 phut → chai mem. A4 chi cotton trang sau test. Kiem tra anh sang manh TRUOC say; con nau → lap E1.'},
   {id:'S_MOTORBIKE_OIL',
-   why_vi:'Dau nhot xe may: dau kho + carbon. Can hut N3 + dung moi D1, thong gio.',
-   fresh_path_vi:'N3 day → D1 cham → A1 neu can → D3/giat cotton-poly.',
-   dried_path_vi:'N3 2 lan → D1 lap → kiem tra nhon truoc say. Khong silk/wool nhiet cao.'},
+   why_vi:'Dau nhot xe may: dau kho + carbon. Can hut N3 + dung moi D1; thong gio khi dung dung moi.',
+   fresh_path_vi:'N3 day hut dau → D1 cham mat trai → A1 neu can → D3/giat cotton-poly.',
+   dried_path_vi:'N3 2 lan → D1 lap → kiem tra het nhon truoc say. Khong silk/wool nhiet cao.'},
   {id:'S_BLACK_COFFEE',
-   why_vi:'Ca phe den = tannin + mau. Xu ly som nuoc lanh; A3 ho tro; say som khoa mau.',
-   fresh_path_vi:'Tham/xa lanh mat trai → A3 1:4 → giat.',
-   dried_path_vi:'A3 → B1 neu con mau (khong len/lua) → kiem tra truoc say.'},
+   why_vi:'Ca phe den = tannin + mau. Xu ly SOM bang nuoc lanh; A3 (giam 1:4) ho tro pha tannin; say som khoa mau.',
+   fresh_path_vi:'Tham/xa lanh mat trai ngay → A3 1 phan giam / 4 phan nuoc → giat. Test goc khuat truoc tay manh.',
+   dried_path_vi:'A3 ngam/cham → neu con mau dung B1 (KHONG len/lua) → kiem tra mau truoc say.'},
   {id:'S_MILK_COFFEE',
-   why_vi:'Ca phe sua: tannin + protein sua. Xu ly protein (E1/lanh) truoc, roi tannin (A3).',
-   fresh_path_vi:'Xa lanh → E1 neu can cho phan sua → A3 cho tannin → giat.',
+   why_vi:'Ca phe sua: tannin + protein sua. Xu ly protein (E1/lanh) TRUOC, roi tannin (A3) — khong dao thu tu.',
+   fresh_path_vi:'Xa lanh → E1 cho phan sua neu can → A3 cho tannin → giat.',
    dried_path_vi:'E1 ngam lanh → A3 → kiem tra truoc say; B1 chi khi con mau va vai cho phep.'}
 ] AS o
 MATCH (s:Stain {id:o.id})
-SET s.why_vi = o.why_vi, s.fresh_path_vi = o.fresh_path_vi, s.dried_path_vi = o.dried_path_vi
+SET s.why_vi = o.why_vi, s.fresh_path_vi = o.fresh_path_vi, s.dried_path_vi = o.dried_path_vi,
+    s.tip = coalesce(s.tip, s.why_vi)
 RETURN count(s) AS updated""")
         _r(s, "S_clear_answer_cache", """
 MATCH (c:AnswerCache)
