@@ -36,6 +36,49 @@ Trả lời điểm chủ theo chuẩn Wash Friends: rõ bước, rõ hóa chấ
 | Bước | Thao tác | Lực tay | Chi tiết | Checkpoint |
 |---|---|---|---|---|
 | 1 | Đánh giá tình trạng vest | 0 | Mặc nhẹ + không vết → làm mới bằng steamer đủ. Có vết + mùi → gửi giặt khô chuyên nghiệp. Chỉ nhàu → bàn ủi hơi (xem iron-6). Vết nặng → dịch vụ chuyên nghiệp + đồng ý trước. | 📋 Vest + máy giặt = nguy cơ hỏng cấu trúc |
+| 2 | Chăm sóc giữa các lần giặt | 0 | Chải mềm theo sợi. Treo móc gỗ rộng vai. Nghỉ 24–48h giữa lần mặc. Túi vải thoáng (không nilon kín). Dry-clean chỉ khi cần — giặt khô quá thường làm yếu sợi. | 📋 Ít dry-clean hơn = áo bền hơn |
+| 3 | Suit hè linen/cotton | 0 | Nếu không canvas phức tạp + nhãn cho phép: tay/máy tinh tế ~30°C trung tính → phơi/treo → ủi khi ẩm. Có lót/canvas → xử lý như suit đông. | 📋 Nghi ngờ cấu trúc → dry-clean |
+
+---
+
+## PROTOCOL: Hanbok (KO) — đối xứng Áo dài
+**Tên**: Hanbok / 한복 / Korean traditional dress
+**Độ khó**: ★★★★☆
+**Hóa chất**: S1 (nếu bắt buộc tay)
+**Quy tắc vàng**: Ưu tiên dry-clean chuyên. Phân loại vải (본견/silk, 모시, cotton, poly). Cổ/고름/소매 khác chất → nguy cơ lem màu. Máy giặt = hỏng form/may.
+
+| Bước | Thao tác | Lực tay | Chi tiết | Checkpoint |
+|---|---|---|---|---|
+| 1 | Phân loại + ảnh | 0 | Silk/nhuộm tự nhiên/đắt → dry-clean. Poly/cotton nhãn cho phép → tay lạnh trung tính, KHÔNG chà. Bleach CAM. | 📋 Không chắc = quyền từ chối / chuyển |
+| 2 | Vết trên silk | 1 | Tránh nước bừa (dễ vết nước). Thấm ngoài→trong, chuyển nhanh. | 🖐️ Không lau vòng |
+
+---
+
+## PROTOCOL: Đồ golf (áo/quần/giày/mũ/găng)
+**Tên**: Đồ golf / 골프 용품 / Golf apparel & accessories
+**Độ khó**: ★★☆☆☆
+**Hóa chất**: D3 ít / trung tính
+**Quy tắc vàng**: Performance: lạnh, KHÔNG xả vải. Găng da ≠ găng synthetic. Giày: không sấy nóng. Mũ: tay + giữ form vành.
+
+| Bước | Thao tác | Lực tay | Chi tiết | Checkpoint |
+|---|---|---|---|---|
+| 1 | Áo/quần golf | 0 | Lộn trái. ≤30°C. Bot lỏng ít. CAM xả vải. Phơi / sấy thấp tối thiểu. | 📋 Xả vải = mất hút ẩm |
+| 2 | Giày golf | 0 | Tháo dây/lót, chải đinh/gai. Vải: như sneaker 30°C. Da: ít nước + kem. CAM sấy nóng. | 📋 Keo + nhiệt = hỏng |
+| 3 | Mũ golf | 0 | Spotting vành mồ hôi. Tay lạnh + chải mềm. Nhét bát giữ form. CAM máy/sấy. | 📋 Máy = hỏng vành |
+| 4 | Găng golf | 0 | Da cabretta: CAM máy, lau nhẹ + kem da. Synthetic/mesh: tay lạnh hoặc túi lưới tinh tế. CAM sấy. | 📋 Phân loại da vs synthetic trước |
+
+---
+
+## PROTOCOL: Lông thú thật & lông giả
+**Tên**: Fur thật / Faux fur / 모피·인조퍼
+**Độ khó**: ★★★★★ (thật) / ★★★☆☆ (giả)
+**Hóa chất**: — (thật: không xử lý tại tiệm thường)
+**Quy tắc vàng**: Fur thật: CAM máy/sấy/dry-clean thường — chỉ chuyên gia lông. Faux: CAM nhiệt cao/steam mạnh (xoăn lông không phục hồi).
+
+| Bước | Thao tác | Lực tay | Chi tiết | Checkpoint |
+|---|---|---|---|---|
+| 1 | Fur thật | 0 | Từ chối máy/hóa chất gia đình. Treo móc rộng vai, thoáng. Ướt mưa: lắc, khô chậm, CAM máy sấy/tóc, CAM chải khi ướt. Chuyển chuyên gia. | 📋 Quyền từ chối = bảo vệ khách |
+| 2 | Faux fur | 0 | Lộn trái. Giặt nhẹ ~30°C, tải thấp. Treo ngay. CAM ủi/steam mạnh. Chải mềm khi KHÔ theo chiều lông. | 📋 Nhiệt cao = xoăn vĩnh viễn |
 
 ---
 

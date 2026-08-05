@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-sneakers-v1",
+            "build": "2026-08-06-specialty-v1",
             "checks": checks,
         },
         status_code=200,
@@ -253,7 +253,8 @@ UNWIND [
   {id:'F6',name:'Denim',name_vi:'Vai denim',max_temp:40,can_bleach:false,enzyme_safe:true,acid_safe:true},
   {id:'F7',name:'Rayon',name_vi:'Vai rayon',max_temp:30,can_bleach:false,enzyme_safe:false,acid_safe:false},
   {id:'F8',name:'Leather',name_vi:'Da (da bong)',max_temp:30,can_bleach:false,enzyme_safe:false,acid_safe:false},
-  {id:'F9',name:'Suede',name_vi:'Da lon / suede / nubuck',max_temp:30,can_bleach:false,enzyme_safe:false,acid_safe:false}
+  {id:'F9',name:'Suede',name_vi:'Da lon / suede / nubuck',max_temp:30,can_bleach:false,enzyme_safe:false,acid_safe:false},
+  {id:'F10',name:'Fur',name_vi:'Long thu that (fur)',max_temp:20,can_bleach:false,enzyme_safe:false,acid_safe:false}
 ] AS f MERGE (n:Fabric {id:f.id}) SET n += f RETURN count(n) AS created""")
         _r(s, "E_chemicals", """
 UNWIND [
@@ -502,13 +503,14 @@ UNWIND [
   {id:'F6',dry_hint_vi:'Say vua; lan dau giat rieng mau',iron_hint_vi:'Ui vua neu can'},
   {id:'F7',dry_hint_vi:'KHONG say may neu co the',iron_hint_vi:'Nhiet thap, can than'},
   {id:'F8',dry_hint_vi:'KHONG say may / KHONG nang truc tiep — phoi bong mat, boi kem da sau',iron_hint_vi:'KHONG ui'},
-  {id:'F9',dry_hint_vi:'KHONG nuoc / KHONG say — chi kho, chuyen chuyen nghiep neu uot',iron_hint_vi:'KHONG ui'}
+  {id:'F9',dry_hint_vi:'KHONG nuoc / KHONG say — chi kho, chuyen chuyen nghiep neu uot',iron_hint_vi:'KHONG ui'},
+  {id:'F10',dry_hint_vi:'KHONG may/say — treo moc rong vai, thoang khi, tranh nang/nhiet; chuyen chuyen gia long',iron_hint_vi:'KHONG ui / KHONG steam manh'}
 ] AS h
 MATCH (f:Fabric {id:h.id})
 SET f.dry_hint_vi = h.dry_hint_vi, f.iron_hint_vi = h.iron_hint_vi
 RETURN count(f) AS updated""")
         _r(s, "X2_leather_never_bleach", """
-MATCH (f:Fabric) WHERE f.id IN ['F8','F9']
+MATCH (f:Fabric) WHERE f.id IN ['F8','F9','F10']
 MATCH (c:Chemical) WHERE c.code IN ['B1','B2','A4','E1','E2','E3','D3']
 MERGE (f)-[:NEVER_USE]->(c)
 RETURN count(*) AS rels""")
@@ -682,7 +684,103 @@ UNWIND [
    dried_path_vi:'Khong ngam. Hong form → bao khach.',
    motion_vi:'Luc 1',
    water_temp_vi:'It nuoc',
-   aftercare_vi:'Kem da. Kho tu nhien.'}
+   aftercare_vi:'Kem da. Kho tu nhien.'},
+  {id:'I_SUIT',name:'Wool / business suit',name_vi:'Vest / bo suit len (dong)',name_ko:'정장·수트(울·캔버스)',fabric_id:'F3',
+   precheck_vi:'Chup anh. Kiem canvas/lot trong. Nhe + khong vet → steamer. Vet/mui → dry-clean / wet-clean chuyen. CAM may giat thuong.',
+   why_vi:'Suit: cau truc vai + lot. May nha = meo vai. Dry-clean CHI KHI can (vet/mui) — lam thuong xuyen lam yeu soi. Giua lan: chai + treo moc rong + nghi 24-48h.',
+   fresh_path_vi:'Chai mem theo soi → treo thoang. Vet: tham NGOAI→TRONG, khong cha lan. Spotting trung tinh nhe neu an toan. Khong het / co canvas → chuyen dry-clean. Ui: steamer dung, tranh ep manh nguc/ve ao.',
+   dried_path_vi:'Vet kho: khong ngam may. Chuyen chuyen + thong bao khach. Khong hao danh het 100%.',
+   motion_vi:'Luc 1-2 — chai/tham, khong vo may',
+   water_temp_vi:'KHONG may nha. Spotting lanh neu bat buoc',
+   aftercare_vi:'Moc go rong vai. Tui vai thoang (khong nilon kin). Nghi giua lan mac. CAM say may.'},
+  {id:'I_SUIT_SUMMER',name:'Summer linen/cotton suit',name_vi:'Suit he linen/cotton mong',name_ko:'여름 정장(린넨·코튼 얇은)',fabric_id:'F5',
+   precheck_vi:'Phan biet linen/cotton vs len. Nhan truoc. Co lot/canvas → xu ly nhu suit dong neu khong chac.',
+   why_vi:'Linen/cotton: de nhao, co the tay/may nhe NEU khong canvas phuc tap. Van uu tien steamer + ui khi am. Cam nhiet cao say.',
+   fresh_path_vi:'Spotting nhe → tay/may tinh te ~30C chat trung tinh (neu nhan cho phep) → xa ky → phoi/treo → ui khi am (linen can ui). Co lot phuc tap → dry-clean.',
+   dried_path_vi:'Vet kho: ngam ngan + spotting, khong cha manh. Khong het → chuyen.',
+   motion_vi:'Luc 2 — nhe, tui luoi neu may',
+   water_temp_vi:'~30C; khong nong',
+   aftercare_vi:'Ui am. Treo moc rong. CAM say nong.'},
+  {id:'I_AO_DAI',name:'Ao dai',name_vi:'Ao dai (truyen thong VN)',name_ko:'아오자이',fabric_id:'F4',
+   precheck_vi:'BAT BUOC phan loai: lua vs polyester (nhan VN thuong SAI). Silk=S1. Poly=trung tinh nhe. Anh + tu choi neu khong chac.',
+   why_vi:'Ao dai = ton trong toi da. CHI tay. CAM may/vat/say. Luc 1. Phoi bong mat phang.',
+   fresh_path_vi:'Tay nuoc lanh + chat trung tinh silk (lua) hoac nhe (poly). NHUNG nhe — KHONG cha/vat. Xa 3 lan. Phoi bong mat phang. Ui mat trai ~110C, lot vai; lua TAT hoi.',
+   dried_path_vi:'Vet: spotting sieu nhe mat trai. Lua + nuoc de de vet nuoc — thong bao khach. Khong het → chuyen.',
+   motion_vi:'Luc 1 — baby face, khong cha',
+   water_temp_vi:'Lanh / <=30C. CHI tay',
+   aftercare_vi:'CAM say/nang gay. Ui mat trai. Treo moc dem vai.'},
+  {id:'I_HANBOK',name:'Hanbok',name_vi:'Hanbok (trang phuc Han)',name_ko:'한복',fabric_id:'F4',
+   precheck_vi:'Phan loai vai: bon gyeon/silk, moshi, cotton, poly. Nhuan mau tu nhien de phai. Git/goreum/tay ao khac chat → nguy co lem mau. Anh + dong y khach.',
+   why_vi:'Hanbok cao cap: uu tien dry-clean chuyen. May = hong may/form. Bleach CAM. Lua: it nuoc, luc 1. Mau git/goreum de lem.',
+   fresh_path_vi:'Uu tien chuyen dry-clean neu silk/nhuan mau/do dat. Neu poly/cotton nhan cho phep: tay lanh trung tinh, KHONG cha, xa ky, phoi bong mat. Spotting: tham, khong lau vong.',
+   dried_path_vi:'Vet thuc an tren silk: tranh nuoc (de vet nuoc) — tham + chuyen nhanh. Khong het → bao khach.',
+   motion_vi:'Luc 1 — khong vo may',
+   water_temp_vi:'Lanh. Uu tien dry-clean',
+   aftercare_vi:'Kho het roi cat. Thoang khi, tranh am moc. CAM say may.'},
+  {id:'I_GOLF_WEAR',name:'Golf performance wear',name_vi:'Do golf (ao/quan performance)',name_ko:'골프복(기능성 셔츠·바지)',fabric_id:'F2',
+   precheck_vi:'Poly/spandex moisture-wick. Lat mat trai. Doc nhan.',
+   why_vi:'Do golf: CAM xa vai / dryer sheet (bit ken hut am). Nuoc lanh, bot LONG it. Nhiet cao hong dan hoi.',
+   fresh_path_vi:'Lat trai → may/tay <=30C chat giat nhe/the thao → KHONG xa vai → xa ky → phoi / say thap toi thieu. Vet co/bun: spotting lanh truoc.',
+   dried_path_vi:'Mui mo hoi: ngam lanh + trung tinh, khong bot dam. Lap neu can.',
+   motion_vi:'Luc 2 — chuong trinh tinh te',
+   water_temp_vi:'Lanh / <=30C',
+   aftercare_vi:'Phoi bong mat. CAM xa vai. Tranh say nong.'},
+  {id:'I_GOLF_SHOE',name:'Golf shoe',name_vi:'Giay golf',name_ko:'골프화',fabric_id:'F2',
+   precheck_vi:'Thao day/lot. Lam sach dinh/gai (cleat) truoc. Phan da vs vai/synthetic.',
+   why_vi:'Giong sneaker: CAM say nong (keo). Da: it nuoc. Vai/synthetic: 30C nhe. Gai/de: chai cung nhe.',
+   fresh_path_vi:'Chai kho bun → spotting sol mem (than) / sol cung (de) → tay hoac tui luoi 30C neu vai → xa → nhet bao phoi bong mat. Da: chi lau am + kem da.',
+   dried_path_vi:'Lap spotting. Khong ngam da. CAM say may.',
+   motion_vi:'Than luc 2 sol mem; de luc 2-3',
+   water_temp_vi:'<=30C; da = it nuoc',
+   aftercare_vi:'Kho han moi mang. CAM say nong. Bao quan kho.'},
+  {id:'I_GOLF_HAT',name:'Golf / sports cap',name_vi:'Mu golf / mu luoi trai',name_ko:'골프모자·캡',fabric_id:'F2',
+   precheck_vi:'Giu form vanh. CAM may/say (hong vanh).',
+   why_vi:'Mu: tay + giu hinh. Spotting mo hoi vanh truoc.',
+   fresh_path_vi:'Spotting vanh (chat nhe) → tay lanh + chai mem → nhet bat/bong giu form → phoi bong mat.',
+   dried_path_vi:'Lap spotting vanh. Khong may.',
+   motion_vi:'Luc 2 — chai mem, khong vo vanh',
+   water_temp_vi:'Lanh. CHI tay',
+   aftercare_vi:'Giu form den kho. CAM say may.'},
+  {id:'I_GOLF_GLOVE_LEATHER',name:'Leather golf glove',name_vi:'Gang golf da (cabretta)',name_ko:'골프장갑(가죽)',fabric_id:'F8',
+   precheck_vi:'Da cabretta: CAM may. Nuoc toi thieu. Khong giat qua thuong.',
+   why_vi:'Gang golf da: may/ngam = cung/nut. Lau nhe + kem da. CAM tay oxy.',
+   fresh_path_vi:'Khan am + xa phong da/kem da nhe lau → khan am lau du → tham kho → de kho phang (co the deo vai phut giu form) → kem da.',
+   dried_path_vi:'Khong ngam. Con ban: lap lau nhe. Bao khach neu gia.',
+   motion_vi:'Luc 1 — lau, khong vo',
+   water_temp_vi:'It nuoc lanh',
+   aftercare_vi:'Kho tu nhien. CAM say. Kem da.'},
+  {id:'I_GOLF_GLOVE_SYNTH',name:'Synthetic golf glove',name_vi:'Gang golf synthetic / mesh',name_ko:'골프장갑(합성·메쉬)',fabric_id:'F2',
+   precheck_vi:'Synthetic/mesh: tay uu tien; may chi tui luoi tinh te neu nhan cho.',
+   why_vi:'Synthetic: lanh + chat nhe. CAM xa vai. CAM say nong.',
+   fresh_path_vi:'Tay lanh + chat nhe, vo nhe → xa → phoi phang. Hoac tui luoi 30C tinh te.',
+   dried_path_vi:'Lap tay neu ban. Khong say.',
+   motion_vi:'Luc 2',
+   water_temp_vi:'Lanh / <=30C',
+   aftercare_vi:'Phoi phang. CAM say.'},
+  {id:'I_FUR_REAL',name:'Real fur garment',name_vi:'Ao long thu that (fur)',name_ko:'모피·진짜 퍼',fabric_id:'F10',
+   precheck_vi:'Phan biet long that vs gia. Anh. TU CHOI may/say/dry-clean thuong. Khuyen chuyen tiem long chuyen.',
+   why_vi:'Fur that: CAM may/say/dry-clean thuong (kho dau da, de rach). Chi chuyen gia long. Bui hut dau tu nhien → can ve sinh chuyen dinh ky.',
+   fresh_path_vi:'KHONG xu ly tai tiem thuong. Lac bui nhe, treo moc rong vai, thoang khi. Uot mua: lac, treo kho CHAM, CAM may say/toc, CAM chai khi uot. Chuyen chuyen gia.',
+   dried_path_vi:'CAM ngam/hoa chat gia dinh. Bao khach chuyen chuyen. Quyen tu choi.',
+   motion_vi:'Luc 0-1 — khong cha khi uot',
+   water_temp_vi:'KHONG giat nuoc tai tiem',
+   aftercare_vi:'Cat thoang, toi, mat. Tranh nang/nuoc hoa xit len ao. Chuyen kho lanh mua he neu co.'},
+  {id:'I_FUR_FAUX',name:'Faux / synthetic fur',name_vi:'Long gia / faux fur',name_ko:'인조 모피·페이크 퍼',fabric_id:'F2',
+   precheck_vi:'Long gia (acrylic/modacrylic): nhiet cao = xoan long. Doc nhan.',
+   why_vi:'Faux fur: CAM nhiet cao / steam manh (xoan long khong phuc hoi). Giat nhe, treo ngay, say thap toi thieu.',
+   fresh_path_vi:'Lat trai. May/tay nhe ~30C chat trung tinh, tai thap, thoi gian ngan. Treo ngay sau giat. CAM ui/steam manh. Say: nhiet thap/tat neu can.',
+   dried_path_vi:'Long xep: chai mem KHI KHO theo chieu long. Khong het → thong bao.',
+   motion_vi:'Luc 2 — nhe, tai thap',
+   water_temp_vi:'~30C; CAM nong',
+   aftercare_vi:'Treo thoang. CAM say nong / ui.'},
+  {id:'I_HIKING_SHOE',name:'Hiking / outdoor shoe',name_vi:'Giay leo nui / outdoor',name_ko:'등산화',fabric_id:'F2',
+   precheck_vi:'Thao day/lot. Chai bun kho. Phan membrane (Gore-Tex) vs da vs vai.',
+   why_vi:'Outdoor: CAM say nong. Membrane: bot it, KHONG xa vai. Da: it nuoc + kem. Luoi: sol mem.',
+   fresh_path_vi:'Chai kho → spotting → tay/tui luoi 30C bot it neu vai/membrane → xa them → nhet bao phoi bong mat. Da: lau am + kem. Sau kho co the xit DWR neu mat chong tham.',
+   dried_path_vi:'Lap. Khong say may. Bao khach neu keo long.',
+   motion_vi:'Than sol mem; de sol cung nhe',
+   water_temp_vi:'<=30C',
+   aftercare_vi:'Kho han. CAM say nong. Bao quan kho.'}
 ] AS it
 MERGE (i:Item {id:it.id})
 SET i.name = it.name, i.name_vi = it.name_vi, i.name_ko = it.name_ko,
@@ -701,18 +799,22 @@ WITH cloth, soft, ultra, hard, shoe
 MATCH (d2:Chemical {code:'D2'}), (d3:Chemical {code:'D3'}), (a1:Chemical {code:'A1'}), (n1:Chemical {code:'N1'})
 WITH cloth, soft, ultra, hard, shoe, d2, d3, a1, n1
 MATCH (i:Item)
-FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_LEATHER_SHOE','I_GLOVE_LEATHER'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_LEATHER_SHOE','I_GLOVE_LEATHER','I_GOLF_GLOVE_LEATHER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(a1))
 FOREACH (_ IN CASE WHEN i.id IN ['I_SUEDE_GARMENT','I_SUEDE_BAG','I_SUEDE_SHOE'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth))
-FOREACH (_ IN CASE WHEN i.id IN ['I_SNEAKER','I_RUNNING_MESH','I_SNEAKER_WHITE'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_SNEAKER','I_RUNNING_MESH','I_SNEAKER_WHITE','I_GOLF_SHOE','I_HIKING_SHOE'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(shoe)
   MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_CHEMICAL]->(n1))
 FOREACH (_ IN CASE WHEN i.id = 'I_SHOE_LACES' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth)
   MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_CHEMICAL]->(n1))
-FOREACH (_ IN CASE WHEN i.id IN ['I_GORETEX','I_DOWN_JACKET'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_GORETEX','I_DOWN_JACKET','I_GOLF_WEAR','I_GOLF_HAT','I_GOLF_GLOVE_SYNTH','I_FUR_FAUX','I_SUIT_SUMMER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_TOOL]->(cloth))
+FOREACH (_ IN CASE WHEN i.id IN ['I_SUIT','I_AO_DAI','I_HANBOK'] THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(ultra) MERGE (i)-[:USES_TOOL]->(cloth))
+FOREACH (_ IN CASE WHEN i.id = 'I_FUR_REAL' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth))
 RETURN count(i) AS items""")
         _r(s, "S_clear_answer_cache", """
 MATCH (c:AnswerCache)

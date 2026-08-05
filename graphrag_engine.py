@@ -201,6 +201,18 @@ _ITEM_FABRIC_TOKEN = {
     "I_SHOE_LACES": "cotton",
     "I_GORETEX": "polyester",
     "I_DOWN_JACKET": "polyester",
+    "I_SUIT": "wool",
+    "I_SUIT_SUMMER": "linen",
+    "I_AO_DAI": "silk",
+    "I_HANBOK": "silk",
+    "I_GOLF_WEAR": "polyester",
+    "I_GOLF_SHOE": "polyester",
+    "I_GOLF_HAT": "polyester",
+    "I_GOLF_GLOVE_LEATHER": "leather",
+    "I_GOLF_GLOVE_SYNTH": "polyester",
+    "I_FUR_REAL": "fur",
+    "I_FUR_FAUX": "polyester",
+    "I_HIKING_SHOE": "polyester",
 }
 Q_RESCUE = """
 MATCH (s:Stain)
@@ -558,8 +570,19 @@ def _infer_item_from_text(text: str) -> str:
     suede = any(k in raw for k in ("스웨이드", "누벅")) or "suede" in t or "nubuck" in t or "da lon" in t
     leather = any(k in raw for k in ("가죽",)) or "leather" in t or "ao da" in t or "giay da" in t or "tui da" in t
     bag = any(k in raw for k in ("가방", "지갑")) or "tui xach" in t or "tui da" in t or "handbag" in t or "vi da" in t
-    shoe = any(k in raw for k in ("구두", "신발", "운동화", "스니커")) or "giay" in t or "shoe" in t or "sneaker" in t
+    shoe = any(k in raw for k in ("구두", "신발", "운동화", "스니커", "등산화", "골프화")) or "giay" in t or "shoe" in t or "sneaker" in t
     glove = any(k in raw for k in ("장갑",)) or "gang tay" in t or "glove" in t
+    golf = "골프" in raw or "golf" in t
+    fur = any(k in raw for k in ("모피", "퍼코트", "모피코트")) or "fur" in t or "ao long" in t or "long thu" in t
+    faux = any(k in raw for k in ("인조", "페이크")) or "faux" in t or "synthetic fur" in t or "long gia" in t
+
+    # Fur before leather (overlap on "fur trim")
+    if fur and faux:
+        return "I_FUR_FAUX"
+    if fur:
+        return "I_FUR_REAL"
+    if faux and ("퍼" in raw or "fur" in t or "long" in t):
+        return "I_FUR_FAUX"
 
     if suede and bag:
         return "I_SUEDE_BAG"
@@ -569,14 +592,39 @@ def _infer_item_from_text(text: str) -> str:
         return "I_SUEDE_GARMENT"
     if leather and bag:
         return "I_LEATHER_BAG"
-    if leather and shoe:
+    if leather and shoe and not golf:
         return "I_LEATHER_SHOE"
     if leather and glove:
-        return "I_GLOVE_LEATHER"
-    if leather:
+        return "I_GOLF_GLOVE_LEATHER" if golf else "I_GLOVE_LEATHER"
+    if leather and not golf:
         return "I_LEATHER_GARMENT"
+
+    # Traditional dress
+    if "한복" in raw or "hanbok" in t:
+        return "I_HANBOK"
+    if "아오자이" in raw or "ao dai" in t or "aodai" in t:
+        return "I_AO_DAI"
+
+    # Suits
+    if any(k in raw for k in ("린넨 정장", "여름 정장", "얇은 정장")) or "suit he" in t or "linen suit" in t or ("linen" in t and ("suit" in t or "정장" in raw)):
+        return "I_SUIT_SUMMER"
+    if any(k in raw for k in ("정장", "수트", "양복", "턱시도")) or "suit" in t or "vest" in t or "tuxedo" in t or "bo vest" in t:
+        return "I_SUIT"
+
+    # Golf kit
+    if golf and glove:
+        return "I_GOLF_GLOVE_LEATHER" if leather else "I_GOLF_GLOVE_SYNTH"
+    if golf and (any(k in raw for k in ("모자", "캡")) or "mu " in t or "hat" in t or "cap" in t):
+        return "I_GOLF_HAT"
+    if golf and shoe:
+        return "I_GOLF_SHOE"
+    if golf:
+        return "I_GOLF_WEAR"
+
+    if "등산화" in raw or "hiking" in t or "giay leo" in t or "outdoor shoe" in t:
+        return "I_HIKING_SHOE"
+
     if "gore" in t or "dwr" in t or "고어" in raw or "방수자켓" in raw or "chong tham" in t:
-        # "기능성" alone is ambiguous — only with outdoor/waterproof cues
         return "I_GORETEX"
     if "기능성" in raw and ("자켓" in raw or "등산" in raw or "아웃도어" in raw):
         return "I_GORETEX"
@@ -621,7 +669,9 @@ def _infer_fabric_from_text(text: str) -> str:
         # avoid false hit on common VI words containing 'da' as substring inside longer tokens — use word-ish check
         if "leather" in t or "가죽" in raw or "da bong" in t or "ao da" in t or "giay da" in t or "tui da" in t or "gang da" in t or t.strip() == "da" or " vai da" in f" {t}" or t.startswith("da "):
             return "leather"
-    if any(k in raw for k in ("비단", "실크")) or "silk" in t or "lua" in t or "ao dai" in t or "aodai" in t:
+    if any(k in raw for k in ("모피",)) or (("fur" in t or "long thu" in t) and "faux" not in t and "gia" not in t):
+        return "fur"
+    if any(k in raw for k in ("비단", "실크")) or "silk" in t or "lua" in t or "ao dai" in t or "aodai" in t or "hanbok" in t or "한복" in raw:
         return "silk"
     if "울" in raw or "wool" in t or "vai len" in t or re.search(r"(^|[^a-z])len([^a-z]|$)", t):
         return "wool"
@@ -650,7 +700,8 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
     is_wool = fid == "F3" or "wool" in fname or " len" in f" {fname}" or fname.strip() == "len"
     is_leather = fid == "F8" or "leather" in fname or ("da (" in fname) or fname.strip() == "da"
     is_suede = fid == "F9" or "suede" in fname or "nubuck" in fname or "da lon" in fname
-    delicate = is_silk or is_wool or is_leather or is_suede
+    is_fur = fid == "F10" or "fur" in fname or "long thu" in fname
+    delicate = is_silk or is_wool or is_leather or is_suede or is_fur
 
     chems = [c for c in (graph.get("chemicals") or []) if c]
     safe, blocked = [], []
@@ -661,11 +712,13 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
             reasons.append("not_safe_on_silk")
         if is_wool and c.get("safe_on_wool") is False:
             reasons.append("not_safe_on_wool")
-        if (is_leather or is_suede) and code in {"B1", "B2", "A4", "E1", "E2", "E3", "D3", "A3", "A5"}:
-            reasons.append("not_safe_on_leather_suede")
+        if (is_leather or is_suede or is_fur) and code in {"B1", "B2", "A4", "E1", "E2", "E3", "D3", "A3", "A5"}:
+            reasons.append("not_safe_on_leather_suede_fur")
         if is_suede and code in {"A1", "D2"}:
             # Suede: avoid wet chemistry by default — professional path
             reasons.append("suede_prefer_dry_pro")
+        if is_fur and code in {"A1", "D2", "N1", "S1"}:
+            reasons.append("fur_pro_only")
         if fabric.get("can_bleach") is False and code in {"B1", "B2", "A4"}:
             reasons.append("fabric_no_bleach")
         if fabric.get("acid_safe") is False and code in {"A3", "A5"} and not (is_leather or is_suede):
