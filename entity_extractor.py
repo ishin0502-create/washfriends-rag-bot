@@ -151,6 +151,7 @@ def _coerce_types(e: dict) -> None:
         e["intent"] = "treatment"
     if not e.get("lang"):
         e["lang"] = "vi"
+    # Caller (graphrag_engine) may override lang via Hangul detection
 
 
 def _fallback_entities(message: str) -> dict:

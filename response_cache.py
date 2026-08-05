@@ -68,7 +68,8 @@ def max_entries() -> int:
 
 
 def cache_version() -> str:
-    return os.getenv("ANSWER_CACHE_VERSION", "v1")
+    # v2: reply language must match question (ko/vi) — invalidate mixed-language cache
+    return os.getenv("ANSWER_CACHE_VERSION", "v2")
 
 
 def _normalize_key(text: str) -> str:
@@ -277,8 +278,9 @@ def store(question: str, answer: str, context_key: str = "") -> None:
 
 
 def build_context_key(entities: dict) -> str:
-    """Stable key for image / entity-based lookups."""
+    """Stable key for image / entity-based lookups. Includes lang so KO/VI don't collide."""
     parts = [
+        str(entities.get("lang") or "vi"),
         str(entities.get("intent") or "treatment"),
         str(entities.get("stain_id") or ""),
         str(entities.get("stain_type") or ""),

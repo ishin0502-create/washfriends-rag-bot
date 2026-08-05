@@ -411,7 +411,10 @@ Nhiệm vụ: Trả lời chủ cửa hàng nhượng quyền về xử lý vế
 Giọng điệu: kinh nghiệm nội bộ Wash Friends — tự tin, cụ thể, như hướng dẫn kỹ thuật của bản thân.
 
 QUY TẮC TRẢ LỜI:
-1. Tiếng Việt là ngôn ngữ chính (nếu hỏi tiếng Hàn → trả lời cả hai)
+1. NGÔN NGỮ BẮT BUỘC: trả lời ĐÚNG ngôn ngữ câu hỏi.
+   - Câu hỏi tiếng Hàn (한국어) → trả lời CHỈ bằng tiếng Hàn. Không xen tiếng Việt.
+   - Câu hỏi tiếng Việt → trả lời CHỈ bằng tiếng Việt. Không xen tiếng Hàn.
+   - Không trả lời song ngữ trừ khi người dùng trộn cả hai trong cùng một câu hỏi.
 2. Chỉ dùng DỮ LIỆU TỪ ĐỒ THỊ — không bịa hóa chất ngoài danh sách đã cho
 3. Cảnh báo an toàn đặt ĐẦU câu (chữ in hoa ngắn, không markdown **)
 4. Luôn gồm: bước + hóa chất (mã + tên) + cấp lực + cảnh báo vải
@@ -427,17 +430,39 @@ Cap 1 = Rat nhe | Cap 2 = Nhe | Cap 3 = Vua | Cap 4 = Manh
 Định dạng:
 - Tối đa 600 từ
 - Số bước rõ ràng: 1) 2) 3)
-- Tên hóa chất: mã (D1, E1...) + tên đầy đủ lần đầu"""
+- Tên hóa chất: mã (D1, E1...) + tên đầy đủ lần đầu
+- Khi trả lời tiếng Hàn: vẫn giữ mã hóa chất (A1, E1...) và có thể kèm tên tiếng Hàn"""
 
-def _build_llm_prompt(user_message: str, graph_context: dict) -> str:
+
+def detect_reply_lang(text: str) -> str:
+    """Detect reply language from user text. Korean Hangul wins; else Vietnamese default."""
+    if not text:
+        return "vi"
+    if re.search(r"[가-힣]", text):
+        return "ko"
+    # Latin/ASCII-only short messages → still default vi for franchise VN
+    return "vi"
+
+
+def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") -> str:
     graph_json = json.dumps(graph_context["graph"], ensure_ascii=False, indent=2, default=str)
     query_type = graph_context.get("query_type", "unknown")
+    if lang == "ko":
+        lang_rule = (
+            "답변 언어: 한국어만 사용하세요. 베트남어로 답하지 마세요. "
+            "화학약품 코드(A1, E1 등)는 그대로 두고 이름은 한국어로 설명하세요."
+        )
+    else:
+        lang_rule = (
+            "Ngôn ngữ trả lời: CHỈ tiếng Việt. Không trả lời bằng tiếng Hàn."
+        )
 
     return f"""Câu hỏi từ chủ cửa hàng: {user_message}
 
 [DỮ LIỆU ĐỒ THỊ — loại truy vấn: {query_type}]
 {graph_json}
 
+{lang_rule}
 Hãy trả lời dựa trên dữ liệu trên. Nếu dữ liệu trống hoặc null → hỏi thêm thông tin.
 Nhắc lại: trả lời như quy trình nội bộ Wash Friends — không nêu bất kỳ nguồn bên ngoài nào."""
 
@@ -495,12 +520,13 @@ def _answer_with_optional_cache(
     prefix: str = "",
 ) -> str:
     """LLM answer with fail-open cache. Skips cache when graph is empty."""
+    lang = entities.get("lang") or "vi"
     ctx_key = build_context_key(entities)
     cached = cache_lookup(cache_question, ctx_key)
     if cached:
         return cached
 
-    base_prompt = _build_llm_prompt(cache_question, graph_context)
+    base_prompt = _build_llm_prompt(cache_question, graph_context, lang=lang)
     llm_prompt = (prefix + "\n\n" + base_prompt) if prefix else base_prompt
     answer = _call_llm(llm_prompt)
     cache_store(cache_question, answer, ctx_key)
@@ -517,7 +543,11 @@ def generate_response_from_entities(
     """
     # Ensure GraphRAG routing fields exist
     entities.setdefault("intent", "treatment")
-    entities.setdefault("lang", "vi")
+    # Caption Hangul → Korean; else keep existing lang from vision / default vi
+    if user_caption and re.search(r"[가-힣]", user_caption):
+        entities["lang"] = "ko"
+    elif not entities.get("lang"):
+        entities["lang"] = detect_reply_lang(user_caption) if user_caption else "vi"
 
     graph_context = _fetch_graph_context(entities)
     graph_data    = graph_context.get("graph")
@@ -537,14 +567,17 @@ def generate_response_from_entities(
 
 
 def generate_response(user_message: str) -> str:
-    """Main entry point: given a user message, return a Vietnamese chatbot response."""
-    # Fast path — skip entity extraction + LLM on cache hit (fail-open inside lookup)
-    cached = cache_lookup(user_message, "")
+    """Main entry point: reply in the same language as the user (vi or ko)."""
+    lang = detect_reply_lang(user_message)
+    # Fast path — lang in context so KO/VI caches never mix
+    cached = cache_lookup(user_message, build_context_key({"lang": lang}))
     if cached:
         return cached
 
     entities = extract_entities(user_message)
     entities["_raw"] = user_message
+    # Hard override language from script (more reliable than LLM lang field)
+    entities["lang"] = lang
     # Hard override for high-value VN franchise phrases (before graph routing)
     raw_n = _normalize_text(user_message)
     if "laterite" in raw_n or "dat do" in raw_n:
