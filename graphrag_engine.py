@@ -310,6 +310,13 @@ def _fetch_graph_context(entities: dict) -> dict:
     fabric_input = _normalize_text(entities.get("fabric_type") or "")
     stain_id = entities.get("stain_id") or ""
     raw_msg = _normalize_text(entities.get("_raw") or "")
+    raw_original = entities.get("_raw") or ""
+
+    # Raw-message fabric wins over a wrong extractor guess (e.g. 비단 / lụa)
+    inferred_fabric = _infer_fabric_from_text(raw_original)
+    if inferred_fabric:
+        fabric_input = inferred_fabric
+        entities["fabric_type"] = inferred_fabric
 
     # Prefer franchise phrasing in the raw message over a wrong LLM entity guess
     _ALIASES = (
@@ -424,6 +431,29 @@ def _fetch_graph_context(entities: dict) -> dict:
     return context
 
 
+def _infer_fabric_from_text(text: str) -> str:
+    """Map common KO/VI/EN fabric words in the user message to Neo4j-friendly tokens."""
+    if not text:
+        return ""
+    raw = text
+    t = _normalize_text(text)
+    if any(k in raw for k in ("비단", "실크")) or "silk" in t or "lua" in t or "ao dai" in t or "aodai" in t:
+        return "silk"
+    if "울" in raw or "wool" in t or "vai len" in t or re.search(r"(^|[^a-z])len([^a-z]|$)", t):
+        return "wool"
+    if "폴리" in raw or "polyester" in t or "tong hop" in t:
+        return "polyester"
+    if "데님" in raw or "청바지" in raw or "denim" in t:
+        return "denim"
+    if "린넨" in raw or "linen" in t or "vai lanh" in t:
+        return "linen"
+    if "레이온" in raw or "rayon" in t:
+        return "rayon"
+    if "면" in raw or "cotton" in t or "vai bong" in t:
+        return "cotton"
+    return ""
+
+
 def _apply_fabric_chem_safety(graph: dict) -> dict:
     """Drop chemicals unsafe for the matched fabric so the LLM cannot recommend them."""
     fabric = graph.get("fabric_context") or {}
@@ -434,6 +464,7 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
     fname = f"{fabric.get('name') or ''} {fabric.get('name_vi') or ''}".lower()
     is_silk = fid == "F4" or "silk" in fname or "lua" in fname or "lụa" in fname
     is_wool = fid == "F3" or "wool" in fname or " len" in f" {fname}" or fname.strip() == "len"
+    delicate = is_silk or is_wool
 
     chems = [c for c in (graph.get("chemicals") or []) if c]
     safe, blocked = [], []
@@ -468,6 +499,45 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
             "Chi dung chemicals[] con lai. Neu rong: uu tien washfriends_supply S1 + nuoc lanh + luc nhe. "
             "Cam khuyen nghi chemicals_blocked_for_fabric. Bo qua tip/dried_path neu chung ke chat bi chan."
         )
+
+    # Delicate fabrics: overwrite path text so tip cannot reintroduce bleach/acid/enzyme
+    if delicate and isinstance(out.get("stain_context"), dict):
+        stain = dict(out["stain_context"])
+        if is_silk:
+            stain["why_vi"] = (
+                "Lua (silk) nhay cam axit, enzyme va tay. "
+                "Uu tien nuoc LANH + nuoc giat trung tinh Wash Friends (S1) + luc nhe. "
+                "Khong dung giam manh, tay oxy, enzyme."
+            )
+            stain["fresh_path_vi"] = (
+                "Tham/xa nuoc lanh mat trai ngay → cham S1 pha loang nhe → "
+                "tham bang khan trang ngoai→trong. Khong cha manh."
+            )
+            stain["dried_path_vi"] = (
+                "Ngam lanh nhe + S1. Neu khong het: bao khach, khong dung tay oxy/giam dam/enzyme. "
+                "Kiem tra truoc khi say/ui."
+            )
+            stain["aftercare_vi"] = (
+                "Kiem tra anh sang manh TRUOC say/ui. Con vet → xu ly lai bang S1, khong say."
+            )
+            stain["tip"] = stain["why_vi"]
+        elif is_wool:
+            stain["why_vi"] = (
+                "Len (wool) la so protein tu nhien — enzyme/tay/axit de hong soi. "
+                "Uu tien S1 + nuoc lanh + luc rat nhe."
+            )
+            stain["fresh_path_vi"] = (
+                "Tham lanh + S1 nhe, khong cha. Khong enzyme, khong tay oxy."
+            )
+            stain["dried_path_vi"] = (
+                "Ngam lanh ngan + S1. Khong het → bao khach, khong dung E1/B1/A3 manh."
+            )
+            stain["aftercare_vi"] = (
+                "Kiem tra truoc say. Uu tien phoi phang, khong say may."
+            )
+            stain["tip"] = stain["why_vi"]
+        out["stain_context"] = stain
+
     return out
 
 
