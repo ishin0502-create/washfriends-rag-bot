@@ -27,6 +27,12 @@ from neo4j import GraphDatabase, Driver
 from openai import OpenAI
 
 from entity_extractor import extract_entities
+from response_cache import (
+    lookup as cache_lookup,
+    store as cache_store,
+    build_context_key,
+    question_for_cache,
+)
 
 # ─── Clients ─────────────────────────────────────────────────────────────────
 
@@ -436,6 +442,71 @@ Hãy trả lời dựa trên dữ liệu trên. Nếu dữ liệu trống hoặc
 Nhắc lại: trả lời như quy trình nội bộ Wash Friends — không nêu bất kỳ nguồn bên ngoài nào."""
 
 
+def _call_llm(llm_prompt: str) -> str:
+    response = _openai.chat.completions.create(
+        model="gpt-4o-mini",
+        max_tokens=1024,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": llm_prompt},
+        ],
+    )
+    return response.choices[0].message.content.strip()
+
+
+def _empty_graph_reply(entities: dict, *, image: bool = False) -> str:
+    lang = entities.get("lang", "vi")
+    if image:
+        if lang == "ko":
+            return (
+                "사진을 받았지만 얼룩 종류를 정확히 파악하기 어렵습니다.\n\n"
+                "추가로 알려주세요:\n"
+                "• 어떤 종류의 얼룩인가요? (기름, 혈액, 커피 등)\n"
+                "• 어떤 원단인가요? (면, 실크, 폴리에스터 등)"
+            )
+        return (
+            "Toi da nhan anh nhung kho xac dinh chinh xac loai vet ban.\n\n"
+            "Vui long cho biet them:\n"
+            "• Loai vet ban la gi? (dau an, mau, ca phe, ...)\n"
+            "• Chat lieu vai la gi? (cotton, lua, polyester, ...)"
+        )
+    if lang == "ko":
+        return (
+            "죄송합니다, 해당 정보를 찾을 수 없었습니다.\n\n"
+            "더 정확한 답변을 위해 알려주세요:\n"
+            "• 어떤 종류의 얼룩인가요? (예: 기름, 혈액, 커피)\n"
+            "• 어떤 원단인가요? (예: 면, 실크, 폴리에스터)\n"
+            "• 얼룩이 생긴 지 얼마나 됐나요?"
+        )
+    return (
+        "Xin loi, toi khong tim thay thong tin cho cau hoi nay.\n\n"
+        "De tra loi chinh xac hon, vui long cho biet:\n"
+        "• Loai vet ban la gi? (vi du: dau an, mau, ca phe)\n"
+        "• Chat lieu vai la gi? (vi du: cotton, lua, polyester)\n"
+        "• Vet ban bi bao lau roi?"
+    )
+
+
+def _answer_with_optional_cache(
+    cache_question: str,
+    entities: dict,
+    graph_context: dict,
+    *,
+    prefix: str = "",
+) -> str:
+    """LLM answer with fail-open cache. Skips cache when graph is empty."""
+    ctx_key = build_context_key(entities)
+    cached = cache_lookup(cache_question, ctx_key)
+    if cached:
+        return cached
+
+    base_prompt = _build_llm_prompt(cache_question, graph_context)
+    llm_prompt = (prefix + "\n\n" + base_prompt) if prefix else base_prompt
+    answer = _call_llm(llm_prompt)
+    cache_store(cache_question, answer, ctx_key)
+    return answer
+
+
 def generate_response_from_entities(
     entities: dict,
     user_caption: str = "",
@@ -452,51 +523,26 @@ def generate_response_from_entities(
     graph_data    = graph_context.get("graph")
 
     if not graph_data or graph_data in ({}, []):
-        lang = entities.get("lang", "vi")
-        if entities.get("_image_analysis"):
-            if lang == "ko":
-                return (
-                    "사진을 받았지만 얼룩 종류를 정확히 파악하기 어렵습니다.\n\n"
-                    "추가로 알려주세요:\n"
-                    "• 어떤 종류의 얼룩인가요? (기름, 혈액, 커피 등)\n"
-                    "• 어떤 원단인가요? (면, 실크, 폴리에스터 등)"
-                )
-            return (
-                "Toi da nhan anh nhung kho xac dinh chinh xac loai vet ban.\n\n"
-                "Vui long cho biet them:\n"
-                "• Loai vet ban la gi? (dau an, mau, ca phe, ...)\n"
-                "• Chat lieu vai la gi? (cotton, lua, polyester, ...)"
-            )
-        if lang == "ko":
-            return (
-                "죄송합니다, 해당 정보를 찾을 수 없었습니다.\n\n"
-                "더 정확한 답변을 위해 알려주세요:\n"
-                "• 어떤 종류의 얼룩인가요?\n"
-                "• 어떤 원단인가요?"
-            )
-        return (
-            "Xin loi, toi khong tim thay thong tin cho cau hoi nay.\n\n"
-            "Vui long cho biet:\n"
-            "• Loai vet ban la gi?\n"
-            "• Chat lieu vai la gi?"
+        return _empty_graph_reply(
+            entities,
+            image=bool(entities.get("_image_analysis")),
         )
 
-    base_prompt = _build_llm_prompt(user_caption or "", graph_context)
-    llm_prompt  = (prefix + "\n\n" + base_prompt) if prefix else base_prompt
-
-    response = _openai.chat.completions.create(
-        model="gpt-4o-mini",
-        max_tokens=1024,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": llm_prompt},
-        ],
+    return _answer_with_optional_cache(
+        question_for_cache(user_caption, entities),
+        entities,
+        graph_context,
+        prefix=prefix,
     )
-    return response.choices[0].message.content.strip()
 
 
 def generate_response(user_message: str) -> str:
     """Main entry point: given a user message, return a Vietnamese chatbot response."""
+    # Fast path — skip entity extraction + LLM on cache hit (fail-open inside lookup)
+    cached = cache_lookup(user_message, "")
+    if cached:
+        return cached
+
     entities = extract_entities(user_message)
     entities["_raw"] = user_message
     # Hard override for high-value VN franchise phrases (before graph routing)
@@ -515,30 +561,6 @@ def generate_response(user_message: str) -> str:
     graph_data = graph_context.get("graph")
 
     if not graph_data or graph_data == {} or graph_data == []:
-        lang = entities.get("lang", "vi")
-        if lang == "ko":
-            return (
-                "죄송합니다, 해당 정보를 찾을 수 없었습니다.\n\n"
-                "더 정확한 답변을 위해 알려주세요:\n"
-                "• 어떤 종류의 얼룩인가요? (예: 기름, 혈액, 커피)\n"
-                "• 어떤 원단인가요? (예: 면, 실크, 폴리에스터)\n"
-                "• 얼룩이 생긴 지 얼마나 됐나요?"
-            )
-        return (
-            "Xin loi, toi khong tim thay thong tin cho cau hoi nay.\n\n"
-            "De tra loi chinh xac hon, vui long cho biet:\n"
-            "• Loai vet ban la gi? (vi du: dau an, mau, ca phe)\n"
-            "• Chat lieu vai la gi? (vi du: cotton, lua, polyester)\n"
-            "• Vet ban bi bao lau roi?"
-        )
+        return _empty_graph_reply(entities)
 
-    llm_prompt = _build_llm_prompt(user_message, graph_context)
-    response = _openai.chat.completions.create(
-        model="gpt-4o-mini",
-        max_tokens=1024,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": llm_prompt},
-        ],
-    )
-    return response.choices[0].message.content.strip()
+    return _answer_with_optional_cache(user_message, entities, graph_context)

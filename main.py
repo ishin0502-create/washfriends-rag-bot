@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-05-ask-errdetail",
+            "build": "2026-08-05-answer-cache-v1",
             "checks": checks,
         },
         status_code=200,
@@ -383,6 +383,11 @@ MATCH (c1:Chemical {code:'B2'}),(c2:Chemical {code:'A5'})
 MERGE (c1)-[:NEVER_MIX_WITH]->(c2)
 MERGE (c2)-[:NEVER_MIX_WITH]->(c1)
 RETURN count(*) AS rels""")
+        _r(s, "S_clear_answer_cache", """
+MATCH (c:AnswerCache)
+WITH collect(c) AS nodes
+FOREACH (x IN nodes | DETACH DELETE x)
+RETURN size(nodes) AS cleared""")
         r2 = s.run("MATCH (n) RETURN labels(n)[0] AS l, count(n) AS c ORDER BY l")
         log["after"] = {row["l"]: row["c"] for row in r2}
         r3 = s.run("MATCH ()-[r]->() RETURN type(r) AS t, count(r) AS c ORDER BY t")
