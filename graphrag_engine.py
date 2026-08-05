@@ -582,15 +582,26 @@ def _infer_item_from_text(text: str) -> str:
         return "I_GORETEX"
     if "다운" in raw or "패딩" in raw or "ao phao" in t or "down jacket" in t or "padding" in t:
         return "I_DOWN_JACKET"
-    # Shoes — specific before generic
-    lace = any(k in raw for k in ("끈", "신발끈")) or "day giay" in t or "shoelace" in t or "lace" in t
-    if lace and (shoe or "운동화" in raw or "giay" in t or "sneaker" in t or not bag):
-        if "끈" in raw or "day giay" in t or "shoelace" in t or "lace" in t:
-            return "I_SHOE_LACES"
-    white_panel = any(k in raw for k in ("흰창", "흰 창", "옆면", "중창")) or "midsole" in t or "canh trang" in t or "de trang" in t
-    if white_panel and (shoe or "운동화" in raw or "giay" in t or "sneaker" in t):
+    # Shoes — specific before generic (require shoe cues to avoid false hits)
+    if (
+        "신발끈" in raw
+        or "day giay" in t
+        or "shoelace" in t
+        or (("끈" in raw or "lace" in t) and shoe)
+    ):
+        return "I_SHOE_LACES"
+    white_panel = (
+        any(k in raw for k in ("흰창", "흰 창", "중창"))
+        or "midsole" in t
+        or "canh trang" in t
+        or "de trang" in t
+        or ("옆면" in raw and shoe)
+    )
+    if white_panel and shoe:
         return "I_SNEAKER_WHITE"
-    if any(k in raw for k in ("러닝", "망사")) or "running" in t or "mesh" in t or "giay chay" in t or "luoi" in t and "giay" in t:
+    if "러닝" in raw or "running" in t or "giay chay" in t:
+        return "I_RUNNING_MESH"
+    if shoe and (any(k in raw for k in ("망사",)) or "mesh" in t or "luoi" in t):
         return "I_RUNNING_MESH"
     if "스니커" in raw or "운동화" in raw or "sneaker" in t or "giay the thao" in t or (shoe and not leather and not suede):
         return "I_SNEAKER"
