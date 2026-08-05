@@ -196,6 +196,9 @@ _ITEM_FABRIC_TOKEN = {
     "I_SUEDE_BAG": "suede",
     "I_SUEDE_SHOE": "suede",
     "I_SNEAKER": "polyester",
+    "I_RUNNING_MESH": "polyester",
+    "I_SNEAKER_WHITE": "polyester",
+    "I_SHOE_LACES": "cotton",
     "I_GORETEX": "polyester",
     "I_DOWN_JACKET": "polyester",
 }
@@ -572,11 +575,24 @@ def _infer_item_from_text(text: str) -> str:
         return "I_GLOVE_LEATHER"
     if leather:
         return "I_LEATHER_GARMENT"
-    if "gore" in t or "dwr" in t or "고어" in raw or "방수자켓" in raw or "chong tham" in t or "기능성" in raw:
+    if "gore" in t or "dwr" in t or "고어" in raw or "방수자켓" in raw or "chong tham" in t:
+        # "기능성" alone is ambiguous — only with outdoor/waterproof cues
+        return "I_GORETEX"
+    if "기능성" in raw and ("자켓" in raw or "등산" in raw or "아웃도어" in raw):
         return "I_GORETEX"
     if "다운" in raw or "패딩" in raw or "ao phao" in t or "down jacket" in t or "padding" in t:
         return "I_DOWN_JACKET"
-    if "스니커" in raw or "운동화" in raw or "sneaker" in t or "giay the thao" in t:
+    # Shoes — specific before generic
+    lace = any(k in raw for k in ("끈", "신발끈")) or "day giay" in t or "shoelace" in t or "lace" in t
+    if lace and (shoe or "운동화" in raw or "giay" in t or "sneaker" in t or not bag):
+        if "끈" in raw or "day giay" in t or "shoelace" in t or "lace" in t:
+            return "I_SHOE_LACES"
+    white_panel = any(k in raw for k in ("흰창", "흰 창", "옆면", "중창")) or "midsole" in t or "canh trang" in t or "de trang" in t
+    if white_panel and (shoe or "운동화" in raw or "giay" in t or "sneaker" in t):
+        return "I_SNEAKER_WHITE"
+    if any(k in raw for k in ("러닝", "망사")) or "running" in t or "mesh" in t or "giay chay" in t or "luoi" in t and "giay" in t:
+        return "I_RUNNING_MESH"
+    if "스니커" in raw or "운동화" in raw or "sneaker" in t or "giay the thao" in t or (shoe and not leather and not suede):
         return "I_SNEAKER"
     return ""
 

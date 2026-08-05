@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-items-care-v1",
+            "build": "2026-08-06-sneakers-v1",
             "checks": checks,
         },
         status_code=200,
@@ -394,7 +394,8 @@ UNWIND [
   {id:'T_BRUSH_HARD',name_vi:'Ban chai spotting cung',name_ko:'경질 스포팅 솔',use_for_vi:'Denim, canvas, giay the thao'},
   {id:'T_BRUSH_ULTRA',name_vi:'Ban chai sieu mem / mieng fot',name_ko:'초연질 솔·스펀지',use_for_vi:'Lua, len, vai mong — khong cha manh'},
   {id:'T_CLOTH',name_vi:'Khan trang sach / giay tham',name_ko:'흰 천·흡수지',use_for_vi:'Tham, lot duoi, khong cha lan'},
-  {id:'T_SPRAY',name_vi:'Binh xit rieng (dan nhan)',name_ko:'분무기(라벨 필수)',use_for_vi:'Pha loang A3/D2/B1 — khong tron binh'}
+  {id:'T_SPRAY',name_vi:'Binh xit rieng (dan nhan)',name_ko:'분무기(라벨 필수)',use_for_vi:'Pha loang A3/D2/B1 — khong tron binh'},
+  {id:'T_BRUSH_SHOE',name_vi:'Ban chai de giay (long cung)',name_ko:'운동화 밑창용 경질 솔',use_for_vi:'De cao su — KHONG dung tren mesh/lua'}
 ] AS t MERGE (n:Tool {id:t.id}) SET n += t RETURN count(n) AS created""")
         _r(s, "U_stain_ops_protein", """
 MATCH (s:Stain) WHERE s.contains_protein = true
@@ -610,14 +611,38 @@ UNWIND [
    motion_vi:'Luc 1 — chai kho',
    water_temp_vi:'KHONG nuoc',
    aftercare_vi:'Kho bong mat. KHONG say.'},
-  {id:'I_SNEAKER',name:'Sneaker / sport shoe',name_vi:'Giay sneaker / the thao (vai/luoi)',name_ko:'스니커즈·운동화(천/메시)',fabric_id:'F2',
-   precheck_vi:'Thao day + lot. Chai kho dat ngoai truoc. May: tui luoi hoac dem khan.',
-   why_vi:'Sneaker: CAM say may (keo chay). Vai/luoi: 30C tinh te, bot giat it. Say khi / phoi + nhet bao giu hinh.',
-   fresh_path_vi:'Chai kho → spotting nuoc rua chen pha loang → giat 30C nhe neu can → say khi / phoi, nhet bao.',
-   dried_path_vi:'Lap spotting. Tranh nang truc tiep (doi mau). Lap day khi kho han.',
-   motion_vi:'Luc 2 — chai mem vong tron nhe',
-   water_temp_vi:'~30C tinh te; khong nhiet cao',
-   aftercare_vi:'CAM say may. Say khi / quat. Nhet bao giu form. Kho han moi mang.'},
+  {id:'I_SNEAKER',name:'Sneaker / sport shoe',name_vi:'Giay sneaker / the thao (vai/canvas)',name_ko:'스니커즈·일반 운동화(천·캔버스)',fabric_id:'F2',
+   precheck_vi:'Phan loai chat lieu TRUOC. Thao DAY + LOT rieng. Chai kho bun/dat ngoai troi. May: tui luoi + dem khan. Chup anh vet/keo long truoc xu ly.',
+   why_vi:'Sneaker: CAM say nhiet cao (keo/mui xop hong). Nuoc <=30C, chat giat TRUNG TINH it. Kiềm manh de gay VANG de trang. Day/lot giat RIENG.',
+   fresh_path_vi:'(1) Chai kho. (2) Spotting: than giay=sol MEM + nuoc rua chen/pha loang; de cao su=sol CUNG nhe. (3) Ngam ngan <=10-30 phut neu can. (4) Giat tay hoac may tui luoi 30C. (5) Xa ky — ton du kiềm gay vang. (6) Nhet bao/khan, phoi BONG MAT.',
+   dried_path_vi:'Vet bun: paste bot giat + baking soda + it nuoc, chai, xa. Canh trang/midsole den: lap spotting trung tinh, KHONG hao danh 100%. Tranh nang gay (vang).',
+   motion_vi:'Than/luoi: luc 2 sol mem mot chieu. De cao su: luc 2-3 sol cung. Khong cha ngang mau phoi mau.',
+   water_temp_vi:'<=30C. Khong nuoc nong.',
+   aftercare_vi:'CAM say may nong. Say khi/quat + nhet bao. Kho HAN moi mang. Doi bao khi am.'},
+  {id:'I_RUNNING_MESH',name:'Mesh running shoe',name_vi:'Giay chay bo luoi / mesh',name_ko:'러닝화·망사(메시) 운동화',fabric_id:'F2',
+   precheck_vi:'Luoi/mesh mong — de rach. BAT BUOC tui luoi neu may. Thao day+lot. Chai kho nhe.',
+   why_vi:'Mesh: ma sat may de hong soi. Chi sol MEM/mieng fot. Nhiet thap. Day trang giat rieng.',
+   fresh_path_vi:'Chai kho nhe → spotting sol mem + chat trung tinh loang → tay hoac may TUI LUOI 30C tinh te → xa ky → nhet bao phoi bong mat.',
+   dried_path_vi:'Vet sau tren mesh: lap spotting, khong chai cung. Khong het → bao khach (mesh de bam mau).',
+   motion_vi:'Luc 1-2 — sol sieu mem/mem, mot chieu theo soi',
+   water_temp_vi:'<=30C, chuong trinh tinh te',
+   aftercare_vi:'CAM say nong. Phoi bong mat + giu form. Kho han moi mang.'},
+  {id:'I_SNEAKER_WHITE',name:'White sneaker panel / midsole',name_vi:'Giay trang / canh trang / de trang (midsole)',name_ko:'흰 창·흰 옆면 운동화',fabric_id:'F2',
+   precheck_vi:'Xu ly RIENG canh/de trang. Ghi nhan: de cao su va vai khac sol. Thong bao: kho trang 100% neu da oxi hoa.',
+   why_vi:'De/canh trang de VANG neu ton du kiềm hoac say nang. Dung chat TRUNG TINH, xa ky, phoi bong mat (nua kho tranh vang).',
+   fresh_path_vi:'Chai kho → paste nhe: bot giat trung tinh + baking soda + it nuoc len canh/de → sol mem (vai) / sol cung nhe (cao su) → xa KY → phoi bong mat, nhet bao.',
+   dried_path_vi:'Lap 1-2 lan. Con xam do oxi hoa: bao khach, khong dung tay manh gay hong keo.',
+   motion_vi:'Canh vai: sol mem. De cao su: sol cung nhe, khong cha len mesh',
+   water_temp_vi:'Lanh/~30C, khong nong',
+   aftercare_vi:'Phoi bong mat den kho. CAM say nong / nang gay. Bao khach neu con o.'},
+  {id:'I_SHOE_LACES',name:'Shoe laces',name_vi:'Day giay (dac biet day trang)',name_ko:'운동화 끈(특히 흰 끈)',fabric_id:'F1',
+   precheck_vi:'LUON thao day ra giat RIENG (khong de trong giay). Day mau/trang tach lo.',
+   why_vi:'Day trong giay khi giat = ban lan + khong sach. Day trang de vang neu kiềm ton du / say nang.',
+   fresh_path_vi:'Ngam nuoc lanh + chat giat trung tinh 15-30 phut → chai mem hoac vo tui luoi giat nhe → xa KY → phoi bong mat (khong say nong).',
+   dried_path_vi:'Con xam: ngam them + baking soda nhe, xa ky. Khong het → bao khach thay day.',
+   motion_vi:'Luc 2 — chai mem doc day, khong xoan manh',
+   water_temp_vi:'Lanh/~30C',
+   aftercare_vi:'Phoi thang bong mat. CAM say nong. Lap lai khi giay kho.'},
   {id:'I_LEATHER_SHOE',name:'Leather shoe',name_vi:'Giay da bong',name_ko:'가죽 구두',fabric_id:'F8',
    precheck_vi:'Giay da: it nuoc toi da — chi spotting. CAM ngam/may neu khong chac.',
    why_vi:'Giay da: nuoc nhieu = bien dang. Spotting nhe + kem da. CAM say may.',
@@ -670,18 +695,22 @@ MATCH (f:Fabric {id:it.fabric_id})
 MERGE (i)-[:MADE_OF]->(f)
 RETURN count(i) AS created""")
         _r(s, "I_items_chem_tools", """
-MATCH (cloth:Tool {id:'T_CLOTH'}), (soft:Tool {id:'T_BRUSH_SOFT'}), (ultra:Tool {id:'T_BRUSH_ULTRA'})
-WITH cloth, soft, ultra
-MATCH (d2:Chemical {code:'D2'}), (d3:Chemical {code:'D3'}), (a1:Chemical {code:'A1'})
-WITH cloth, soft, ultra, d2, d3, a1
+MATCH (cloth:Tool {id:'T_CLOTH'}), (soft:Tool {id:'T_BRUSH_SOFT'}), (ultra:Tool {id:'T_BRUSH_ULTRA'}),
+      (hard:Tool {id:'T_BRUSH_HARD'}), (shoe:Tool {id:'T_BRUSH_SHOE'})
+WITH cloth, soft, ultra, hard, shoe
+MATCH (d2:Chemical {code:'D2'}), (d3:Chemical {code:'D3'}), (a1:Chemical {code:'A1'}), (n1:Chemical {code:'N1'})
+WITH cloth, soft, ultra, hard, shoe, d2, d3, a1, n1
 MATCH (i:Item)
 FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_LEATHER_SHOE','I_GLOVE_LEATHER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(a1))
 FOREACH (_ IN CASE WHEN i.id IN ['I_SUEDE_GARMENT','I_SUEDE_BAG','I_SUEDE_SHOE'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth))
-FOREACH (_ IN CASE WHEN i.id = 'I_SNEAKER' THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_SNEAKER','I_RUNNING_MESH','I_SNEAKER_WHITE'] THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(shoe)
+  MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_CHEMICAL]->(n1))
+FOREACH (_ IN CASE WHEN i.id = 'I_SHOE_LACES' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth)
-  MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(d3))
+  MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_CHEMICAL]->(n1))
 FOREACH (_ IN CASE WHEN i.id IN ['I_GORETEX','I_DOWN_JACKET'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_TOOL]->(cloth))
 RETURN count(i) AS items""")
