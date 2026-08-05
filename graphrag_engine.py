@@ -152,6 +152,53 @@ RETURN s.id AS id, s.name_vi AS name_vi, s.name AS name_en,
 ORDER BY s.name_vi
 """
 
+Q_ITEM_CONTEXT = """
+MATCH (i:Item {id: $item_id})
+OPTIONAL MATCH (i)-[:MADE_OF]->(f:Fabric)
+OPTIONAL MATCH (i)-[:USES_CHEMICAL]->(chem:Chemical)
+OPTIONAL MATCH (i)-[:USES_TOOL]->(tool:Tool)
+OPTIONAL MATCH (wf:Chemical)
+  WHERE wf.wf_supply = true OR wf.code IN ['S1','WF_SOFT','WF_FRAG']
+OPTIONAL MATCH (f)-[:NEVER_USE]->(blocked:Chemical)
+RETURN
+  i {
+    .id, .name, .name_vi, .name_ko,
+    .precheck_vi, .why_vi, .fresh_path_vi, .dried_path_vi,
+    .motion_vi, .water_temp_vi, .aftercare_vi, .fabric_id
+  } AS item_context,
+  CASE WHEN f IS NULL THEN null ELSE f {
+    .id, .name, .name_vi, .max_temp, .can_bleach, .enzyme_safe, .acid_safe,
+    .dry_hint_vi, .iron_hint_vi
+  } END AS fabric_context,
+  COLLECT(DISTINCT chem {
+    .code, .name, .name_vi, .name_ko, .role, .safe_on_wool, .safe_on_silk,
+    .shop_name_vi, .buy_where_vi, .buy_where_ko, .alt1_vi, .alt2_vi, .alt3_vi,
+    .example_brands_vi, .wf_supply, .when_use_vi, .dilution_vi, .dilution_ko
+  }) AS chemicals,
+  COLLECT(DISTINCT tool {
+    .id, .name_vi, .name_ko, .use_for_vi
+  }) AS tools,
+  COLLECT(DISTINCT wf {
+    .code, .name, .name_vi, .name_ko, .role, .shop_name_vi, .buy_where_vi, .buy_where_ko,
+    .alt1_vi, .alt2_vi, .when_use_vi, .wf_supply, .dilution_vi, .dilution_ko
+  }) AS washfriends_supply,
+  COLLECT(DISTINCT CASE WHEN blocked IS NOT NULL THEN {
+    fabric: f.name_vi, chemical: blocked.code, chemical_name_vi: blocked.name_vi
+  } END) AS never_use_on_fabric
+"""
+
+_ITEM_FABRIC_TOKEN = {
+    "I_LEATHER_GARMENT": "leather",
+    "I_LEATHER_BAG": "leather",
+    "I_LEATHER_SHOE": "leather",
+    "I_GLOVE_LEATHER": "leather",
+    "I_SUEDE_GARMENT": "suede",
+    "I_SUEDE_BAG": "suede",
+    "I_SUEDE_SHOE": "suede",
+    "I_SNEAKER": "polyester",
+    "I_GORETEX": "polyester",
+    "I_DOWN_JACKET": "polyester",
+}
 Q_RESCUE = """
 MATCH (s:Stain)
 WHERE s.id = $stain_id
@@ -318,6 +365,14 @@ def _fetch_graph_context(entities: dict) -> dict:
         fabric_input = inferred_fabric
         entities["fabric_type"] = inferred_fabric
 
+    item_id = entities.get("item_id") or _infer_item_from_text(raw_original)
+    if item_id:
+        entities["item_id"] = item_id
+        if not fabric_input:
+            fabric_input = _ITEM_FABRIC_TOKEN.get(item_id, "")
+            if fabric_input:
+                entities["fabric_type"] = fabric_input
+
     # Prefer franchise phrasing in the raw message over a wrong LLM entity guess
     _ALIASES = (
         ("laterite", "dat do laterite"),
@@ -428,7 +483,102 @@ def _fetch_graph_context(entities: dict) -> dict:
     if isinstance(context.get("graph"), dict):
         context["graph"] = _apply_fabric_chem_safety(context["graph"])
 
+    # Item care (shoes/bags/gore-tex/down/leather) — same 1)-6) fields as stains
+    item_id = entities.get("item_id")
+    if item_id:
+        item_rows = _run_query(Q_ITEM_CONTEXT, {"item_id": item_id})
+        if item_rows:
+            context = _merge_item_into_context(context, item_rows[0])
+            if isinstance(context.get("graph"), dict):
+                context["graph"] = _apply_fabric_chem_safety(context["graph"])
+
     return context
+
+
+def _item_as_stain_shaped(item_graph: dict) -> dict:
+    """Map Item fields onto stain_context so existing owner 1)-6) prompt stays unchanged."""
+    ic = item_graph.get("item_context") or {}
+    return {
+        "stain_context": {
+            "id": ic.get("id"),
+            "name": ic.get("name"),
+            "name_vi": ic.get("name_vi"),
+            "name_ko": ic.get("name_ko"),
+            "tip": ic.get("why_vi"),
+            "urgency": "care",
+            "precheck_vi": ic.get("precheck_vi"),
+            "why_vi": ic.get("why_vi"),
+            "fresh_path_vi": ic.get("fresh_path_vi"),
+            "dried_path_vi": ic.get("dried_path_vi"),
+            "motion_vi": ic.get("motion_vi"),
+            "water_temp_vi": ic.get("water_temp_vi"),
+            "aftercare_vi": ic.get("aftercare_vi"),
+            "group": "item_care",
+        },
+        "fabric_context": item_graph.get("fabric_context"),
+        "chemicals": item_graph.get("chemicals") or [],
+        "tools": item_graph.get("tools") or [],
+        "washfriends_supply": item_graph.get("washfriends_supply") or [],
+        "force_levels": [],
+        "fabric_cautions": [],
+        "never_use_on_fabric": item_graph.get("never_use_on_fabric") or [],
+        "never_mix_alerts": [],
+        "climate_context": [],
+        "item_context": ic,
+    }
+
+
+def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
+    g = context.get("graph")
+    has_stain = isinstance(g, dict) and g.get("stain_context") is not None
+    if not has_stain:
+        context["graph"] = _item_as_stain_shaped(item_graph)
+        context["query_type"] = "item_care"
+        return context
+    g = dict(g)
+    g["item_context"] = item_graph.get("item_context")
+    if not g.get("fabric_context") and item_graph.get("fabric_context"):
+        g["fabric_context"] = item_graph["fabric_context"]
+    # Prefer item tools/chems when stain chem list empty
+    if not g.get("tools") and item_graph.get("tools"):
+        g["tools"] = item_graph.get("tools")
+    context["graph"] = g
+    return context
+
+
+def _infer_item_from_text(text: str) -> str:
+    """Detect franchise item types from KO/VI/EN — KB-backed Item ids only."""
+    if not text:
+        return ""
+    raw = text
+    t = _normalize_text(text)
+    suede = any(k in raw for k in ("스웨이드", "누벅")) or "suede" in t or "nubuck" in t or "da lon" in t
+    leather = any(k in raw for k in ("가죽",)) or "leather" in t or "ao da" in t or "giay da" in t or "tui da" in t
+    bag = any(k in raw for k in ("가방", "지갑")) or "tui xach" in t or "tui da" in t or "handbag" in t or "vi da" in t
+    shoe = any(k in raw for k in ("구두", "신발", "운동화", "스니커")) or "giay" in t or "shoe" in t or "sneaker" in t
+    glove = any(k in raw for k in ("장갑",)) or "gang tay" in t or "glove" in t
+
+    if suede and bag:
+        return "I_SUEDE_BAG"
+    if suede and shoe:
+        return "I_SUEDE_SHOE"
+    if suede:
+        return "I_SUEDE_GARMENT"
+    if leather and bag:
+        return "I_LEATHER_BAG"
+    if leather and shoe:
+        return "I_LEATHER_SHOE"
+    if leather and glove:
+        return "I_GLOVE_LEATHER"
+    if leather:
+        return "I_LEATHER_GARMENT"
+    if "gore" in t or "dwr" in t or "고어" in raw or "방수자켓" in raw or "chong tham" in t or "기능성" in raw:
+        return "I_GORETEX"
+    if "다운" in raw or "패딩" in raw or "ao phao" in t or "down jacket" in t or "padding" in t:
+        return "I_DOWN_JACKET"
+    if "스니커" in raw or "운동화" in raw or "sneaker" in t or "giay the thao" in t:
+        return "I_SNEAKER"
+    return ""
 
 
 def _infer_fabric_from_text(text: str) -> str:
@@ -621,13 +771,14 @@ QUY TẮC TRẢ LỜI:
    Thiếu field → bỏ qua hoặc hỏi 1 câu. CẤM in tên field kỹ thuật (why_vi, fresh_path_vi, code…).
 3. Cảnh báo an toàn ĐẦU câu (chữ in hoa ngắn, không markdown **)
 4. Mở đầu ngắn (2–4 câu) nếu có why_vi / tip — nguyên tắc ĐÚNG vết này, rồi mới 1)-6).
-5. Câu XỬ LÝ VẾT — 1)-6), dễ đọc:
-   (1) Nhận diện + tươi/khô (nội dung fresh/dried, không in tên field)
-   (2) Dụng cụ
+5. Câu XỬ LÝ VẾT / CHĂM SÓC MÓN ĐỒ — 1)-6), dễ đọc (cùng một format cho stain và item_care):
+   (1) Nhận diện + tươi/khô hoặc tình trạng món (nội dung fresh/dried, không in tên field)
+   (2) Dụng cụ — tools.name_ko nếu trả lời Hàn
    (3) Lực + hướng
    (4) Hóa chất — xem quy tắc HÓA CHẤT bên dưới
    (5) Nhiệt độ nước + max_temp vải
    (6) Sau xử lý — kiểm tra TRƯỚC sấy/ủi
+   Nếu có item_context: đây là chăm sóc món (giày/túi/áo phao/Gore-Tex…) — vẫn dùng 1)-6), không đổi giọng.
 6. WF_SOFT / WF_FRAG chỉ khi đúng when_use_vi
 7. CẤM mẹo dân gian, thương hiệu ngoài, viện/web/AI/PDF
 8. Không markdown **, ##, *, _ — Zalo plain text thuần (không in dấu ** quanh tiêu đề)

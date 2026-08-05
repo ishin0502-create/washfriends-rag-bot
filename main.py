@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-05-leather-safe-v1",
+            "build": "2026-08-06-items-care-v1",
             "checks": checks,
         },
         status_code=200,
@@ -575,6 +575,116 @@ MATCH (s:Stain {id:o.id})
 SET s.why_vi = o.why_vi, s.fresh_path_vi = o.fresh_path_vi, s.dried_path_vi = o.dried_path_vi,
     s.tip = coalesce(s.tip, s.why_vi)
 RETURN count(s) AS updated""")
+        # Priority 1–2 item care — same field names as stain paths (owner 1)-6) flow)
+        _r(s, "I_items_care", """
+UNWIND [
+  {id:'I_LEATHER_GARMENT',name:'Leather garment',name_vi:'Ao/quan da bong',name_ko:'가죽 의류(무지/매끈 가죽)',fabric_id:'F8',
+   precheck_vi:'Phan biet da bong vs suede. CAM may giat. Test goc khuat truoc khi dung con.',
+   why_vi:'Da bong: it nuoc toi da; may giat/nhiet/tay oxy = hong. Sau xu ly can boi kem da.',
+   fresh_path_vi:'Khan am nhe lau → kho. Vet: khan + con sat khuan 70% CHAM nhe (test). CAM tay oxy. Roi boi kem da.',
+   dried_path_vi:'Vet cu/nam: chai/kho khan → con nhe neu can. Sau long/dien rong → chuyen chuyen nghiep. CAM may.',
+   motion_vi:'Luc 1 — chi tham/lau, khong cha manh',
+   water_temp_vi:'It nuoc, nhiet phong. KHONG ngam may.',
+   aftercare_vi:'Phoi bong mat. Boi kem da. KHONG say may, KHONG nang gay.'},
+  {id:'I_SUEDE_GARMENT',name:'Suede garment',name_vi:'Ao/quan da lon (suede/nubuck)',name_ko:'스웨이드·누벅 의류',fabric_id:'F9',
+   precheck_vi:'Be mat nhung = suede. CAM nuoc. Uot → chuyen ngay.',
+   why_vi:'Suede + nuoc = vet vinh vien. Chi chai kho / tay kho. CAM may, CAM tay oxy.',
+   fresh_path_vi:'Chai suede kho ngoai→trong. Vet dau nhe: tay kho (gom). Khong het → chuyen.',
+   dried_path_vi:'Khong ngam. Bao khach chuyen chuyen nghiep neu uot/nam sau long.',
+   motion_vi:'Luc 1 — chai kho nhe theo chieu long',
+   water_temp_vi:'KHONG dung nuoc',
+   aftercare_vi:'De kho bong mat. KHONG say/ui. Thong bao khach neu con vet.'},
+  {id:'I_LEATHER_BAG',name:'Leather bag',name_vi:'Tui da / vi da',name_ko:'가죽 가방·지갑',fabric_id:'F8',
+   precheck_vi:'Lay het do trong tui. Da/PU: it nuoc. Dat tien / khong chac → tu choi xu ly sau.',
+   why_vi:'Tui da: it nuoc, dung dich da. CAM may giat/say (hong hinh).',
+   fresh_path_vi:'Lau khan am nhe → kho. Vet: spotting nhe dung dich da / con test goc. Boi kem da.',
+   dried_path_vi:'Khong ngam. Sau xu ly giu hinh, phoi bong mat.',
+   motion_vi:'Luc 1 — lau/tham, khong ngam',
+   water_temp_vi:'It nuoc, nhiet phong',
+   aftercare_vi:'Phoi boi hinh. KHONG say. Boi kem da neu can.'},
+  {id:'I_SUEDE_BAG',name:'Suede bag',name_vi:'Tui da lon / suede',name_ko:'스웨이드 가방',fabric_id:'F9',
+   precheck_vi:'Suede tui: CAM nuoc. Dat tien → chuyen chuyen nghiep.',
+   why_vi:'Suede tui + nuoc = vet. Chi chai kho / chuyen.',
+   fresh_path_vi:'Chai kho. Khong het → chuyen. CAM may.',
+   dried_path_vi:'Tu choi ngam/may. Bao khach chuyen.',
+   motion_vi:'Luc 1 — chai kho',
+   water_temp_vi:'KHONG nuoc',
+   aftercare_vi:'Kho bong mat. KHONG say.'},
+  {id:'I_SNEAKER',name:'Sneaker / sport shoe',name_vi:'Giay sneaker / the thao (vai/luoi)',name_ko:'스니커즈·운동화(천/메시)',fabric_id:'F2',
+   precheck_vi:'Thao day + lot. Chai kho dat ngoai truoc. May: tui luoi hoac dem khan.',
+   why_vi:'Sneaker: CAM say may (keo chay). Vai/luoi: 30C tinh te, bot giat it. Say khi / phoi + nhet bao giu hinh.',
+   fresh_path_vi:'Chai kho → spotting nuoc rua chen pha loang → giat 30C nhe neu can → say khi / phoi, nhet bao.',
+   dried_path_vi:'Lap spotting. Tranh nang truc tiep (doi mau). Lap day khi kho han.',
+   motion_vi:'Luc 2 — chai mem vong tron nhe',
+   water_temp_vi:'~30C tinh te; khong nhiet cao',
+   aftercare_vi:'CAM say may. Say khi / quat. Nhet bao giu form. Kho han moi mang.'},
+  {id:'I_LEATHER_SHOE',name:'Leather shoe',name_vi:'Giay da bong',name_ko:'가죽 구두',fabric_id:'F8',
+   precheck_vi:'Giay da: it nuoc toi da — chi spotting. CAM ngam/may neu khong chac.',
+   why_vi:'Giay da: nuoc nhieu = bien dang. Spotting nhe + kem da. CAM say may.',
+   fresh_path_vi:'Chai kho → khan + nuoc rua chen rat loang / dung dich da Cham → lau kho → kem da.',
+   dried_path_vi:'Khong ngam. Con vet nang → chuyen. Phoi bong mat, nhet bao.',
+   motion_vi:'Luc 1 — lau nhe',
+   water_temp_vi:'It nuoc, nhiet phong',
+   aftercare_vi:'Kem da. KHONG say may. Phoi bong mat + giu form.'},
+  {id:'I_SUEDE_SHOE',name:'Suede shoe',name_vi:'Giay da lon / suede',name_ko:'스웨이드 구두',fabric_id:'F9',
+   precheck_vi:'Suede giay: CAM nuoc. Uot → chuyen.',
+   why_vi:'Suede giay + nuoc = vet. Chai suede kho / tay kho. CAM may/say.',
+   fresh_path_vi:'Chai kho theo chieu long. Vet dau: tay kho. Khong het → chuyen.',
+   dried_path_vi:'Khong ngam. Bao khach chuyen neu nang.',
+   motion_vi:'Luc 1 — chai kho',
+   water_temp_vi:'KHONG nuoc',
+   aftercare_vi:'Kho bong mat. KHONG say.'},
+  {id:'I_GORETEX',name:'Waterproof functional wear',name_vi:'Do chong tham / Gore-Tex / DWR',name_ko:'고어텍스·기능성 방수 의류',fabric_id:'F2',
+   precheck_vi:'Gore-Tex/DWR: giat it bot, nhiet thap. Ton du bot = mat chong tham.',
+   why_vi:'Mang chong tham: bot giat qua nhieu / xa vai = hong DWR. Say nhiet thap co the tai kich hoat DWR.',
+   fresh_path_vi:'Giat 30C tinh te, bot giat LONG it. KHONG xa vai. Xa them 1 lan. Say nhiet thap ngan (tai DWR) neu may cho phep.',
+   dried_path_vi:'Neu mat chong tham: giat sach ton du → say thap ~10 phut → xit lai DWR sau ~10 lan giat.',
+   motion_vi:'Luc 2 — may tinh te / tay nhe',
+   water_temp_vi:'~30C; nhiet thap khi say',
+   aftercare_vi:'Kiem tra chong tham. Co the xit lai DWR. Tranh bot giat dam.'},
+  {id:'I_DOWN_JACKET',name:'Down / padded jacket',name_vi:'Ao phao / ao don long',name_ko:'다운·패딩 점퍼',fabric_id:'F2',
+   precheck_vi:'Khoa keo, lam rong tui trong. Giat 30C tinh te, bot it, xa them.',
+   why_vi:'Ao phao: ton du bot = don von. Khong kho het = moc. Say thap + rũ (bong tennis neu co).',
+   fresh_path_vi:'30C tinh te, bot giat it. Them 1 lan xa. Vat rat nhe. Say nhiet thap + rũ thuong xuyen (hoac quat manh neu khong co say).',
+   dried_path_vi:'Kiem tra giua ao khong lanh = kho. Chua kho → say/quat them. CAM de am lau.',
+   motion_vi:'Luc 2 — chuong trinh tinh te',
+   water_temp_vi:'~30C; say nhiet thap',
+   aftercare_vi:'Kho HOAN TOAN truoc khi cat. Ru deu don. Tranh am keo dai.'},
+  {id:'I_GLOVE_LEATHER',name:'Leather glove',name_vi:'Gang tay da',name_ko:'가죽 장갑',fabric_id:'F8',
+   precheck_vi:'Gang da: nuoc toi thieu. CAM ngam lau.',
+   why_vi:'Gang da + nuoc nhieu = bien dang/nut. Lau nhe + kem da.',
+   fresh_path_vi:'Khan am nhe lau → kho → kem da.',
+   dried_path_vi:'Khong ngam. Hong form → bao khach.',
+   motion_vi:'Luc 1',
+   water_temp_vi:'It nuoc',
+   aftercare_vi:'Kem da. Kho tu nhien.'}
+] AS it
+MERGE (i:Item {id:it.id})
+SET i.name = it.name, i.name_vi = it.name_vi, i.name_ko = it.name_ko,
+    i.precheck_vi = it.precheck_vi, i.why_vi = it.why_vi,
+    i.fresh_path_vi = it.fresh_path_vi, i.dried_path_vi = it.dried_path_vi,
+    i.motion_vi = it.motion_vi, i.water_temp_vi = it.water_temp_vi, i.aftercare_vi = it.aftercare_vi,
+    i.fabric_id = it.fabric_id
+WITH it, i
+MATCH (f:Fabric {id:it.fabric_id})
+MERGE (i)-[:MADE_OF]->(f)
+RETURN count(i) AS created""")
+        _r(s, "I_items_chem_tools", """
+MATCH (cloth:Tool {id:'T_CLOTH'}), (soft:Tool {id:'T_BRUSH_SOFT'}), (ultra:Tool {id:'T_BRUSH_ULTRA'})
+WITH cloth, soft, ultra
+MATCH (d2:Chemical {code:'D2'}), (d3:Chemical {code:'D3'}), (a1:Chemical {code:'A1'})
+WITH cloth, soft, ultra, d2, d3, a1
+MATCH (i:Item)
+FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_LEATHER_SHOE','I_GLOVE_LEATHER'] THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(a1))
+FOREACH (_ IN CASE WHEN i.id IN ['I_SUEDE_GARMENT','I_SUEDE_BAG','I_SUEDE_SHOE'] THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth))
+FOREACH (_ IN CASE WHEN i.id = 'I_SNEAKER' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth)
+  MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(d3))
+FOREACH (_ IN CASE WHEN i.id IN ['I_GORETEX','I_DOWN_JACKET'] THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_TOOL]->(cloth))
+RETURN count(i) AS items""")
         _r(s, "S_clear_answer_cache", """
 MATCH (c:AnswerCache)
 WITH collect(c) AS nodes
