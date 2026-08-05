@@ -61,7 +61,15 @@ S_MILK=milk/sua, S_SWEAT_FRESH=sweat/mo hoi, S_SWEAT_YELLOW=armpit yellow,
 S_BLACK_COFFEE=black coffee/ca phe den, S_MILK_COFFEE=milk coffee/ca phe sua,
 S_TEA=tea/tra, S_RED_WINE=wine, S_SOY_SAUCE=soy sauce/nuoc tuong, S_FISH_SAUCE=nuoc mam,
 S_INK_PEN=ballpoint ink/muc, S_INK_PERMANENT=permanent marker, S_GRASS=grass/co,
-S_MUD=mud/bun, S_CURRY=curry/nghe, S_MUSTARD=mustard
+S_MUD=mud/bun, S_CURRY=curry/nghe, S_MUSTARD=mustard,
+S_LATERITE=laterite/dat do/dat do laterite/red soil Vietnam,
+S_MOTORBIKE_OIL=motorbike oil/dau nhot xe may,
+S_MILDEW=mildew/nam moc, S_RUST=rust/ri set,
+S_DEODORANT=deodorant, S_PAINT_LATEX=latex paint/son nuoc, S_GLUE=glue/keo
+
+IMPORTANT: "dat do" / "laterite" / "đất đỏ" = S_LATERITE (red soil), NEVER blood.
+"đỏ" alone does not mean blood if "dat"/"laterite"/"đất" is present.
+If the user names a specific stain, intent MUST be "treatment" (not mystery).
 
 Group IDs: G1=protein, G2=oil, G3=tannin, G4=dye, G5=complex
 

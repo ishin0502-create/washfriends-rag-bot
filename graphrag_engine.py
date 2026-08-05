@@ -305,8 +305,26 @@ def _fetch_graph_context(entities: dict) -> dict:
             break
     if alias_hit:
         stain_input = alias_hit
+        # Do not let LLM "mystery/red" routing win over a known franchise phrase
+        intent = "treatment"
+        context["intent"] = "treatment"
+        if alias_hit == "dat do laterite":
+            stain_id = "S_LATERITE"
+        elif alias_hit == "dau nhot xe may":
+            stain_id = "S_MOTORBIKE_OIL"
+        elif alias_hit == "nam moc":
+            stain_id = "S_MILDEW"
+        elif alias_hit == "ri set":
+            stain_id = "S_RUST"
     elif not stain_input and raw_msg:
         stain_input = raw_msg
+
+    # If we have an exact stain id, prefer id match via full context input
+    if stain_id and not alias_hit:
+        # keep extractor id, but still normalize name path below
+        pass
+    if stain_id and alias_hit:
+        stain_input = stain_id  # Cypher matches s.id CONTAINS / equality via CONTAINS on id
 
     if intent == "daily":
         rows = _run_query(Q_DAILY, {"month": month})
