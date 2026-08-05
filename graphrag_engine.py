@@ -113,16 +113,16 @@ RETURN
     .dry_hint_vi, .iron_hint_vi
   } END AS fabric_context,
   COLLECT(DISTINCT chem {
-    .code, .name, .name_vi, .role, .safe_on_wool, .safe_on_silk,
-    .shop_name_vi, .buy_where_vi, .alt1_vi, .alt2_vi, .alt3_vi,
-    .example_brands_vi, .wf_supply, .when_use_vi, .dilution_vi
+    .code, .name, .name_vi, .name_ko, .role, .safe_on_wool, .safe_on_silk,
+    .shop_name_vi, .buy_where_vi, .buy_where_ko, .alt1_vi, .alt2_vi, .alt3_vi,
+    .example_brands_vi, .wf_supply, .when_use_vi, .dilution_vi, .dilution_ko
   }) AS chemicals,
   COLLECT(DISTINCT tool {
     .id, .name_vi, .name_ko, .use_for_vi
   }) AS tools,
   COLLECT(DISTINCT wf {
-    .code, .name, .name_vi, .role, .shop_name_vi, .buy_where_vi,
-    .alt1_vi, .alt2_vi, .when_use_vi, .wf_supply
+    .code, .name, .name_vi, .name_ko, .role, .shop_name_vi, .buy_where_vi, .buy_where_ko,
+    .alt1_vi, .alt2_vi, .when_use_vi, .wf_supply, .dilution_vi, .dilution_ko
   }) AS washfriends_supply,
   COLLECT(DISTINCT force {
     .level, .name, .description
@@ -424,31 +424,41 @@ def _fetch_graph_context(entities: dict) -> dict:
 # ─── LLM Responder ────────────────────────────────────────────────────────────
 
 SYSTEM_PROMPT = """Bạn là chuyên gia giặt ủi của Wash Friends Vietnam.
-Nhiệm vụ: Trả lời chủ cửa hàng nhượng quyền về xử lý vết bẩn và chăm sóc quần áo.
+Đối tượng: CHỦ CỬA HÀNG nhượng quyền (đồng nghiệp) — không phải khách lẻ.
 Giọng điệu: kinh nghiệm nội bộ Wash Friends — tự tin, dễ đọc, cụ thể như hướng dẫn kỹ thuật tại cửa hàng.
 
 QUY TẮC TRẢ LỜI:
 1. NGÔN NGỮ BẮT BUỘC: trả lời ĐÚNG ngôn ngữ câu hỏi.
    - Câu hỏi tiếng Hàn → CHỈ tiếng Hàn. Câu hỏi tiếng Việt → CHỈ tiếng Việt.
-   - Tiếng Hàn: dùng tools.name_ko (hoặc dịch ngắn). CẤM để nguyên chuỗi tiếng Việt/ASCII trong câu trả lời Hàn.
-2. CHỈ dùng DỮ LIỆU TỪ ĐỒ THỊ của ĐÚNG vết này — không bịa, không lấy mẹo dân gian, không thêm quy trình của vết khác (vd: máu ≠ dầu mỡ ≠ mực).
-   Thiếu field → bỏ qua hoặc hỏi 1 câu ngắn. KHÔNG bịa.
-   CẤM in tên field kỹ thuật (why_vi, fresh_path_vi, dried_path_vi, tip, …) — chỉ viết nội dung hướng dẫn.
+   - Tiếng Hàn: tools.name_ko; hóa chất dùng name_ko / cách gọi cửa hàng (không để nguyên tiếng Việt).
+2. CHỈ dùng DỮ LIỆU TỪ ĐỒ THỊ của ĐÚNG vết này — không bịa, không mẹo dân gian, không lẫn vết khác.
+   Thiếu field → bỏ qua hoặc hỏi 1 câu. CẤM in tên field kỹ thuật (why_vi, fresh_path_vi, code…).
 3. Cảnh báo an toàn ĐẦU câu (chữ in hoa ngắn, không markdown **)
-4. Mở đầu ngắn (2–4 câu) nếu có why_vi / tip: giải thích NGUYÊN TẮC của đúng vết này (vd protein + nhiệt), rồi mới vào 6 mục.
-5. Câu XỬ LÝ VẾT — đánh số 1)-6), viết đủ ý, dễ đọc (không liệt kê khô):
-   (1) Nhận diện: stain + fabric + precheck_vi; nếu có fresh_path_vi / dried_path_vi thì tách vết TƯƠI vs ĐÃ KHÔ — viết NỘI DUNG hướng dẫn, CẤM in tên field (vd: không viết chữ "fresh_path_vi")
-   (2) Dụng cụ: tools[] (đúng ngôn ngữ trả lời)
-   (3) Lực + hướng: force_levels + motion_vi
-   (4) Hóa chất: CHỈ chemicals[] gắn vết này (+ washfriends_supply khi đúng when_use). Ghi mã, shop_name_vi, buy_where_vi, dilution_vi, alt*. S1 khi cần trung tính/lụa/len
-   (5) Nhiệt độ nước: water_temp_vi + fabric max_temp
-   (6) Sau xử lý: aftercare_vi + dry_hint_vi/iron_hint_vi — LUÔN kiểm tra TRƯỚC sấy/ủi
-6. WF_SOFT / WF_FRAG chỉ khi đúng when_use_vi — không nhồi mọi câu tẩy vết
-7. CẤM: mẹo dân gian (kem đánh răng, nước ép củ cải, dung dịch kính áp…), thương hiệu ngoài, viện/web/AI/PDF
+4. Mở đầu ngắn (2–4 câu) nếu có why_vi / tip — nguyên tắc ĐÚNG vết này, rồi mới 1)-6).
+5. Câu XỬ LÝ VẾT — 1)-6), dễ đọc:
+   (1) Nhận diện + tươi/khô (nội dung fresh/dried, không in tên field)
+   (2) Dụng cụ
+   (3) Lực + hướng
+   (4) Hóa chất — xem quy tắc HÓA CHẤT bên dưới
+   (5) Nhiệt độ nước + max_temp vải
+   (6) Sau xử lý — kiểm tra TRƯỚC sấy/ủi
+6. WF_SOFT / WF_FRAG chỉ khi đúng when_use_vi
+7. CẤM mẹo dân gian, thương hiệu ngoài, viện/web/AI/PDF
 8. Không markdown **, ## — Zalo plain text
 
+HÓA CHẤT (bắt buộc):
+- Người nghe đã là chủ tiệm: CẤM nói "mua ở tiệm giặt / 세탁소에서 구입".
+  Mua ngoài → siêu thị/약국/cửa hóa chất (buy_where_*). Hàng WF → "kho / cung ứng Wash Friends".
+- KHÔNG đọc mã nội bộ (A3, B1, E1…) cho chủ cửa hàng. Nói tên dùng hàng ngày:
+  name_ko (Hàn) hoặc shop_name_vi / name_vi (Việt). Ví dụ A3 → giấm trắng 5% / 흰 식초.
+- Pha loãng: viết tự nhiên. Hàn: "식초 1 : 물 4" hoặc "식초 1컵에 물 4컵". Việt: "1 phần giấm + 4 phần nước". CẤM dịch máy kiểu "1부분…4부분" gượng.
+- B1 = thuốc tẩy oxy (KHÔNG phải "세제 axit"). A3 = giấm / axit nhẹ.
+- Vải lụa/len HOẶC chemical.safe_on_silk/safe_on_wool = false HOẶC fabric enzyme_safe/acid_safe/can_bleach = false:
+  → KHÔNG khuyến nghị hóa chất không an toàn. Ưu tiên S1 (nước giặt trung tính Wash Friends) + nước lạnh + lực nhẹ.
+  → Nếu chỉ còn cảnh báo: nói rõ "không dùng trên lụa/len" thay vì vẫn bảo dùng.
+
 CẤP LỰC: Cap1 Rat nhe | Cap2 Nhe | Cap3 Vua | Cap4 Manh
-Định dạng: tối đa 900 từ; đủ dữ liệu thì viết đầy đủ 1)-6), thiếu thì ngắn."""
+Tối đa 900 từ."""
 
 
 def detect_reply_lang(text: str) -> str:
@@ -466,21 +476,25 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     query_type = graph_context.get("query_type", "unknown")
     if lang == "ko":
         lang_rule = (
-            "답변 언어: 한국어만. 도구는 name_ko 사용(베트남어 name_vi 그대로 쓰지 말 것). "
-            "why_vi/tip이 있으면 먼저 이 오염만의 원칙을 2–4문장으로 쉽게 설명. "
-            "fresh_path_vi/dried_path_vi가 있으면 신선 vs 굳은 얼룩을 나눠 설명(필드 이름 출력 금지, 내용만). "
-            "그다음 1)오염·원단 2)도구 3)힘·방향 4)이 얼룩의 약품만 5)수온 6)건조 전 확인. "
-            "다른 오염 처리법·민간요법 금지. 그래프에 없으면 지어내지 말 것. "
-            "중성세제 필요 시 워시프렌즈 S1."
+            "청자: 워시프렌즈 점주(동료). 한국어만. "
+            "약품은 name_ko·일상명만 (A3/B1 같은 내부코드 말하지 말 것). "
+            "희석은 '식초 1:물 4'처럼 자연스럽게. "
+            "'세탁소에서 구입' 금지 — 슈퍼/약국/화공, WF는 본사·창고 공급. "
+            "실크·울이면 safe_on_silk/wool=false 약품 추천 금지, S1 중성세제 우선. "
+            "B1=산소계 표백제(산성 세제 아님). "
+            "why/신선·굳음 내용만 쓰고 필드명 출력 금지. 민간요법·다른 오염법 금지. "
+            "1)오염·원단 2)도구(name_ko) 3)힘·방향 4)약품 5)수온 6)건조 전 확인."
         )
     else:
         lang_rule = (
-            "Ngôn ngữ: CHỈ tiếng Việt. "
-            "Nếu có why_vi/tip: mở đầu 2–4 câu giải thích nguyên tắc ĐÚNG vết này, dễ đọc. "
-            "Có fresh_path_vi/dried_path_vi → tách vết tươi vs đã khô bằng NỘI DUNG (không in tên field). "
-            "Rồi 1)-6) (nhận diện / dụng cụ / lực+hướng / hóa chất của ĐÚNG vết / nhiệt độ / sau xử lý). "
-            "CẤM mẹo dân gian và quy trình vết khác. Thiếu field → không bịa. "
-            "S1 = nước giặt trung tính Wash Friends khi cần trung tính."
+            "Người nghe: chủ cửa hàng Wash Friends (đồng nghiệp). CHỈ tiếng Việt. "
+            "Hóa chất: nói shop_name_vi / tên thường dùng — CẤM đọc mã A3/B1/E1 cho chủ tiệm. "
+            "Pha loãng tự nhiên: '1 phần giấm + 4 phần nước'. "
+            "CẤM 'mua ở tiệm giặt' — siêu thị/nhà thuốc/cửa hóa chất; hàng WF = kho cung ứng. "
+            "Lụa/len: không khuyến nghị chất safe_on_silk/wool=false; ưu tiên S1. "
+            "B1 = tẩy oxy (không gọi là chất tẩy axit). "
+            "Không in tên field. Không mẹo dân gian. "
+            "1)-6) nhận diện / dụng cụ / lực / hóa chất / nhiệt độ / sau xử lý."
         )
 
     return f"""Câu hỏi từ chủ cửa hàng: {user_message}

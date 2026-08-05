@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-05-rich-safe-v3",
+            "build": "2026-08-05-owner-lang-v1",
             "checks": checks,
         },
         status_code=200,
@@ -436,17 +436,42 @@ SET s.precheck_vi = o.precheck_vi, s.motion_vi = o.motion_vi,
 RETURN count(s) AS updated""")
         _r(s, "V_chem_dilution", """
 UNWIND [
-  {code:'E1',dilution_vi:'1 muong canh / 1 lit nuoc lanh; khuay tan, ngam 15-60 phut'},
-  {code:'N2',dilution_vi:'2 muong canh / 1 lit nuoc lanh (mau tuoi)'},
-  {code:'A3',dilution_vi:'1 phan giam / 4 phan nuoc (khu mui / tannin)'},
-  {code:'A5',dilution_vi:'1 muong canh / 1 coc nuoc — KHONG tron B2'},
-  {code:'A4',dilution_vi:'Dung 3% nguyen (vai trang cotton)'},
-  {code:'A1',dilution_vi:'Cham bang bong/khan — khong do ngap'},
-  {code:'D2',dilution_vi:'1-2 giot nguyen chat len vet hoac pha loang nhe'},
-  {code:'S1',dilution_vi:'Theo huong dan chai Wash Friends — uu tien lua/len'}
+  {code:'E1',dilution_vi:'1 muong canh / 1 lit nuoc lanh; khuay tan, ngam 15-60 phut',dilution_ko:'찬물 1리터에 큰술 1 → 잘 녹여 15–60분 담금'},
+  {code:'N2',dilution_vi:'2 muong canh / 1 lit nuoc lanh (mau tuoi)',dilution_ko:'찬물 1리터에 소금 큰술 2 (선혈)'},
+  {code:'A3',dilution_vi:'1 phan giam + 4 phan nuoc (khu mui / tannin)',dilution_ko:'식초 1 : 물 4 (탄닌·냄새)'},
+  {code:'A5',dilution_vi:'1 muong canh / 1 coc nuoc — KHONG tron B2',dilution_ko:'물 1컵에 큰술 1 — 락스(염소)와 절대 혼합 금지'},
+  {code:'A4',dilution_vi:'Dung 3% nguyen (vai trang cotton)',dilution_ko:'3% 원액 (흰 면만, 구석 테스트)'},
+  {code:'A1',dilution_vi:'Cham bang bong/khan — khong do ngap',dilution_ko:'솜·흰 천으로 가볍게 찍기 (흠뻑 붓지 말 것)'},
+  {code:'D2',dilution_vi:'1-2 giot nguyen chat len vet hoac pha loang nhe',dilution_ko:'얼룩에 1–2방울 또는 약하게 희석'},
+  {code:'S1',dilution_vi:'Theo huong dan chai Wash Friends — uu tien lua/len',dilution_ko:'워시프렌즈 중성세제 병 안내 따름 — 실크·울 우선'}
 ] AS d
 MATCH (c:Chemical {code:d.code})
-SET c.dilution_vi = d.dilution_vi
+SET c.dilution_vi = d.dilution_vi, c.dilution_ko = d.dilution_ko
+RETURN count(c) AS updated""")
+        _r(s, "V2_chem_owner_labels", """
+UNWIND [
+  {code:'E1',name_ko:'효소(프로테아제) 세제·효소제',buy_where_ko:'슈퍼/마트',buy_where_vi:'Sieu thi (chu tu mua)'},
+  {code:'E2',name_ko:'전분 분해 효소 세제',buy_where_ko:'슈퍼/마트',buy_where_vi:'Sieu thi (chu tu mua)'},
+  {code:'E3',name_ko:'유지 분해 효소 세제',buy_where_ko:'슈퍼/마트',buy_where_vi:'Sieu thi (chu tu mua)'},
+  {code:'D1',name_ko:'기름·오일 용제(탈지제)',buy_where_ko:'자동차용품·화공점 (환기 필수)',buy_where_vi:'Cua o to / cua hoa chat — THONG GIO'},
+  {code:'D2',name_ko:'주방세제(중성)',buy_where_ko:'슈퍼/마트',buy_where_vi:'Sieu thi (chu tu mua)'},
+  {code:'D3',name_ko:'일반 세탁 세제(강력)',buy_where_ko:'슈퍼/마트',buy_where_vi:'Sieu thi (chu tu mua)'},
+  {code:'B1',name_ko:'산소계 표백제(과탄산 계열)',buy_where_ko:'슈퍼 세탁용품 코너',buy_where_vi:'Sieu thi ke giat (chu tu mua)'},
+  {code:'B2',name_ko:'염소계 표백제(락스/자벨)',buy_where_ko:'슈퍼/마트',buy_where_vi:'Sieu thi (chu tu mua) — CHI cotton trang'},
+  {code:'A1',name_ko:'이소프로필 알코올(소독용 알코올)',buy_where_ko:'약국·슈퍼',buy_where_vi:'Nha thuoc, sieu thi'},
+  {code:'A2',name_ko:'아세톤(매니큐어 리무버 계열)',buy_where_ko:'약국·화공점',buy_where_vi:'Nha thuoc, cua hoa chat'},
+  {code:'A3',name_ko:'흰 식초(식용 식초 약 5%)',buy_where_ko:'슈퍼/마트',buy_where_vi:'Sieu thi (chu tu mua)'},
+  {code:'A4',name_ko:'과산화수소 3%(옥시)',buy_where_ko:'약국',buy_where_vi:'Nha thuoc'},
+  {code:'A5',name_ko:'암모니아 희석액',buy_where_ko:'화공점',buy_where_vi:'Cua hoa chat — KHONG tron Javel'},
+  {code:'N1',name_ko:'베이킹소다',buy_where_ko:'슈퍼/마트',buy_where_vi:'Sieu thi (chu tu mua)'},
+  {code:'N2',name_ko:'소금(식염)',buy_where_ko:'슈퍼/마트',buy_where_vi:'Sieu thi (chu tu mua)'},
+  {code:'N3',name_ko:'옥수수 전분·베이비파우더(오일 흡착)',buy_where_ko:'슈퍼/마트',buy_where_vi:'Sieu thi (chu tu mua)'},
+  {code:'S1',name_ko:'워시프렌즈 중성세제',buy_where_ko:'워시프렌즈 본사·창고 공급',buy_where_vi:'Kho hang / cung ung noi bo Wash Friends'},
+  {code:'WF_SOFT',name_ko:'워시프렌즈 섬유유연제',buy_where_ko:'워시프렌즈 본사·창고 공급',buy_where_vi:'Kho hang Wash Friends'},
+  {code:'WF_FRAG',name_ko:'워시프렌즈 독일 향수 스프레이',buy_where_ko:'워시프렌즈 본사·창고 공급',buy_where_vi:'Kho hang Wash Friends'}
+] AS x
+MATCH (c:Chemical {code:x.code})
+SET c.name_ko = x.name_ko, c.buy_where_ko = x.buy_where_ko, c.buy_where_vi = x.buy_where_vi
 RETURN count(c) AS updated""")
         _r(s, "W_tool_links", """
 MATCH (soft:Tool {id:'T_BRUSH_SOFT'}), (hard:Tool {id:'T_BRUSH_HARD'}),
