@@ -97,22 +97,28 @@ OPTIONAL MATCH (f)-[:NEVER_USE]->(blocked:Chemical)
 OPTIONAL MATCH (chem)-[:NEVER_MIX_WITH]->(dangerous:Chemical)
 OPTIONAL MATCH (cr:ClimateRule)
   WHERE cr.id STARTS WITH 'CR'
+OPTIONAL MATCH (s)-[:USES_TOOL]->(tool:Tool)
 OPTIONAL MATCH (wf:Chemical)
   WHERE wf.wf_supply = true OR wf.code IN ['S1','WF_SOFT','WF_FRAG']
 RETURN
   s {
     .id, .name, .name_vi, .tip, .urgency,
     .contains_protein, .contains_tannin, .contains_oil, .contains_dye,
-    .water_spreads, group: g.name_vi, group_id: g.id
+    .water_spreads, .precheck_vi, .motion_vi, .water_temp_vi, .aftercare_vi,
+    group: g.name_vi, group_id: g.id
   } AS stain_context,
   CASE WHEN f IS NULL THEN null ELSE f {
-    .id, .name, .name_vi, .max_temp, .can_bleach, .enzyme_safe, .acid_safe
+    .id, .name, .name_vi, .max_temp, .can_bleach, .enzyme_safe, .acid_safe,
+    .dry_hint_vi, .iron_hint_vi
   } END AS fabric_context,
   COLLECT(DISTINCT chem {
     .code, .name, .name_vi, .role, .safe_on_wool, .safe_on_silk,
     .shop_name_vi, .buy_where_vi, .alt1_vi, .alt2_vi, .alt3_vi,
-    .example_brands_vi, .wf_supply, .when_use_vi
+    .example_brands_vi, .wf_supply, .when_use_vi, .dilution_vi
   }) AS chemicals,
+  COLLECT(DISTINCT tool {
+    .id, .name_vi, .name_ko, .use_for_vi
+  }) AS tools,
   COLLECT(DISTINCT wf {
     .code, .name, .name_vi, .role, .shop_name_vi, .buy_where_vi,
     .alt1_vi, .alt2_vi, .when_use_vi, .wf_supply
@@ -422,29 +428,22 @@ Giọng điệu: kinh nghiệm nội bộ Wash Friends — tự tin, cụ thể,
 
 QUY TẮC TRẢ LỜI:
 1. NGÔN NGỮ BẮT BUỘC: trả lời ĐÚNG ngôn ngữ câu hỏi.
-   - Câu hỏi tiếng Hàn (한국어) → trả lời CHỈ bằng tiếng Hàn. Không xen tiếng Việt.
-   - Câu hỏi tiếng Việt → trả lời CHỈ bằng tiếng Việt. Không xen tiếng Hàn.
-2. Chỉ dùng DỮ LIỆU TỪ ĐỒ THỊ — không bịa hóa chất ngoài danh sách đã cho
+   - Câu hỏi tiếng Hàn → CHỈ tiếng Hàn. Câu hỏi tiếng Việt → CHỈ tiếng Việt.
+2. Chỉ dùng DỮ LIỆU TỪ ĐỒ THỊ — không bịa. Thiếu field → bỏ qua mục đó hoặc hỏi ngắn 1 câu, KHÔNG bịa.
 3. Cảnh báo an toàn đặt ĐẦU câu (chữ in hoa ngắn, không markdown **)
-4. Mỗi hóa chất nhắc đến phải gồm:
-   - Mã (A1, E1...) + tên kỹ thuật
-   - Tên mua ở cửa hàng (shop_name_vi) + nơi mua (buy_where_vi)
-   - Nếu hết hàng: thay thế 1 / 2 / 3 (alt1_vi, alt2_vi, alt3_vi)
-5. SẢN PHẨM WASH FRIENDS (chỉ khi cần — xem when_use_vi / washfriends_supply):
-   - S1: BẮT BUỘC ưu tiên "nước giặt trung tính do Wash Friends cung cấp" khi cần chất trung tính / lụa / len
-   - WF_SOFT: chỉ khi hoàn thiện / xả vải; khách ghét hương đậm → giảm liều
-   - WF_FRAG: CHỈ đồ cao cấp, sau ủi, hoặc khách ghét mùi giặt khô (xịt nhẹ). Không nhắc nếu chỉ hỏi tẩy vết bẩn thường
-6. Kết thúc: thời gian xử lý ước tính (+ chi phí nếu có)
-7. Thiếu dữ liệu → hỏi ngắn (loại vết, loại vải, mới/cũ, đã sấy chưa)
-8. Không dùng markdown **, ## — Zalo plain text
-9. CẤM nêu nguồn ngoài (đại học, web, AI, PDF)
-10. Không nói kiểu tìm trên mạng — nói như quy trình vận hành Wash Friends
+4. Với câu hỏi XỬ LÝ VẾT (treatment/rescue), trả lời theo 6 mục (có dữ liệu thì ghi, không có thì bỏ qua ngắn):
+   (1) Nhận diện: loại vết + vải (stain_context + fabric_context + precheck_vi)
+   (2) Dụng cụ: tools[] nếu có
+   (3) Lực tay + hướng: force_levels + motion_vi
+   (4) Hóa chất: mã + shop_name_vi + buy_where_vi + dilution_vi + alt1/2/3; S1 = nước giặt trung tính Wash Friends khi cần trung tính/lụa/len
+   (5) Nhiệt độ nước: water_temp_vi + fabric max_temp
+   (6) Sau xử lý: aftercare_vi + dry_hint_vi/iron_hint_vi — LUÔN nhắc kiểm tra TRƯỚC khi sấy/ủi
+5. WF_SOFT / WF_FRAG chỉ khi đúng when_use_vi (hoàn thiện / sau ủi / mùi giặt khô) — không nhồi vào mọi câu tẩy vết
+6. Không markdown **, ## — Zalo plain text
+7. CẤM nêu nguồn ngoài (đại học, web, AI, PDF)
 
-CẤP ĐỘ LỰC: Cap 1 Rat nhe | Cap 2 Nhe | Cap 3 Vua | Cap 4 Manh
-
-Định dạng:
-- Tối đa 600 từ; bước 1) 2) 3)
-- Tiếng Hàn: giữ mã A1/E1..., giải thích tên mua hàng bằng tiếng Hàn"""
+CẤP LỰC: Cap1 Rat nhe | Cap2 Nhe | Cap3 Vua | Cap4 Manh
+Định dạng: tối đa 700 từ; đánh số 1)-6) tương ứng 6 mục khi đủ dữ liệu."""
 
 
 def detect_reply_lang(text: str) -> str:
@@ -462,17 +461,17 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     query_type = graph_context.get("query_type", "unknown")
     if lang == "ko":
         lang_rule = (
-            "답변 언어: 한국어만 사용하세요. 베트남어로 답하지 마세요. "
-            "화학약품은 코드(A1 등) + 매장에서 사는 이름 + 없으면 대체 1/2/3을 함께 말하세요. "
-            "중성세제가 필요하면 반드시 워시프렌즈 공급 중성세제(S1)를 안내하세요. "
-            "섬유유연제·향스프레이는 필요할 때만(피니싱/다림질 후/드라이 냄새 싫어하는 고객)."
+            "답변 언어: 한국어만. "
+            "처리 질문이면 가능하면 1)오염·원단 2)도구 3)힘·방향 4)약품(시판·희석·대체) 5)수온 6)건조 전 확인 순서로. "
+            "그래프에 없는 항목은 지어내지 말고 짧게 건너뛰거나 질문하세요. "
+            "중성세제 필요 시 워시프렌즈 공급 S1."
         )
     else:
         lang_rule = (
-            "Ngôn ngữ trả lời: CHỈ tiếng Việt. "
-            "Mỗi hóa chất: mã + tên mua cửa hàng + nơi mua + thay thế 1/2/3 nếu hết. "
-            "Cần chất trung tính → bắt buộc nước giặt trung tính Wash Friends (S1). "
-            "WF_SOFT / WF_FRAG chỉ nhắc khi đúng tình huống hoàn thiện (xem when_use_vi)."
+            "Ngôn ngữ: CHỈ tiếng Việt. "
+            "Câu xử lý vết: trả lời theo 1)-6) nếu có dữ liệu "
+            "(nhận diện / dụng cụ / lực+hướng / hóa chất / nhiệt độ nước / sau xử lý). "
+            "Thiếu field → không bịa. S1 = nước giặt trung tính Wash Friends khi cần trung tính."
         )
 
     return f"""Câu hỏi từ chủ cửa hàng: {user_message}

@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-05-wf-products-v1",
+            "build": "2026-08-05-six-elements-v1",
             "checks": checks,
         },
         status_code=200,
@@ -385,6 +385,98 @@ MATCH (c1:Chemical {code:'B2'}),(c2:Chemical {code:'A5'})
 MERGE (c1)-[:NEVER_MIX_WITH]->(c2)
 MERGE (c2)-[:NEVER_MIX_WITH]->(c1)
 RETURN count(*) AS rels""")
+        # Additive ops fields — fail-soft; never deletes existing stain/chem nodes
+        _r(s, "T_tools", """
+UNWIND [
+  {id:'T_BRUSH_SOFT',name_vi:'Ban chai spotting mem',name_ko:'연질 스포팅 솔',use_for_vi:'Cotton, polyester, vet thuong'},
+  {id:'T_BRUSH_HARD',name_vi:'Ban chai spotting cung',name_ko:'경질 스포팅 솔',use_for_vi:'Denim, canvas, giay the thao'},
+  {id:'T_BRUSH_ULTRA',name_vi:'Ban chai sieu mem / mieng fot',name_ko:'초연질 솔·스펀지',use_for_vi:'Lua, len, vai mong — khong cha manh'},
+  {id:'T_CLOTH',name_vi:'Khan trang sach / giay tham',name_ko:'흰 천·흡수지',use_for_vi:'Tham, lot duoi, khong cha lan'},
+  {id:'T_SPRAY',name_vi:'Binh xit rieng (dan nhan)',name_ko:'분무기(라벨 필수)',use_for_vi:'Pha loang A3/D2/B1 — khong tron binh'}
+] AS t MERGE (n:Tool {id:t.id}) SET n += t RETURN count(n) AS created""")
+        _r(s, "U_stain_ops_protein", """
+MATCH (s:Stain) WHERE s.contains_protein = true
+SET s.precheck_vi = coalesce(s.precheck_vi, 'Xac nhan vai + vet tuoi/kho + KHONG dung nuoc nong dau'),
+    s.motion_vi = coalesce(s.motion_vi, 'Tham/cao tu NGOAI vao TAM — khong cha lan'),
+    s.water_temp_vi = coalesce(s.water_temp_vi, 'Nuoc LANH (duoi 40C). Enzyme toi uu ~30-37C sau khi da an toan'),
+    s.aftercare_vi = coalesce(s.aftercare_vi, 'Kiem tra anh sang manh TRUOC khi say/ui. Con vet → xu ly lai, khong say')
+RETURN count(s) AS updated""")
+        _r(s, "U_stain_ops_oil", """
+MATCH (s:Stain) WHERE s.contains_oil = true AND coalesce(s.contains_protein,false) = false
+SET s.precheck_vi = coalesce(s.precheck_vi, 'Xac nhan vai + hut dau truoc (N3) — khong say khi con dau'),
+    s.motion_vi = coalesce(s.motion_vi, 'Hut bot → xit/tham mat trai → cha nhe vong tron ngoai→trong'),
+    s.water_temp_vi = coalesce(s.water_temp_vi, 'Am 30-40C sau khi da tay dau; cotton co the am hon neu nhan cho phep'),
+    s.aftercare_vi = coalesce(s.aftercare_vi, 'Het cam giac nhon + kiem tra truoc say. Con loang → lap D1/D2')
+RETURN count(s) AS updated""")
+        _r(s, "U_stain_ops_tannin", """
+MATCH (s:Stain) WHERE s.contains_tannin = true AND coalesce(s.contains_protein,false) = false AND coalesce(s.contains_oil,false) = false
+SET s.precheck_vi = coalesce(s.precheck_vi, 'Xu ly SOM + nuoc lanh; test goc khuat truoc acid/tay'),
+    s.motion_vi = coalesce(s.motion_vi, 'Tham mat trai, ngoai→trong — khong cha lan mau'),
+    s.water_temp_vi = coalesce(s.water_temp_vi, 'Nuoc lanh luc dau; sau A3 co the giat am nhe neu vai cho phep'),
+    s.aftercare_vi = coalesce(s.aftercare_vi, 'Kiem tra mau con lai truoc say; B1 neu con mau (khong len/lua)')
+RETURN count(s) AS updated""")
+        _r(s, "U_stain_ops_dye", """
+MATCH (s:Stain) WHERE s.contains_dye = true AND coalesce(s.contains_oil,false) = false AND coalesce(s.contains_protein,false) = false AND coalesce(s.contains_tannin,false) = false
+SET s.precheck_vi = coalesce(s.precheck_vi, 'Test phai mau o goc khuat; xac nhan muc but hay but long'),
+    s.motion_vi = coalesce(s.motion_vi, 'CHAM/THAM tu mat trai — TUYET DOI khong cha lan'),
+    s.water_temp_vi = coalesce(s.water_temp_vi, 'Phong nhiet; giat lanh/am nhe sau khi het muc'),
+    s.aftercare_vi = coalesce(s.aftercare_vi, 'Kiem tra ky truoc say — nhiet khoa mau muc')
+RETURN count(s) AS updated""")
+        _r(s, "U_stain_ops_overrides", """
+UNWIND [
+  {id:'S_BLOOD_FRESH',precheck_vi:'Mau tuoi — uu tien ngay, chi nuoc lanh',motion_vi:'Xa mat trai, tham — Cap luc 1, khong cha',water_temp_vi:'Chi nuoc LANH',aftercare_vi:'Kiem tra truoc say; con nau → E1'},
+  {id:'S_INK_PEN',precheck_vi:'Test goc khuat; lot giay tham duoi',motion_vi:'Cham A1 mat trai, thay khan — khong cha',water_temp_vi:'Xu ly o nhiet do phong; giat lanh sau',aftercare_vi:'Het muc moi say'},
+  {id:'S_INK_PERMANENT',precheck_vi:'But long kho — test vai; co the khong het 100%',motion_vi:'A2/A1 cham nhe mat trai',water_temp_vi:'Nhiet phong',aftercare_vi:'Thong bao khach neu con vet'},
+  {id:'S_MOTORBIKE_OIL',precheck_vi:'Dau nhot xe may — thong gio khi dung D1',motion_vi:'N3 day 2 lan → D1 → A1 cham → D3',water_temp_vi:'Giat am/nong chi cotton-poly; khong silk/wool',aftercare_vi:'Kiem tra nhon truoc say'},
+  {id:'S_LATERITE',precheck_vi:'Dat do — de KHO roi chai bot truoc',motion_vi:'Chai kho → xa lanh → A3 → B1',water_temp_vi:'Lanh/am; khong say khi con mau do',aftercare_vi:'Lap lai neu con sat oxit'}
+] AS o
+MATCH (s:Stain {id:o.id})
+SET s.precheck_vi = o.precheck_vi, s.motion_vi = o.motion_vi,
+    s.water_temp_vi = o.water_temp_vi, s.aftercare_vi = o.aftercare_vi
+RETURN count(s) AS updated""")
+        _r(s, "V_chem_dilution", """
+UNWIND [
+  {code:'E1',dilution_vi:'1 muong canh / 1 lit nuoc lanh; khuay tan, ngam 15-60 phut'},
+  {code:'N2',dilution_vi:'2 muong canh / 1 lit nuoc lanh (mau tuoi)'},
+  {code:'A3',dilution_vi:'1 phan giam / 4 phan nuoc (khu mui / tannin)'},
+  {code:'A5',dilution_vi:'1 muong canh / 1 coc nuoc — KHONG tron B2'},
+  {code:'A4',dilution_vi:'Dung 3% nguyen (vai trang cotton)'},
+  {code:'A1',dilution_vi:'Cham bang bong/khan — khong do ngap'},
+  {code:'D2',dilution_vi:'1-2 giot nguyen chat len vet hoac pha loang nhe'},
+  {code:'S1',dilution_vi:'Theo huong dan chai Wash Friends — uu tien lua/len'}
+] AS d
+MATCH (c:Chemical {code:d.code})
+SET c.dilution_vi = d.dilution_vi
+RETURN count(c) AS updated""")
+        _r(s, "W_tool_links", """
+MATCH (soft:Tool {id:'T_BRUSH_SOFT'}), (hard:Tool {id:'T_BRUSH_HARD'}),
+      (ultra:Tool {id:'T_BRUSH_ULTRA'}), (cloth:Tool {id:'T_CLOTH'}), (spray:Tool {id:'T_SPRAY'})
+WITH soft, hard, ultra, cloth, spray
+MATCH (s:Stain)
+FOREACH (_ IN CASE WHEN s.contains_oil = true OR s.contains_tannin = true THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_TOOL]->(soft) MERGE (s)-[:USES_TOOL]->(cloth))
+FOREACH (_ IN CASE WHEN s.contains_dye = true THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_TOOL]->(cloth) MERGE (s)-[:USES_TOOL]->(soft))
+FOREACH (_ IN CASE WHEN s.contains_protein = true THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_TOOL]->(cloth) MERGE (s)-[:USES_TOOL]->(ultra))
+FOREACH (_ IN CASE WHEN s.id IN ['S_MOTORBIKE_OIL','S_ENGINE_OIL','S_MUD','S_LATERITE'] THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_TOOL]->(hard))
+FOREACH (_ IN CASE WHEN s.contains_tannin = true OR s.id STARTS WITH 'S_INK' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_TOOL]->(spray))
+RETURN count(DISTINCT s) AS stains""")
+        _r(s, "X_fabric_hints", """
+UNWIND [
+  {id:'F1',dry_hint_vi:'Say may OK neu sach; uu tien bong mat + quat',iron_hint_vi:'Ui 180-200C khi con am'},
+  {id:'F2',dry_hint_vi:'Say nhiet thap; tranh nhiet cao (bong)',iron_hint_vi:'Ui thap 110-130C'},
+  {id:'F3',dry_hint_vi:'KHONG say may — phoi phang bong mat',iron_hint_vi:'Hoi nuoc + lot vai, khong ui truc tiep'},
+  {id:'F4',dry_hint_vi:'KHONG say may — bong mat',iron_hint_vi:'110C mat trai + lot, TAT hoi'},
+  {id:'F5',dry_hint_vi:'Phoi/say vua; ui khi am',iron_hint_vi:'Ui cao 200-220C khi am'},
+  {id:'F6',dry_hint_vi:'Say vua; lan dau giat rieng mau',iron_hint_vi:'Ui vua neu can'},
+  {id:'F7',dry_hint_vi:'KHONG say may neu co the',iron_hint_vi:'Nhiet thap, can than'}
+] AS h
+MATCH (f:Fabric {id:h.id})
+SET f.dry_hint_vi = h.dry_hint_vi, f.iron_hint_vi = h.iron_hint_vi
+RETURN count(f) AS updated""")
         _r(s, "S_clear_answer_cache", """
 MATCH (c:AnswerCache)
 WITH collect(c) AS nodes
