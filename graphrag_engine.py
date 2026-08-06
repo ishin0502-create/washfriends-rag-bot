@@ -1387,7 +1387,8 @@ def generate_response(user_message: str) -> str:
     entities["_raw"] = user_message
     # Hard override language from script (more reliable than LLM lang field)
     entities["lang"] = lang
-    # Hard override for high-value VN franchise phrases (before graph routing)
+    # Hard override for high-value franchise phrases (before graph routing)
+    # More specific phrases first.
     raw_n = _normalize_text(user_message)
     if "laterite" in raw_n or "dat do" in raw_n:
         entities["intent"] = "treatment"
@@ -1399,6 +1400,74 @@ def generate_response(user_message: str) -> str:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_MOTORBIKE_OIL"
         entities["stain_type"] = "dau nhot xe may"
+    elif any(k in user_message for k in ("풀로", "풀 이염", "전분 이염")) or (
+        "tinh bot" in raw_n and ("mau lan" in raw_n or "lo mau" in raw_n)
+    ) or ("starch" in raw_n and ("dye" in raw_n or "bleed" in raw_n)):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_STARCH_TRANSFER"
+        entities["stain_type"] = "ho tinh bot mau lan"
+    elif any(
+        k in user_message for k in ("이염", "물든", "물이 든", "색이염", "이염된")
+    ) or "dye transfer" in raw_n or "mau lan" in raw_n or "lo mau" in raw_n or "color bleed" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_DYE_TRANSFER"
+        entities["stain_type"] = "mau lan"
+    elif any(
+        k in user_message
+        for k in ("와이셔츠", "흰셔츠", "드레스셔츠")
+    ) and any(k in user_message for k in ("누렇", "황변", "노랗", "누래")):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_SHIRT_YELLOW"
+        entities["stain_type"] = "ao so mi vang"
+    elif any(k in user_message for k in ("누렇게", "황변")) and any(
+        k in user_message for k in ("셔츠", "와이", "흰옷", "흰 옷")
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_SHIRT_YELLOW"
+        entities["stain_type"] = "ao so mi vang"
+    elif any(k in user_message for k in ("목때", "칼라때", "깃때")) or "vong co" in raw_n or "collar stain" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_COLLAR_STAIN"
+        entities["stain_type"] = "vong co"
+    elif any(k in user_message for k in ("곰팡이", "곰팡")) or "nam moc" in raw_n or "mildew" in raw_n or "mold" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_MILDEW"
+        entities["stain_type"] = "nam moc"
+    elif any(k in user_message for k in ("케첩", "켓찹", "케찹")) or "ketchup" in raw_n or "tuong ca" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_KETCHUP"
+        entities["stain_type"] = "ketchup"
+    elif any(k in user_message for k in ("마요네즈", "마요")) or "mayonnaise" in raw_n or "mayo" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_MAYO"
+        entities["stain_type"] = "mayonnaise"
+    elif any(k in user_message for k in ("느억맘", "느억맘", "액젓", "피시소스", "뉴억맘")) or "nuoc mam" in raw_n or "fish sauce" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_FISH_SAUCE"
+        entities["stain_type"] = "nuoc mam"
+    elif any(k in user_message for k in ("간장",)) or "nuoc tuong" in raw_n or "soy sauce" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_SOY_SAUCE"
+        entities["stain_type"] = "nuoc tuong"
+    elif any(k in user_message for k in ("핏자국", "혈액", "피 묻", "피얼룩")) or "mau tuoi" in raw_n or "mau kho" in raw_n or (
+        "blood" in raw_n and "bleed" not in raw_n
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_BLOOD_DRY" if any(
+            k in user_message for k in ("마른", "굳은", "오래된")
+        ) or "mau kho" in raw_n or "dried" in raw_n else "S_BLOOD_FRESH"
+        entities["stain_type"] = "mau"
+    elif any(k in user_message for k in ("식용유", "식용 오일")) or "dau an" in raw_n or "cooking oil" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_COOKING_OIL"
+        entities["stain_type"] = "dau an"
+    elif any(k in user_message for k in ("기름때", "그리즈")) or (
+        ("기름" in user_message or "오일" in user_message)
+        and not any(k in user_message for k in ("오토바이", "엔진", "기계"))
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_COOKING_OIL"
+        entities["stain_type"] = "dau an"
     elif any(
         k in user_message
         for k in ("주스", "쥬스", "과일즙", "과즙")

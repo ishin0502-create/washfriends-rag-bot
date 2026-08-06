@@ -55,22 +55,30 @@ Intent rules:
 - hardest: user asks which stains are hardest, "vet nao kho nhat"
 
 Stain IDs (use exact ID if confident):
-S_COOKING_OIL=cooking oil/dau an, S_ENGINE_OIL=machine oil, S_LIPSTICK=lipstick/son moi,
-S_BLOOD_FRESH=fresh blood/mau tuoi, S_BLOOD_DRY=old blood/mau kho, S_EGG=egg/trung,
-S_MILK=milk/sua, S_SWEAT_FRESH=sweat/mo hoi, S_SWEAT_YELLOW=armpit yellow,
-S_BLACK_COFFEE=black coffee/ca phe den, S_MILK_COFFEE=milk coffee/ca phe sua,
-S_TEA=tea/tra, S_RED_WINE=wine, S_SOY_SAUCE=soy sauce/nuoc tuong, S_FISH_SAUCE=nuoc mam,
+S_COOKING_OIL=cooking oil/dau an/기름/식용유, S_ENGINE_OIL=machine oil, S_GREASE=grease/mo,
+S_MAYO=mayonnaise/마요네즈, S_COLLAR_STAIN=collar/목때/vong co,
+S_BLOOD_FRESH=fresh blood/mau tuoi/핏자국, S_BLOOD_DRY=old blood/mau kho,
+S_EGG=egg/trung, S_MILK=milk/sua, S_SWEAT_FRESH=sweat/mo hoi, S_SWEAT_YELLOW=armpit yellow,
+S_BLACK_COFFEE=black coffee/ca phe den, S_MILK_COFFEE=milk coffee/ca phe sua/latte,
+S_TEA=tea/tra, S_RED_WINE=wine, S_SOY_SAUCE=soy sauce/nuoc tuong/간장,
+S_FISH_SAUCE=nuoc mam/느억맘/액젓, S_KETCHUP=ketchup/케첩, S_TOMATO_SAUCE=tomato sauce,
+S_FRUIT_JUICE=juice/주스, S_KIMCHI=kimchi/김치,
 S_INK_PEN=ballpoint ink/muc, S_INK_PERMANENT=permanent marker, S_GRASS=grass/co,
 S_MUD=mud/bun, S_CURRY=curry/nghe, S_MUSTARD=mustard,
+S_DYE_TRANSFER=dye transfer/이염/mau lan/lo mau,
+S_STARCH_TRANSFER=starch dye/풀 이염/ho tinh bot,
+S_SHIRT_YELLOW=yellowed white shirt/와이셔츠 황변/누렇게,
 S_LATERITE=laterite/dat do/dat do laterite/red soil Vietnam,
 S_MOTORBIKE_OIL=motorbike oil/dau nhot xe may,
-S_MILDEW=mildew/nam moc, S_RUST=rust/ri set,
-S_KIMCHI=kimchi/kim chi/nuoc kim chi/김치/김치국물,
+S_MILDEW=mildew/nam moc/곰팡이, S_RUST=rust/ri set,
 S_DEODORANT=deodorant, S_PAINT_LATEX=latex paint/son nuoc, S_GLUE=glue/keo
 
 IMPORTANT: "dat do" / "laterite" / "đất đỏ" = S_LATERITE (red soil), NEVER blood.
 "đỏ" alone does not mean blood if "dat"/"laterite"/"đất" is present.
 Kimchi / 김치 / kim chi = S_KIMCHI (not tomato alone).
+Ketchup / 케첩 = S_KETCHUP (not generic tomato only).
+이염 / dye transfer / mau lan = S_DYE_TRANSFER (not color fade restore).
+와이셔츠 누렇/황변 = S_SHIRT_YELLOW (not only armpit sweat).
 If the user names a specific stain, intent MUST be "treatment" (not mystery).
 
 Group IDs: G1=protein, G2=oil, G3=tannin, G4=dye, G5=complex
@@ -81,9 +89,9 @@ Language detection:
 - en: English otherwise
 
 Common stain names:
-- VI: vet dau, vet mau, vet ca phe, vet nuoc tuong, nuoc mam, co, muc, gi set, moc, kim chi
-- KO: 기름, 혈액, 커피, 간장, 액젓, 잔디, 잉크, 녹, 곰팡이, 김치, 김치국물
-- EN: oil, blood, coffee, soy sauce, fish sauce, grass, ink, rust, mold, kimchi
+- VI: vet dau, vet mau, vet ca phe, vet nuoc tuong, nuoc mam, co, muc, gi set, moc, kim chi, ketchup, lo mau
+- KO: 기름, 혈액, 커피, 간장, 액젓, 느억맘, 잔디, 잉크, 녹, 곰팡이, 김치, 케첩, 마요, 목때, 이염, 와이셔츠
+- EN: oil, blood, coffee, soy sauce, fish sauce, grass, ink, rust, mold, kimchi, ketchup, mayo, collar, dye transfer
 Common fabric names:
 - VI: lua, cotton, vai bong, len, tong hop, polyester, denim, vai lanh
 - KO: 실크, 면, 울, 합성섬유, 폴리에스터, 데님, 린넨

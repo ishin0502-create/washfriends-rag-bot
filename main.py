@@ -123,7 +123,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-kimchi-coffee-v2",
+            "build": "2026-08-06-edu-sop-v1",
             "checks": checks,
         },
         status_code=200,
@@ -312,11 +312,11 @@ UNWIND [
         _r(s, "G_stains_oil", """
 UNWIND [
   {id:'S_BUTTER',name:'Butter',name_vi:'Bo',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'same_day',tip:'Cornstarch absorb 10min brush then dish soap'},
-  {id:'S_COOKING_OIL',name:'Cooking Oil',name_vi:'Dau an',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'same_day',tip:'Talc absorb then dish soap scrub warm water'},
+  {id:'S_COOKING_OIL',name:'Cooking Oil',name_vi:'Dau an',name_ko:'식용유·오일·기름(식용)',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'same_day',tip:'Absorb powder then dish soap; lipase enzyme if available; never dry while greasy'},
   {id:'S_ENGINE_OIL',name:'Engine Oil',name_vi:'Dau dong co',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'Solvent degreaser first then strong detergent - dark stain'},
-  {id:'S_GREASE',name:'Grease/Lard',name_vi:'Mo',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'same_day',tip:'Absorb with cornstarch then dish soap lipase enzyme'},
-  {id:'S_MAYO',name:'Mayonnaise',name_vi:'Sot mayonnaise',group_id:'G2',water_spreads:false,contains_protein:true,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'same_day',tip:'Scrape protease+lipase combo soak'},
-  {id:'S_COLLAR_STAIN',name:'Collar Stain',name_vi:'Vong co',group_id:'G2',water_spreads:false,contains_protein:true,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'low',tip:'Old sebum: strong detergent scrub or enzyme paste soak overnight'},
+  {id:'S_GREASE',name:'Grease/Lard',name_vi:'Mo',name_ko:'기름때·그리즈',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'same_day',tip:'Absorb cornstarch then dish soap + lipase enzyme'},
+  {id:'S_MAYO',name:'Mayonnaise',name_vi:'Sot mayonnaise',name_ko:'마요네즈',group_id:'G2',water_spreads:false,contains_protein:true,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'same_day',tip:'Scrape; dish soap for oil THEN protease enzyme for egg protein — order matters'},
+  {id:'S_COLLAR_STAIN',name:'Collar Stain',name_vi:'Vong co / vet co ao so mi',name_ko:'목때·칼라 황변',group_id:'G2',water_spreads:false,contains_protein:true,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'low',tip:'Sebum+skin: enzyme on dry collar first; NEVER chlorine (yellow worsens); then oxygen'},
   {id:'S_SHOE_POLISH',name:'Shoe Polish',name_vi:'Xi giay',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'Solvent then dish soap - color dye difficult to remove'},
   {id:'S_LIPSTICK',name:'Lipstick',name_vi:'Son moi',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'Dish soap blot no spread alcohol for pigment'},
   {id:'S_FOUNDATION',name:'Foundation',name_vi:'Kem nen',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'Dish soap blot gently micellar water'},
@@ -336,10 +336,11 @@ UNWIND [
   {id:'S_WHITE_WINE_BEER',name:'White Wine/Beer',name_vi:'Ruou vang trang/Bia',group_id:'G3',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:false,urgency:'immediate',tip:'Cold water immediately - may become invisible then yellow over time'},
   {id:'S_SOFT_DRINK',name:'Soft Drink/Cola',name_vi:'Nuoc ngot',group_id:'G3',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold water vinegar if colored drink vinegar soak'},
   {id:'S_FRUIT_JUICE',name:'Fruit Juice',name_vi:'Nuoc trai cay / juice',group_id:'G3',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold water immediately; vinegar 1:4 then oxygen bleach if color remains — white cotton OK for B1; silk/wool no B1'},
-  {id:'S_TOMATO_SAUCE',name:'Tomato Sauce',name_vi:'Sot ca chua',group_id:'G3',water_spreads:false,contains_protein:false,contains_tannin:true,contains_oil:true,contains_dye:true,urgency:'immediate',tip:'Scrape then dish soap for oil then vinegar for tannin'},
-  {id:'S_SOY_SAUCE',name:'Soy Sauce',name_vi:'Nuoc tuong',group_id:'G3',water_spreads:true,contains_protein:true,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold water enzyme for protein then vinegar for tannin'},
-  {id:'S_FISH_SAUCE',name:'Fish Sauce',name_vi:'Nuoc mam',group_id:'G3',water_spreads:true,contains_protein:true,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold water enzyme soak - difficult salt odor vinegar deodorize'},
-  {id:'S_BBQ_SAUCE',name:'BBQ Sauce',name_vi:'Sot BBQ',group_id:'G3',water_spreads:false,contains_protein:true,contains_tannin:true,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'Triple action: enzyme+dish soap+vinegar sequential treatment'},
+  {id:'S_TOMATO_SAUCE',name:'Tomato Sauce',name_vi:'Sot ca chua',name_ko:'토마토 소스',group_id:'G3',water_spreads:false,contains_protein:false,contains_tannin:true,contains_oil:true,contains_dye:true,urgency:'immediate',tip:'Scrape then dish soap for oil then vinegar for tannin/lycopene'},
+  {id:'S_KETCHUP',name:'Ketchup',name_vi:'Tuong ca / ketchup',name_ko:'케첩',group_id:'G3',water_spreads:false,contains_protein:false,contains_tannin:true,contains_oil:true,contains_dye:true,urgency:'immediate',tip:'Ketchup=tomato dye+sugar+oil film. Scrape→dish soap→vinegar→oxygen on white'},
+  {id:'S_SOY_SAUCE',name:'Soy Sauce',name_vi:'Nuoc tuong',name_ko:'간장',group_id:'G3',water_spreads:true,contains_protein:true,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold water enzyme for protein then vinegar for tannin/dye'},
+  {id:'S_FISH_SAUCE',name:'Fish Sauce',name_vi:'Nuoc mam',name_ko:'느억맘·액젓',group_id:'G3',water_spreads:true,contains_protein:true,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold enzyme; salt odor needs vinegar deodorize; dye may need oxygen on white'},
+  {id:'S_BBQ_SAUCE',name:'BBQ Sauce',name_vi:'Sot BBQ',name_ko:'BBQ 소스',group_id:'G3',water_spreads:false,contains_protein:true,contains_tannin:true,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'Triple: enzyme then dish soap then vinegar sequential'},
   {id:'S_KIMCHI',name:'Kimchi / kimchi broth',name_vi:'Kim chi / nuoc kim chi',name_ko:'김치·김치국물',group_id:'G3',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:true,contains_dye:true,urgency:'immediate',tip:'Kimchi: chili dye + oil + salt/acid. Cold rinse ASAP; dish soap for oil then vinegar; oxygen bleach on white only'}
 ] AS s MERGE (n:Stain {id:s.id}) SET n += s RETURN count(n) AS created""")
         _r(s, "I_stains_dye", """
@@ -352,7 +353,10 @@ UNWIND [
   {id:'S_SWEAT_YELLOW',name:'Yellow Armpit Stain',name_vi:'Ve o nach',group_id:'G5',water_spreads:false,contains_protein:true,contains_tannin:false,contains_oil:false,contains_dye:true,urgency:'low',tip:'Old sweat+deodorant: oxygen bleach soak 2h then enzyme - difficult'},
   {id:'S_PERFUME',name:'Perfume/Alcohol Spray',name_vi:'Nuoc hoa',group_id:'G5',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'same_day',tip:'Vinegar diluted soak - may yellow white fabric over time'},
   {id:'S_NAIL_POLISH',name:'Nail Polish',name_vi:'Son mong',group_id:'G4',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Acetone from back of fabric - never rub into fiber'},
-  {id:'S_MILDEW',name:'Mildew',name_vi:'Nam moc',group_id:'G5',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:false,contains_dye:true,urgency:'same_day',tip:'Sun dry after wash; white cotton may use diluted chlorine carefully; colored: oxygen bleach soak - severe mildew may not fully recover'},
+  {id:'S_MILDEW',name:'Mildew / mold',name_vi:'Nam moc',name_ko:'곰팡이·곰팡이 제거',group_id:'G5',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:false,contains_dye:true,urgency:'same_day',tip:'PPE outdoors brush; vinegar soak kill; oxygen for pigment; chlorine ONLY white cotton; never dry until clear'},
+  {id:'S_DYE_TRANSFER',name:'Dye transfer / color bleed',name_vi:'Lo mau / mau lan / dye transfer',name_ko:'이염·물든 옷',group_id:'G4',water_spreads:true,contains_protein:false,contains_tannin:false,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Do NOT dry. Oxygen bleach long soak; white cotton may use diluted chlorine carefully; silk/wool no bleach'},
+  {id:'S_STARCH_TRANSFER',name:'Starch sizing dye bleed',name_vi:'Ho tinh bot / starch + mau lan',name_ko:'풀(전분)·풀로 묻은 이염',group_id:'G4',water_spreads:true,contains_protein:false,contains_tannin:false,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Amylase enzyme digests starch carrier then oxygen for dye; do not dry'},
+  {id:'S_SHIRT_YELLOW',name:'Yellowed white dress shirt',name_vi:'Ao so mi trang vang / yellowed shirt',name_ko:'누렇게 된 와이셔츠·흰셔츠 황변',group_id:'G5',water_spreads:false,contains_protein:true,contains_tannin:false,contains_oil:true,contains_dye:true,urgency:'low',tip:'Sebum+sweat oxidize. Enzyme FIRST. NEVER chlorine on protein yellow (worse). Then oxygen soak. Soft brush only'},
   {id:'S_LATERITE',name:'Laterite Red Soil',name_vi:'Dat do laterite / laterite / dat do',group_id:'G5',water_spreads:false,contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'same_day',tip:'VN red soil: let DRY brush off then cold rinse then vinegar then oxygen bleach - iron oxide may need specialty acid with gloves neutralize after'},
   {id:'S_GLUE',name:'Glue/Adhesive',name_vi:'Keo dan',group_id:'G4',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:false,contains_dye:false,urgency:'same_day',tip:'Water-based glue: soak warm detergent; solvent glue: A2/A1 test corner then blot - scrape excess first'}
 ] AS s MERGE (n:Stain {id:s.id}) SET n += s RETURN count(n) AS created""")
@@ -410,14 +414,19 @@ RETURN count(DISTINCT s) AS stains""")
 // Rewrite specialty stains: drop stale flag links, attach protocol chems
 MATCH (s:Stain) WHERE s.id IN [
   'S_RUST','S_GUM','S_CANDLE_WAX','S_MOTORBIKE_OIL','S_ENGINE_OIL',
-  'S_GLUE','S_PAINT_LATEX','S_MUSTARD','S_CURRY','S_KIMCHI'
+  'S_GLUE','S_PAINT_LATEX','S_MUSTARD','S_CURRY','S_KIMCHI',
+  'S_DYE_TRANSFER','S_STARCH_TRANSFER','S_SHIRT_YELLOW','S_MILDEW',
+  'S_KETCHUP','S_TOMATO_SAUCE','S_MAYO','S_COLLAR_STAIN',
+  'S_SOY_SAUCE','S_FISH_SAUCE','S_COOKING_OIL','S_GREASE'
 ]
 OPTIONAL MATCH (s)-[old:USES_CHEMICAL]->()
 DELETE old
 WITH DISTINCT s
 MATCH (a1:Chemical {code:'A1'}),(a2:Chemical {code:'A2'}),(a3:Chemical {code:'A3'}),
-      (b1:Chemical {code:'B1'}),(d1:Chemical {code:'D1'}),(d2:Chemical {code:'D2'}),
-      (d3:Chemical {code:'D3'}),(n1:Chemical {code:'N1'}),(n3:Chemical {code:'N3'})
+      (b1:Chemical {code:'B1'}),(b2:Chemical {code:'B2'}),
+      (d1:Chemical {code:'D1'}),(d2:Chemical {code:'D2'}),
+      (d3:Chemical {code:'D3'}),(n1:Chemical {code:'N1'}),(n3:Chemical {code:'N3'}),
+      (e1:Chemical {code:'E1'}),(e2:Chemical {code:'E2'}),(e3:Chemical {code:'E3'})
 FOREACH (_ IN CASE WHEN s.id = 'S_RUST' THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(a3))
 FOREACH (_ IN CASE WHEN s.id = 'S_CANDLE_WAX' THEN [1] ELSE [] END |
@@ -433,9 +442,30 @@ FOREACH (_ IN CASE WHEN s.id = 'S_PAINT_LATEX' THEN [1] ELSE [] END |
 FOREACH (_ IN CASE WHEN s.id IN ['S_MUSTARD','S_CURRY'] THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(n1) MERGE (s)-[:USES_CHEMICAL]->(b1)
   MERGE (s)-[:USES_CHEMICAL]->(d2))
-FOREACH (_ IN CASE WHEN s.id = 'S_KIMCHI' THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN s.id IN ['S_KIMCHI','S_KETCHUP','S_TOMATO_SAUCE'] THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a3)
   MERGE (s)-[:USES_CHEMICAL]->(b1))
+FOREACH (_ IN CASE WHEN s.id = 'S_DYE_TRANSFER' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(b1) MERGE (s)-[:USES_CHEMICAL]->(a3)
+  MERGE (s)-[:USES_CHEMICAL]->(b2) MERGE (s)-[:USES_CHEMICAL]->(d3))
+FOREACH (_ IN CASE WHEN s.id = 'S_STARCH_TRANSFER' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(e2) MERGE (s)-[:USES_CHEMICAL]->(b1)
+  MERGE (s)-[:USES_CHEMICAL]->(d3))
+FOREACH (_ IN CASE WHEN s.id IN ['S_SHIRT_YELLOW','S_COLLAR_STAIN'] THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(e1) MERGE (s)-[:USES_CHEMICAL]->(e3)
+  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(b1))
+FOREACH (_ IN CASE WHEN s.id = 'S_MILDEW' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(a3) MERGE (s)-[:USES_CHEMICAL]->(b1)
+  MERGE (s)-[:USES_CHEMICAL]->(b2) MERGE (s)-[:USES_CHEMICAL]->(d3))
+FOREACH (_ IN CASE WHEN s.id = 'S_MAYO' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(e1)
+  MERGE (s)-[:USES_CHEMICAL]->(e3))
+FOREACH (_ IN CASE WHEN s.id IN ['S_SOY_SAUCE','S_FISH_SAUCE'] THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(e1) MERGE (s)-[:USES_CHEMICAL]->(a3)
+  MERGE (s)-[:USES_CHEMICAL]->(b1))
+FOREACH (_ IN CASE WHEN s.id IN ['S_COOKING_OIL','S_GREASE'] THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(n3) MERGE (s)-[:USES_CHEMICAL]->(d2)
+  MERGE (s)-[:USES_CHEMICAL]->(e3))
 RETURN count(DISTINCT s) AS stains""")
         _r(s, "O_force_levels", """
 MATCH (s:Stain)
@@ -679,33 +709,81 @@ RETURN count(s) AS updated""")
         _r(s, "Z_paths_overrides", """
 UNWIND [
   {id:'S_BLOOD_FRESH',
-   why_vi:'Mau tuoi = hemoglobin (protein + sat). Nuoc LANH giu protein hoa tan — nuoc nong/say bien tinh → sat bam soi tao vet nau vinh vien. Muoi an hut mau tuoi; enzyme protease cat chuoi protein; giat thuong sau. Vai trang: oxy gia 3% co the oxy hoa them (test goc).',
-   fresh_path_vi:'(1) Lat mat trai, xa nuoc LANH 2-3 phut den khi nuoc hong→trong. (2) Ngam muoi an 2 muong canh / 1 lit nuoc lanh 15-30 phut (mua sieu thi). (3) Con nhat: nho nuoc giat/bot ngam enzyme protease len vet 15 phut (nhan chai ghi enzyme; sieu thi) — KHONG dung tren len/lua (dung nuoc giat trung tinh Wash Friends). (4) Giat nuoc giat thuong nuoc lanh. KHONG cha manh, KHONG say khi con vet.',
-   dried_path_vi:'Neu da kho: cao nhe vay kho → ngam lanh 30-60 phut → enzyme protease pha loang 30-60 phut → chai mem. Cotton TRANG: oxy gia 3% test goc khuat 10 phut. Len/lua: KHONG enzyme/oxy — muoi + nuoc giat trung tinh Wash Friends, bao khach.'},
+   why_vi:'GIAO DUC: Mau tuoi = hemoglobin (protein + sat). Nuoc LANH giu protein hoa tan — nuoc nong/say bien tinh → sat bam soi tao vet nau VINH VIEN. Muoi hut mau tuoi; enzyme protease cat chuoi protein; giat sau. Vai trang: oxy gia 3% them (test goc). Len/lua: KHONG enzyme/oxy — S1 trung tinh. CAM meo kem danh rang.',
+   fresh_path_vi:'(1) Nhan: mau TUOI, vai nao. (2) Lat mat trai, xa LANH 2-3 phut den nuoc trong. (3) Ngam muoi an 2 muong canh/1 lit nuoc lanh 15-30 phut (sieu thi). (4) Con nhat: enzyme protease 15 phut (nhan enzyme; sieu thi) — KHONG len/lua (S1). (5) Giat nuoc giat thuong lanh. (6) Anh sang manh TRUOC say. KHONG cha manh.',
+   dried_path_vi:'Neu kho: xu ly nhu mau kho — xem S_BLOOD_DRY. Neu con am: xa lanh mat trai truoc moi buoc.'},
   {id:'S_BLOOD_DRY',
-   why_vi:'Mau kho: protein da gan soi. Can enzyme protease pha chuoi; nhiet van CAM truoc khi sach hoan toan.',
-   fresh_path_vi:'Neu con am: xu ly nhu mau tuoi — xa lanh mat trai truoc moi buoc khac.',
-   dried_path_vi:'Cao nhe → ngam lanh → enzyme protease 30-60 phut → chai mem. Oxy gia 3% chi cotton trang sau test. Kiem tra anh sang manh TRUOC say; con nau → lap enzyme.'},
+   why_vi:'GIAO DUC: Mau kho = protein da gan soi. Can enzyme protease pha chuoi lau hon. Nhiet van CAM. Oxy gia 3% chi cotton trang sau test. Bao khach neu vet nau da khoa.',
+   fresh_path_vi:'Neu con am: xu ly nhu mau tuoi — xa lanh mat trai truoc.',
+   dried_path_vi:'(1) Cao nhe vay kho. (2) Ngam lanh 30-60 phut. (3) Enzyme protease pha loang 30-60 phut → chai mem. (4) Cotton TRANG: oxy gia 3% test goc 10 phut. (5) Len/lua: muoi + S1, KHONG enzyme/oxy. (6) Anh sang manh TRUOC say; con nau → lap enzyme.'},
   {id:'S_MOTORBIKE_OIL',
-   why_vi:'Dau nhot xe may: dau kho + carbon. Can hut bot ngo/phan rom + dung moi tay dau (thong gio); sau do giat.',
-   fresh_path_vi:'Bot ngo/phan rom day hut dau → dung moi tay dau cham mat trai (thong gio) → con sat khuan neu can → giat nuoc giat thuong (cotton-poly).',
+   why_vi:'GIAO DUC: Dau nhot xe may = dau kho + carbon. Buoc 1 hut (bot ngo/phan rom) → Buoc 2 dung moi tay dau (THONG GIO, khong lua) → Buoc 3 giat. Say khi con nhon = khoa vet. Silk/wool: khong dung moi manh/nhiet cao — bao khach.',
+   fresh_path_vi:'(1) Nhan: dau nhot xe may, vai. (2) Bot ngo/phan rom day hut 10-30 phut, chai bot. Lap neu nhieu. (3) Dung moi tay dau cham mat trai (thong gio). (4) Con mau: con sat khuan nhe neu can (test). (5) Giat nuoc giat thuong cotton-poly. (6) Het nhon moi say.',
    dried_path_vi:'Bot hut 2 lan → dung moi lap → kiem tra het nhon truoc say. Khong silk/wool nhiet cao.'},
   {id:'S_BLACK_COFFEE',
-   why_vi:'Ca phe den = tannin + mau. Xu ly SOM bang nuoc LANH — nhiet/say khoa mau. Giam trang 5% (1:4) pha tannin; con mau dung bot tay oxy (khong len/lua). Neu la ca phe SUA/latte: xu ly enzyme/nuoc rua chen truoc (protein/mo), roi giam — neu khong ro loai, hoi 1 cau Amricano vs latte.',
-   fresh_path_vi:'Tham/xa lanh mat trai ngay (khong cha lan) → giam trang 1 phan + nuoc 4 phan cham/xit → giat. Test goc khuat. Con mau: bot tay oxy theo chai (vai trang/cotton). CAM meo: kem danh rang, ethanol cocktail, giam 1:1 bia.',
-   dried_path_vi:'Giam trang ngam/cham → neu con mau dung bot tay oxy (KHONG len/lua) → kiem tra mau truoc say.'},
+   why_vi:'GIAO DUC: Ca phe den = tannin + mau. Xu ly SOM nuoc LANH — nhiet/say khoa mau. Giam trang 5% (1:4) pha tannin; con mau: bot tay oxy (khong len/lua). Neu ca phe SUA/latte: enzyme/nuoc rua chen TRUOC roi giam. CAM meo: kem danh rang, ethanol cocktail, giam 1:1.',
+   fresh_path_vi:'(1) Nhan: ca phe den (khong sua), tuoi/kho, vai. (2) Tham/xa lanh mat trai (khong cha lan). (3) Giam trang 1:4 cham/xit 5-10 phut. (4) Con mau: bot tay oxy theo chai (trang/cotton; test). (5) Giat am nhe neu cho. (6) Anh sang manh truoc say.',
+   dried_path_vi:'Giam trang ngam/cham → bot tay oxy neu con mau (KHONG len/lua) → kiem tra truoc say.'},
   {id:'S_MILK_COFFEE',
-   why_vi:'Ca phe sua / latte: tannin + protein/mo sua. Xu ly protein/mo (enzyme protease hoac nuoc rua chen nhe) TRUOC, roi tannin (giam 1:4) — khong dao thu tu. Nhiet cao khoa protein.',
-   fresh_path_vi:'Xa lanh → enzyme protease (hoac nuoc rua chen nhe neu mo) cho phan sua → xa → giam trang 1:4 cho tannin → giat. Test goc.',
-   dried_path_vi:'Enzyme ngam lanh → giam trang → kiem tra truoc say; bot tay oxy chi khi con mau va vai cho phep.'},
+   why_vi:'GIAO DUC: Latte/ca phe sua = tannin + protein/mo sua. THU TU BAT BUOC: protein/mo (enzyme protease hoac nuoc rua chen) TRUOC → tannin (giam 1:4) SAU. Dao thu tu = mau khoa. Nhiet cao khoa protein.',
+   fresh_path_vi:'(1) Nhan: latte/sua. (2) Xa lanh. (3) Enzyme protease (hoac nuoc rua chen neu mo) 15-30 phut. (4) Xa → giam trang 1:4. (5) Giat. (6) Oxy chi khi con mau + vai cho phep; test goc.',
+   dried_path_vi:'Enzyme ngam lanh → giam trang → kiem tra truoc say; bot tay oxy neu can.'},
   {id:'S_FRUIT_JUICE',
-   why_vi:'Nuoc trai cay / juice = tannin + mau hoa qua. Xu ly SOM bang nuoc lanh. Buoc 1: giam trang 1:4. Buoc 2 neu con mau: bot tay oxy (vai trang/cotton OK; CAM len/lua).',
-   fresh_path_vi:'(1) Nhan: juice/trai cay, tuoi/kho, vai trang hay mau. (2) Tham/xa LANH mat trai. (3) Buoc1 giam trang 1:4 cham/xit → tham. (4) Con mau: Buoc2 bot tay oxy theo chai (vai trang uu tien; test goc). (5) Giat am nhe neu vai cho. CAM say khi con mau.',
-   dried_path_vi:'Ngam/cham giam trang → neu con mau bot tay oxy (khong len/lua) → kiem tra anh sang manh truoc say. Vai mau: can than oxy (test); uu tien giam lap.'},
+   why_vi:'GIAO DUC: Juice = tannin + mau hoa qua (anthocyanin/carotenoid). SOM + lanh. Buoc1 giam 1:4. Buoc2 bot tay oxy neu con mau (trang/cotton OK; CAM len/lua). CAM say khoa mau.',
+   fresh_path_vi:'(1) Nhan: juice/trai cay, trang/mau. (2) Tham/xa LANH mat trai. (3) Giam 1:4 cham/xit → tham. (4) Con mau: bot tay oxy (trang uu tien; test). (5) Giat am nhe. (6) CAM say khi con mau.',
+   dried_path_vi:'Giam ngam → oxy neu can (khong len/lua) → anh sang manh truoc say. Vai mau: than trong oxy.'},
   {id:'S_KIMCHI',
-   why_vi:'Kim chi / nuoc kim chi = bot ot (mau) + dau + muoi/acid len men. Xu ly SOM nuoc LANH. Dau: nuoc rua chen. Mau/mui: giam trang 1:4. Vai trang con mau: bot tay oxy. CAM say khi con mau ot. CAM meo kem danh rang.',
-   fresh_path_vi:'(1) Cao bot ot/thuc an du. (2) Xa/tham LANH mat trai. (3) Nuoc rua chen 1-2 giot cham, ngoai→trong. (4) Xa → giam trang 1:4 cham/xit 5-10 phut. (5) Con mau tren vai trang: bot tay oxy theo chai (test). Vai mau: lap giam, than trong oxy. (6) Giat thuong. KHONG say khi con vet.',
-   dried_path_vi:'Ngam lanh + nuoc rua chen nhe → giam trang → bot tay oxy neu trang con mau. Mui kim chi: giam them + xa ky. Bao khach neu mau ot vin vien.'}
+   why_vi:'GIAO DUC: Kim chi/nuoc kim chi = bot ot (mau) + dau + muoi/acid. Xu ly SOM lanh. THU TU: cao bot → xa lanh → nuoc rua chen (dau) → giam 1:4 (mau/mui) → oxy CHI vai trang con mau. CAM say khoa mau ot. CAM meo kem danh rang.',
+   fresh_path_vi:'(1) Cao bot ot/thuc an. (2) Xa/tham LANH mat trai. (3) Nuoc rua chen 1-2 giot cham ngoai→trong. (4) Xa → giam 1:4 5-10 phut. (5) Trang con mau: bot tay oxy (test). Mau: lap giam, than trong oxy. (6) Giat; KHONG say khi con vet.',
+   dried_path_vi:'Ngam lanh + nuoc rua chen → giam → oxy neu trang. Mui: giam them + xa ky. Bao neu mau ot vin vien.'},
+  {id:'S_KETCHUP',
+   why_vi:'GIAO DUC: Ketchup = lycopene (mau ca chua) + duong + mang dau. Cao bot truoc. THU TU: nuoc rua chen (dau) → giam 1:4 (tannin/lycopene) → bot tay oxy neu trang con mau. Nhiet som khoa mau do.',
+   fresh_path_vi:'(1) Cao bot ketchup. (2) Tham/xa lanh/mat am nhe. (3) Nuoc rua chen 1-2 giot ngoai→trong. (4) Xa → giam 1:4 5-10 phut. (5) Con mau trang: bot tay oxy (test). (6) Giat; CAM say khi con mau.',
+   dried_path_vi:'Ngam + nuoc rua chen → giam lap → oxy neu trang. Bao khach neu mau do vin vien.'},
+  {id:'S_TOMATO_SAUCE',
+   why_vi:'GIAO DUC: Sot ca chua = lycopene + dau nau. Giong ketchup: cao → nuoc rua chen → giam → oxy trang. Khong cha lan mau do.',
+   fresh_path_vi:'Cao → xa/tham → nuoc rua chen → giam 1:4 → oxy neu trang con mau → giat. CAM say khi con mau.',
+   dried_path_vi:'Ngam + nuoc rua chen → giam → oxy trang neu can. Kiem tra truoc say.'},
+  {id:'S_MAYO',
+   why_vi:'GIAO DUC: Mayonnaise = dau (mo) + trung (protein). THU TU: cao → nuoc rua chen/lipase cho DAU TRUOC → enzyme protease cho PROTEIN. Dao thu tu = mo khoa protein. Nhiet cao khoa protein. Khong oxy truoc khi het mo.',
+   fresh_path_vi:'(1) Cao bot mayo. (2) Nuoc rua chen 1-2 giot cham 5-10 phut (hoac enzyme lipase). (3) Xa. (4) Enzyme protease 15-30 phut neu con nhat trung. (5) Giat am nhe. (6) Het nhon moi say.',
+   dried_path_vi:'Ngam lanh + nuoc rua chen → enzyme protease → giat. Lap neu con mo.'},
+  {id:'S_COOKING_OIL',
+   why_vi:'GIAO DUC: Dau an bam soi. Buoc1 hut (bot ngo/phan rom) → Buoc2 nuoc rua chen (surfactant) → Buoc3 enzyme lipase neu co. Say khi con nhon = khoa vet bong. Phan biet dau an vs dau nhot xe may.',
+   fresh_path_vi:'(1) Bot ngo/phan rom day 10-30 phut, chai. (2) Nuoc rua chen 1-2 giot cham am nhe. (3) Enzyme lipase neu con nhon. (4) Giat. (5) Het nhon moi say.',
+   dried_path_vi:'Hut bot 2 lan → nuoc rua chen/lapase → giat. Kiem tra nhon truoc say.'},
+  {id:'S_GREASE',
+   why_vi:'GIAO DUC: Mo/grease = lipid dam. Hut bot → nuoc rua chen + lipase. Khong say khi con mo.',
+   fresh_path_vi:'Hut bot → nuoc rua chen → lipase neu can → giat. Het nhon moi say.',
+   dried_path_vi:'Hut 2 lan → nuoc rua chen/lapase → giat. Bao neu mo cu kho.'},
+  {id:'S_SOY_SAUCE',
+   why_vi:'GIAO DUC: Nuoc tuong = protein len men + tannin/mau den. THU TU: xa lanh → enzyme protease → giam 1:4 → oxy neu trang con mau. Nhiet som khoa mau.',
+   fresh_path_vi:'(1) Xa/tham LANH ngay. (2) Enzyme protease 15-30 phut. (3) Giam 1:4. (4) Trang con mau: bot tay oxy (test). (5) Giat. (6) CAM say khi con mau.',
+   dried_path_vi:'Ngam lanh + enzyme → giam → oxy trang neu can. Anh sang manh truoc say.'},
+  {id:'S_FISH_SAUCE',
+   why_vi:'GIAO DUC: Nuoc mam = protein + muoi + mau. Mui man kho: giam deodorize. THU TU: xa lanh → enzyme → giam (mau+mui) → oxy trang neu can. Bao khach mui co the ton tai nhe.',
+   fresh_path_vi:'(1) Xa LANH. (2) Enzyme protease 15-30 phut. (3) Giam 1:4 cham/ngam (mui). (4) Oxy neu trang con mau. (5) Giat xa ky. (6) CAM say khi con mau/mui manh.',
+   dried_path_vi:'Ngam enzyme → giam lap (mui) → oxy trang neu can. Bao neu mui vin vien.'},
+  {id:'S_COLLAR_STAIN',
+   why_vi:'GIAO DUC: Vet co ao so mi = sebum + mo hoi + da chet oxy hoa → vang/xam. Enzyme (protease/lipase) len CO KHO truoc khi uot. CAM Javel/chlorine tren protein vang — lam VANG HON (tai lieu laundry cong nghiep). Sau do bot tay oxy. Ban chai mem thoi. CAM ui khi con vet.',
+   fresh_path_vi:'(1) Nhan: vong co, ao so mi. (2) Nho enzyme protease/lipase len co KHO 5-15 phut. (3) Nuoc rua chen nhe neu mo. (4) Ngam bot tay oxy am (theo chai) 1-2 gio neu trang. (5) Giat. (6) Anh sang; con → lap. CAM chlorine.',
+   dried_path_vi:'Enzyme paste dem neu cu → oxy ngam → giat. Bao khach vet rat cu co the con bong. CAM chlorine/ui khi con vet.'},
+  {id:'S_SHIRT_YELLOW',
+   why_vi:'GIAO DUC: Ao so mi trang vang toan than/co/tay = sebum+mo hoi oxy hoa + co the deodorant. KHONG dung chlorine (lam vang hon). THU TU: enzyme TRUOC → bot tay oxy ngam SAU. Soft brush. Lien quan vong co (S_COLLAR) neu chi co.',
+   fresh_path_vi:'(1) Nhan: ao so mi trang vang (khong phai lo mau). (2) Enzyme protease/lipase pretreat vung vang. (3) Ngam bot tay oxy am theo chai 1-6 gio (test). (4) Giat detergent. (5) Anh sang manh; lap neu can. (6) CAM Javel; CAM say/ui khi con vang.',
+   dried_path_vi:'Enzyme dem → oxy ngam dai → giat. Bao neu vang cu khong het 100%. Goi y tach rieng trang khi giat.'},
+  {id:'S_DYE_TRANSFER',
+   why_vi:'GIAO DUC: Lo mau / dye transfer = mau tu ao khac bam khi giat. XU LY NGAY — CAM say/ui (nhiet khoa mau). Bot tay oxy ngam dai (toi 6-8 gio theo chai) roi giat lai. Vai TRANG cotton: co the Javel pha loang CAN THAN. Vai mau/len/lua: CHI oxy + test; khong chlorine. Bao khach co the khong het 100%.',
+   fresh_path_vi:'(1) Tach khoi may, KHONG say. (2) Phan biet trang vs mau, lua/len. (3) Ngam bot tay oxy theo chai (lanh/am) toi da theo nhan (thuong nhieu gio). (4) Giat detergent. (5) Anh sang; lap oxy neu can. (6) Trang cotton: Javel pha loang chi khi can + an toan vai. CAM say khi con mau lan.',
+   dried_path_vi:'Neu da say: kho hon — van thu oxy ngam dai, bao khach ty le thanh cong thap. Khong chlorine tren mau/len/lua.'},
+  {id:'S_STARCH_TRANSFER',
+   why_vi:'GIAO DUC: Ho tinh bot (starch/풀) + mau lan: starch la mang giu mau. THU TU: enzyme amylase (phan tinh bot) TRUOC → bot tay oxy cho mau SAU. CAM say. Neu chi lo mau khong ho → xu ly nhu S_DYE_TRANSFER.',
+   fresh_path_vi:'(1) Nhan: ho/풀 + mau lan. (2) Enzyme amylase (nuoc giat ghi tinh bot/amylase) ngam 15-60 phut. (3) Xa. (4) Bot tay oxy ngam. (5) Giat. (6) CAM say khi con mau.',
+   dried_path_vi:'Amylase ngam → oxy → giat. Bao neu mau da say.'},
+  {id:'S_MILDEW',
+   why_vi:'GIAO DUC: Nam moc = nam + sac to. An toan: PPE, xu ly NGOAI TROI, chai/hut bot bao tu (CCI). Giam trang giet nam (acid). Bot tay oxy pha sac to. Javel CHI cotton trang + khong tron giam/ammonia. Oxy KHONG phai chat khu trung. CAM say khi con vet moc. Da/suede: chuyen chuyen nghiep.',
+   fresh_path_vi:'(1) Dua ra ngoai, deo gang/khau trang neu nang. (2) Chai kho bot moc (khong hit). (3) Ngam giam trang pha (vd 1:4 den dam hon theo vai) nhieu gio. (4) Giat + bot tay oxy theo chai. (5) Trang cotton: Javel pha loang CHI neu an toan + KHONG tron giam. (6) Phoi nang/gio; CAM say khi con vet/mui.',
+   dried_path_vi:'Chai ngoai troi → giam ngam → oxy → giat. Bao khach vet moc nang co the vin vien; da/len/lua can than hoac chuyen pro.'}
 ] AS o
 MATCH (s:Stain {id:o.id})
 SET s.why_vi = o.why_vi, s.fresh_path_vi = o.fresh_path_vi, s.dried_path_vi = o.dried_path_vi,
@@ -716,8 +794,32 @@ MATCH (s:Stain {id:'S_KIMCHI'})
 SET s.precheck_vi = 'Kim chi/nuoc kim chi — xu ly SOM. Phan biet vai trang vs mau. Test goc khuat truoc tay oxy.',
     s.motion_vi = 'Cao bot → tham/xa lanh mat trai ngoai→trong — khong cha lan mau ot',
     s.water_temp_vi = 'Bat dau nuoc LANH; sau do giat am nhe neu vai cho phep',
-    s.aftercare_vi = 'Anh sang manh: con mau ot → lap (oxy chi vai trang). Phoi bong mat, tranh nang gay. CAM say khoa mau.',
+    s.aftercare_vi = 'Anh sang manh: con mau ot → lap (oxy chi vai trang). Phoi bong mat. CAM say khoa mau.',
     s.name_ko = '김치·김치국물'
+RETURN count(s) AS updated""")
+        _r(s, "Z3_edu_ops_ko", """
+UNWIND [
+  {id:'S_KETCHUP',name_ko:'케첩',precheck_vi:'Ketchup/tuong ca — cao bot, phan biet trang/mau'},
+  {id:'S_TOMATO_SAUCE',name_ko:'토마토 소스',precheck_vi:'Sot ca chua — lycopene+dau'},
+  {id:'S_MAYO',name_ko:'마요네즈',precheck_vi:'Mayo: dau TRUOC, protein SAU'},
+  {id:'S_COOKING_OIL',name_ko:'식용유·오일(식용)',precheck_vi:'Dau an — khong nham dau nhot xe'},
+  {id:'S_GREASE',name_ko:'기름때·그리즈',precheck_vi:'Mo — hut bot truoc'},
+  {id:'S_SOY_SAUCE',name_ko:'간장',precheck_vi:'Nuoc tuong — enzyme roi giam'},
+  {id:'S_FISH_SAUCE',name_ko:'느억맘·액젓',precheck_vi:'Nuoc mam — enzyme + giam mui'},
+  {id:'S_COLLAR_STAIN',name_ko:'목때·칼라 황변',precheck_vi:'Vong co — CAM chlorine'},
+  {id:'S_SHIRT_YELLOW',name_ko:'누렇게 된 와이셔츠',precheck_vi:'Ao so mi vang — enzyme roi oxy; CAM Javel'},
+  {id:'S_DYE_TRANSFER',name_ko:'이염·물든 옷',precheck_vi:'Lo mau — CAM say; oxy ngam dai'},
+  {id:'S_STARCH_TRANSFER',name_ko:'풀로 묻은 이염',precheck_vi:'Ho tinh bot + mau — amylase roi oxy'},
+  {id:'S_MILDEW',name_ko:'곰팡이·곰팡이 제거',precheck_vi:'Nam moc — PPE ngoai troi; da/suede → pro'},
+  {id:'S_BLOOD_FRESH',name_ko:'핏자국(신선)',precheck_vi:'Mau tuoi — CHI nuoc lanh'},
+  {id:'S_BLOOD_DRY',name_ko:'핏자국(마른)',precheck_vi:'Mau kho — enzyme dai'},
+  {id:'S_BLACK_COFFEE',name_ko:'커피(블랙)',precheck_vi:'Ca phe den — giam roi oxy'},
+  {id:'S_MILK_COFFEE',name_ko:'라떼·우유커피',precheck_vi:'Ca phe sua — enzyme TRUOC giam'},
+  {id:'S_FRUIT_JUICE',name_ko:'주스·과일즙',precheck_vi:'Juice — giam roi oxy'},
+  {id:'S_MOTORBIKE_OIL',name_ko:'오토바이 오일',precheck_vi:'Dau nhot — thong gio khi dung moi'}
+] AS x
+MATCH (s:Stain {id:x.id})
+SET s.name_ko = x.name_ko, s.precheck_vi = x.precheck_vi
 RETURN count(s) AS updated""")
         # Priority 1–2 item care — same field names as stain paths (owner 1)-6) flow)
         _r(s, "I_items_care", """
