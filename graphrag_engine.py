@@ -396,6 +396,8 @@ def _fetch_graph_context(entities: dict) -> dict:
         ("dau nhot", "dau nhot xe may"),
         ("nam moc", "nam moc"),
         ("ri set", "ri set"),
+        ("kim chi", "kim chi"),
+        ("kimchi", "kim chi"),
     )
     alias_hit = None
     haystack = f"{raw_msg} {stain_input}".strip()
@@ -415,6 +417,8 @@ def _fetch_graph_context(entities: dict) -> dict:
             stain_id = "S_MILDEW"
         elif alias_hit == "ri set":
             stain_id = "S_RUST"
+        elif alias_hit == "kim chi":
+            stain_id = "S_KIMCHI"
     elif not stain_input and raw_msg:
         stain_input = raw_msg
 
@@ -1404,6 +1408,21 @@ def generate_response(user_message: str) -> str:
         entities["stain_type"] = "nuoc trai cay"
         if any(k in user_message for k in ("흰", "화이트", "하얀")) or "trang" in raw_n or "white" in raw_n:
             entities["fabric_type"] = entities.get("fabric_type") or "cotton"
+    elif any(k in user_message for k in ("김치", "김치국", "김치찌")) or "kimchi" in raw_n or "kim chi" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_KIMCHI"
+        entities["stain_type"] = "kim chi"
+    elif any(
+        k in user_message
+        for k in ("라떼", "우유커피", "카페라떼", "카푸치노", "밀크커피")
+    ) or "latte" in raw_n or "ca phe sua" in raw_n or "milk coffee" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_MILK_COFFEE"
+        entities["stain_type"] = "ca phe sua"
+    elif any(k in user_message for k in ("커피", "아메리카노")) or "ca phe" in raw_n or "coffee" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_BLACK_COFFEE"
+        entities["stain_type"] = "ca phe den"
     graph_context = _fetch_graph_context(entities)
     graph_data = graph_context.get("graph")
 

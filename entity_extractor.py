@@ -65,10 +65,12 @@ S_MUD=mud/bun, S_CURRY=curry/nghe, S_MUSTARD=mustard,
 S_LATERITE=laterite/dat do/dat do laterite/red soil Vietnam,
 S_MOTORBIKE_OIL=motorbike oil/dau nhot xe may,
 S_MILDEW=mildew/nam moc, S_RUST=rust/ri set,
+S_KIMCHI=kimchi/kim chi/nuoc kim chi/김치/김치국물,
 S_DEODORANT=deodorant, S_PAINT_LATEX=latex paint/son nuoc, S_GLUE=glue/keo
 
 IMPORTANT: "dat do" / "laterite" / "đất đỏ" = S_LATERITE (red soil), NEVER blood.
 "đỏ" alone does not mean blood if "dat"/"laterite"/"đất" is present.
+Kimchi / 김치 / kim chi = S_KIMCHI (not tomato alone).
 If the user names a specific stain, intent MUST be "treatment" (not mystery).
 
 Group IDs: G1=protein, G2=oil, G3=tannin, G4=dye, G5=complex
@@ -79,10 +81,9 @@ Language detection:
 - en: English otherwise
 
 Common stain names:
-- VI: vet dau, vet mau, vet ca phe, vet nuoc tuong, nuoc mam, co, muc, gi set, moc
-- KO: 기름, 혈액, 커피, 간장, 액젓, 잔디, 잉크, 녹, 곰팡이
-- EN: oil, blood, coffee, soy sauce, fish sauce, grass, ink, rust, mold
-
+- VI: vet dau, vet mau, vet ca phe, vet nuoc tuong, nuoc mam, co, muc, gi set, moc, kim chi
+- KO: 기름, 혈액, 커피, 간장, 액젓, 잔디, 잉크, 녹, 곰팡이, 김치, 김치국물
+- EN: oil, blood, coffee, soy sauce, fish sauce, grass, ink, rust, mold, kimchi
 Common fabric names:
 - VI: lua, cotton, vai bong, len, tong hop, polyester, denim, vai lanh
 - KO: 실크, 면, 울, 합성섬유, 폴리에스터, 데님, 린넨
