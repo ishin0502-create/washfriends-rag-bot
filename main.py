@@ -719,8 +719,8 @@ UNWIND [
    aftercare_vi:'Kho het roi cat. Thoang khi, tranh am moc. CAM say may.'},
   {id:'I_GOLF_WEAR',name:'Golf performance wear',name_vi:'Do golf (ao/quan performance)',name_ko:'골프복(기능성 셔츠·바지)',fabric_id:'F2',
    precheck_vi:'Poly/spandex moisture-wick. Lat mat trai. Doc nhan.',
-   why_vi:'Do golf: CAM xa vai / dryer sheet (bit ken hut am). Nuoc lanh, bot LONG it. Nhiet cao hong dan hoi.',
-   fresh_path_vi:'Lat trai → may/tay <=30C chat giat nhe/the thao → KHONG xa vai → xa ky → phoi / say thap toi thieu. Vet co/bun: spotting lanh truoc.',
+   why_vi:'Do golf: CAM xa vai / dryer sheet (bit ken hut am). Nuoc lanh, chat giat NHE/the thao — KHONG bot dam/enzyme manh. Nhiet cao hong dan hoi.',
+   fresh_path_vi:'Lat trai → may/tay <=30C chat giat nhe/the thao → KHONG xa vai → xa ky → phoi / say thap toi thieu. Vet co/bun: spotting lanh truoc. Mui: ngam lanh + trung tinh.',
    dried_path_vi:'Mui mo hoi: ngam lanh + trung tinh, khong bot dam. Lap neu can.',
    motion_vi:'Luc 2 — chuong trinh tinh te',
    water_temp_vi:'Lanh / <=30C',
@@ -742,9 +742,9 @@ UNWIND [
    water_temp_vi:'Lanh. CHI tay',
    aftercare_vi:'Giu form den kho. CAM say may.'},
   {id:'I_GOLF_GLOVE_LEATHER',name:'Leather golf glove',name_vi:'Gang golf da (cabretta)',name_ko:'골프장갑(가죽)',fabric_id:'F8',
-   precheck_vi:'Da cabretta: CAM may. Nuoc toi thieu. Khong giat qua thuong.',
-   why_vi:'Gang golf da: may/ngam = cung/nut. Lau nhe + kem da. CAM tay oxy.',
-   fresh_path_vi:'Khan am + xa phong da/kem da nhe lau → khan am lau du → tham kho → de kho phang (co the deo vai phut giu form) → kem da.',
+   precheck_vi:'Da cabretta: CAM may. Nuoc toi thieu. Khong giat qua thuong. CAM con sat khuan/alcohol (lam kho nut da).',
+   why_vi:'Gang golf da: may/ngam = cung/nut. Chi lau nhe + kem da. CAM tay oxy, CAM alcohol.',
+   fresh_path_vi:'Khan am + xa phong da/kem da nhe lau → khan am lau du → tham kho → de kho phang (co the deo vai phut giu form) → kem da. CAM con/alcohol.',
    dried_path_vi:'Khong ngam. Con ban: lap lau nhe. Bao khach neu gia.',
    motion_vi:'Luc 1 — lau, khong vo',
    water_temp_vi:'It nuoc lanh',
@@ -798,6 +798,11 @@ MATCH (cloth:Tool {id:'T_CLOTH'}), (soft:Tool {id:'T_BRUSH_SOFT'}), (ultra:Tool 
 WITH cloth, soft, ultra, hard, shoe
 MATCH (d2:Chemical {code:'D2'}), (d3:Chemical {code:'D3'}), (a1:Chemical {code:'A1'}), (n1:Chemical {code:'N1'})
 WITH cloth, soft, ultra, hard, shoe, d2, d3, a1, n1
+// Drop stale chem links before re-wire (golf glove must not keep A1 alcohol)
+MATCH (bad:Item) WHERE bad.id IN ['I_GOLF_GLOVE_LEATHER','I_GOLF_WEAR']
+OPTIONAL MATCH (bad)-[oldc:USES_CHEMICAL]->()
+DELETE oldc
+WITH cloth, soft, ultra, hard, shoe, d2, d3, a1, n1
 MATCH (i:Item)
 FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_LEATHER_SHOE','I_GLOVE_LEATHER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(a1))
@@ -811,8 +816,10 @@ FOREACH (_ IN CASE WHEN i.id IN ['I_SNEAKER','I_RUNNING_MESH','I_SNEAKER_WHITE',
 FOREACH (_ IN CASE WHEN i.id = 'I_SHOE_LACES' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth)
   MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_CHEMICAL]->(n1))
-FOREACH (_ IN CASE WHEN i.id IN ['I_GORETEX','I_DOWN_JACKET','I_GOLF_WEAR','I_GOLF_HAT','I_GOLF_GLOVE_SYNTH','I_FUR_FAUX','I_SUIT_SUMMER'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_GORETEX','I_DOWN_JACKET','I_GOLF_HAT','I_GOLF_GLOVE_SYNTH','I_FUR_FAUX','I_SUIT_SUMMER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_TOOL]->(cloth))
+FOREACH (_ IN CASE WHEN i.id = 'I_GOLF_WEAR' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(d2))
 FOREACH (_ IN CASE WHEN i.id IN ['I_SUIT','I_AO_DAI','I_HANBOK'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(ultra) MERGE (i)-[:USES_TOOL]->(cloth))
 FOREACH (_ IN CASE WHEN i.id = 'I_FUR_REAL' THEN [1] ELSE [] END |
