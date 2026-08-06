@@ -104,6 +104,10 @@ RETURN
     .contains_protein, .contains_tannin, .contains_oil, .contains_dye,
     .water_spreads, .precheck_vi, .motion_vi, .water_temp_vi, .aftercare_vi,
     .why_vi, .fresh_path_vi, .dried_path_vi,
+    .force_metaphor_vi, .force_metaphor_ko,
+    .sense_check_vi, .sense_check_ko,
+    .success_rate_vi, .success_rate_ko,
+    .refuse_when_vi, .refuse_when_ko,
     group: g.name_vi, group_id: g.id,
     group_care_order_vi: g.care_order_vi, group_care_order_ko: g.care_order_ko
   } AS stain_context,
@@ -1195,6 +1199,10 @@ def _sanitize_graph_for_owner(graph, lang: str):
             "tip", "why_vi", "fresh_path_vi", "dried_path_vi",
             "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
             "group_care_order_vi", "group_care_order_ko",
+            "force_metaphor_vi", "force_metaphor_ko",
+            "sense_check_vi", "sense_check_ko",
+            "success_rate_vi", "success_rate_ko",
+            "refuse_when_vi", "refuse_when_ko",
         ):
             if sc2.get(field):
                 sc2[field] = _expand_chem_codes_in_text(str(sc2[field]), lang=lang)
@@ -1233,14 +1241,14 @@ QUY TẮC TRẢ LỜI:
 2. CHỈ dùng DỮ LIỆU TỪ ĐỒ THỊ của ĐÚNG vết này — không bịa, không mẹo dân gian, không lẫn vết khác.
    Thiếu field → bỏ qua hoặc hỏi 1 câu. CẤM in tên field kỹ thuật (why_vi, fresh_path_vi, code, id…).
 3. Cảnh báo an toàn ĐẦU câu — chữ thường/hoa ngắn, CẤM markdown ** ## * _
-4. Mở đầu ngắn (2–4 câu) nếu có why_vi / tip — nguyên tắc ĐÚNG vết này, rồi mới 1)-6).
-5. Câu XỬ LÝ VẾT / CHĂM SÓC MÓN ĐỒ — 1)-6), dễ đọc (cùng một format cho stain và item_care):
+4. Mở đầu BẮT BUỘC khối [왜 이 순서] / [Tại sao thứ tự này] (2–5 câu) từ why_vi / tip — nguyên tắc hóa học ĐÚNG vết này (GIAO DUC). Không bỏ khối này khi có why/tip.
+5. Sau đó khối XỬ LÝ — 1)-6) (stain và item_care cùng format):
    (1) Nhận diện: BẮT BUỘC nêu ĐÚNG loại vết từ stain_context (name_ko/name_vi) + tươi/khô + màu vải nếu user nói
        (vd: "과일 주스, 젖은 상태, 흰 면"). CẤM câu mơ hồ kiểu "균일하게 분포/분류입니다" khi không có trong đồ thị.
    (2) Dụng cụ — chỉ tên người dùng (name_ko / name_vi), CẤM id T_…
        Nếu tools[] RỖNG: viết "해당 없음" / "khong can dung cu dac biet" HOẶC lấy từ fresh_path
        (vd bút màu vải, chụp ảnh) — CẤM bịa "흰 천·흡수지" khi không có trong tools[]
-   (3) Lực + hướng — cụ thể (thấm/nhấn ngoài→trong), không chỉ "không lan"
+   (3) Lực + hướng — Cap 1–4 + 비유감각 nếu có force_levels / force_metaphor_* (Hàn: 아기 얼굴·안경 닦기·수세미 등). Cụ thể thấm/nhấn ngoài→trong.
    (4) Hóa chất — BẮT BUỘC ghi TÊN THƯỜNG NGÀY từ chemicals[] (name_ko / shop_name_vi):
        muối, enzyme, giấm, nước rửa chén, bột tẩy oxy, nước giặt trung tính Wash Friends…
        Kèm: pha loãng (dilution_*), nơi mua (buy_where_*), thay thế nếu có (alt*).
@@ -1251,7 +1259,11 @@ QUY TẮC TRẢ LỜI:
    (5) Nhiệt độ nước + max_temp vải
    (6) Sau xử lý: đủ ý kiểm tra ánh sáng / còn thì làm lại (đúng thứ tự hóa chất) / phơi bóng mát — CẤM câu kết kiểu quảng cáo "최상의 결과"
    Nếu có item_context: đây là chăm sóc món (giày/túi/áo phao/Gore-Tex…) — vẫn dùng 1)-6), không đổi giọng.
-6. KHÔNG tự chèn WF_SOFT / WF_FRAG. S1 chỉ khi có trong chemicals[] (lụa/len hoặc đã gắn).
+5b. SAU 1)-6) BẮT BUỘC thêm 3 khối ngắn (plain text, không markdown):
+   [감각 체크] / [Kiểm tra giác quan]: mắt/tay/mũi từ sense_check_* hoặc suy từ fresh_path (vd nước trong, hết nhờn, hết mùi).
+   [성공률·고지] / [Tỷ lệ & báo khách]: success_rate_* hoặc "không cam kết 100%; nhiệt/sấy khi còn vết = cố định".
+   [거절·보내기] / [Từ chối / chuyển]: refuse_when_* hoặc khi lụa/len/da hỏng cấu trúc / không đủ máy — nói rõ chuyển chuyên hoặc từ chối.
+5c. CẤM bỏ [왜]/[감각]/[성공률]/[거절] chỉ vì muốn ngắn. Tối đa vẫn 900 từ — cắt phần lan man, không cắt khối giáo dục.6. KHÔNG tự chèn WF_SOFT / WF_FRAG. S1 chỉ khi có trong chemicals[] (lụa/len hoặc đã gắn).
 7. CẤM mẹo dân gian, thương hiệu ngoài, viện/web/AI/PDF
 8. Không markdown **, ##, *, _ — Zalo plain text thuần (không in dấu ** quanh tiêu đề)
 9. Không trộn tiếng Anh vụng (cấm: external, internal, soft brush…). Lực/hướng viết đủ ngôn ngữ trả lời (Hàn: 바깥→안 / Việt: ngoài→trong)
@@ -1301,8 +1313,105 @@ def detect_reply_lang(text: str) -> str:
     return "vi"
 
 
+def _enrich_teach_slots(graph: dict) -> dict:
+    """Fill Protocol Card teach slots from stain fields or group fallbacks (additive)."""
+    if not isinstance(graph, dict):
+        return graph
+    g = dict(graph)
+    sc = dict(g.get("stain_context") or {})
+    if not sc:
+        return g
+    group = ""
+    grp = sc.get("group_id") or sc.get("group")
+    if isinstance(grp, dict):
+        group = str(grp.get("id") or "")
+    elif isinstance(grp, str):
+        group = grp
+    # Infer group from stain id prefix lists if missing
+    sid = str(sc.get("id") or "")
+    if not group:
+        if sid.startswith("S_"):
+            # light heuristic from known protein/oil markers in tip flags — skip
+            pass
+    fb = {
+        "G1": {
+            "force_metaphor_vi": "Cap1–2: tham nhe nhu lau mat kinh — protein de khoa neu cha manh/nuoc nong",
+            "force_metaphor_ko": "Cap1–2: 안경 닦듯 가볍게 — 문지르거나 온수면 단백질 고착",
+            "sense_check_vi": "Mat: nuoc xa trong. Tay: het nhon mau. Mui: het mui protein.",
+            "sense_check_ko": "눈: 헹굼물 맑음. 손: 미끌거림 없음. 코: 단백질 냄새 감소.",
+            "success_rate_vi": "Tuoi xu ly som: cao. Da say/nong: thap — bao khach truoc.",
+            "success_rate_ko": "신선·즉시 처리: 높음. 이미 건조·열 처리: 낮음 — 사전 고지.",
+            "refuse_when_vi": "Lua/len hong cau truc, mau nau da khoa sau say → bao thap / chuyen pro.",
+            "refuse_when_ko": "실크·울 구조 손상 우려, 열로 고착된 갈색 → 성공률 낮음 고지/전문 의뢰.",
+        },
+        "G2": {
+            "force_metaphor_vi": "Cap2: tham/chai nhe; hut bot truoc — cam say khi con nhon",
+            "force_metaphor_ko": "Cap2: 가볍게 누르며; 흡착 먼저 — 기름 남은 채 건조 금지",
+            "sense_check_vi": "Tay: het nhon. Mat: loang mo giam. Mui: het mui dau.",
+            "sense_check_ko": "손: 미끄러움 없음. 눈: 기름때 감소. 코: 오일 냄새 감소.",
+            "success_rate_vi": "Hut + surfactant dung: tot. Da say khoa mo: thap.",
+            "success_rate_ko": "흡착+계면활성제 정석: 양호. 건조로 고착: 낮음.",
+            "refuse_when_vi": "Da/suede + dung moi manh; khong thong gio → tu choi / chuyen.",
+            "refuse_when_ko": "가죽·스웨이드+강한 용제, 환기 불가 → 거절/전문.",
+        },
+        "G3": {
+            "force_metaphor_vi": "Cap1–2: tham ngoai→trong — cha lan tannin/mau",
+            "force_metaphor_ko": "Cap1–2: 바깥→안 흡수 — 문지르면 탄닌·색소 번짐",
+            "sense_check_vi": "Mat: mau nhat. Mui: het chua/ngot. Anh sang: khong con vet.",
+            "sense_check_ko": "눈: 색 옅어짐. 코: 신맛·단맛 감소. 강광: 잔존 없음.",
+            "success_rate_vi": "Xu ly SOM + lanh: cao. Da say: mau khoa — bao truoc.",
+            "success_rate_ko": "즉시·찬물: 높음. 건조 후: 색소 고착 — 사전 고지.",
+            "refuse_when_vi": "Len/lua + oxy/chlorine; khach doi 100% → tu choi cam ket.",
+            "refuse_when_ko": "실크·울+산소/염소, 100% 요구 → 보장 거절.",
+        },
+        "G4": {
+            "force_metaphor_vi": "Cap1: blot/tham — KHONG cha (lan pigment)",
+            "force_metaphor_ko": "Cap1: 찍기·흡수 — 문지르면 색소 확산",
+            "sense_check_vi": "Mat: muc/mau giam tung chu ky blot. Test goc truoc.",
+            "sense_check_ko": "눈: 블롯마다 색소 감소. 구석 테스트 필수.",
+            "success_rate_vi": "Muc but: trung binh. Permanent/son: thap — bao 100% khong cam ket.",
+            "success_rate_ko": "볼펜: 중간. 유성·매니큐어: 낮음 — 100% 비보장 고지.",
+            "refuse_when_vi": "In/son/vai mong de hong dung moi → test fail thi dung.",
+            "refuse_when_ko": "프린트·도장·섬세 원단 용제 손상 → 테스트 실패 시 중단.",
+        },
+        "G5": {
+            "force_metaphor_vi": "Theo fresh_path; thuong Cap1–2 + PPE neu moc/hoa chat manh",
+            "force_metaphor_ko": "fresh_path 따름; 보통 Cap1–2 + 곰팡이/강산 시 PPE",
+            "sense_check_vi": "Mat + mui + anh sang manh truoc say.",
+            "sense_check_ko": "눈·코·강광 확인 후 건조.",
+            "success_rate_vi": "Phuc tap: bao khoi phuc 100% — ghi nhan anh truoc/sau.",
+            "success_rate_ko": "복합 오염: 100% 복원 비보장 — 전후 사진.",
+            "refuse_when_vi": "Da/suede moc; thiet bi khong du (chan lon) → chuyen/tu choi.",
+            "refuse_when_ko": "가죽 곰팡이, 대형 이불 설비 부족 → 전문/거절.",
+        },
+    }
+    # Map stain id → group when group missing
+    gid = group if group in fb else ""
+    if not gid:
+        # use contains flags if present on sc
+        if sc.get("contains_protein") and not sc.get("contains_tannin") and not sc.get("contains_oil"):
+            gid = "G1"
+        elif sc.get("contains_oil") and not sc.get("contains_protein"):
+            gid = "G2"
+        elif sc.get("contains_tannin"):
+            gid = "G3"
+        elif sc.get("contains_dye") and not sc.get("contains_oil"):
+            gid = "G4"
+        else:
+            gid = "G5"
+    card = fb.get(gid) or fb["G5"]
+    for k, v in card.items():
+        if not sc.get(k):
+            sc[k] = v
+    g["stain_context"] = sc
+    g["teach_group"] = gid
+    return g
+
+
 def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") -> str:
     raw_graph = graph_context.get("graph")
+    if isinstance(raw_graph, dict):
+        raw_graph = _enrich_teach_slots(raw_graph)
     safe_graph = _sanitize_graph_for_owner(raw_graph, lang) if isinstance(raw_graph, dict) else raw_graph
     graph_json = json.dumps(safe_graph, ensure_ascii=False, indent=2, default=str)
     query_type = graph_context.get("query_type", "unknown")
@@ -1332,9 +1441,13 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "희석(dilution_ko)·구매처(buy_where_ko)·대체(alt*_ko) 있으면 함께. "
             "'를 1리터'처럼 약품명 빠진 문장 금지. 민간요법(치약 등) 금지. "
             "혼합 비율은 그래프에 있을 때만; 없으면 순차 처리+헹굼. "
-            "1)오염·원단 2)도구(name_ko) 3)힘·방향 4)약품 5)수온 "
-            "6)후관리: 강한 빛에서 잔존 확인→남으면 재처리(건조 금지), 그늘·통풍 건조, "
-            "직사광선 피하기(색바램), fabric dry_hint/iron_hint 있으면 한 줄로 건조·다림질. "
+            "필수 교육 형식(빠지면 안 됨, 마크다운 금지): "
+            "[왜 이 순서] why/tip 2–5문장 → "
+            "(1)오염·원단 (2)도구(name_ko) (3)힘·방향+Cap비유 (4)약품 (5)수온 "
+            "(6)후관리: 강한 빛에서 잔존 확인→남으면 재처리(건조 금지), 그늘·통풍 건조 → "
+            "[감각 체크] 눈/손/코 → [성공률·고지] 100% 보장 금지·열고착 고지 → "
+            "[거절·보내기] 손상·실크/울/가죽·설비 부족 시. "
+            "sense_check_*/success_rate_*/refuse_when_*/force_metaphor_* 있으면 그대로 반영. "
             "약 혼합: A/B/C 칵테일 비율(2:1:1 등) 지어내기 금지. 성분별 순차 처리+중간 헹굼. "
             "구석 테스트 후 전체. never_mix는 절대 준수."
         )
@@ -1352,9 +1465,11 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "Lụa/len: chỉ dùng S1 nếu có trong chemicals[]. "
             "B1 = tẩy oxy (không gọi chất tẩy axit). "
             "Không in tên field. Không mẹo dân gian. "
-            "1)-6) nhận diện / dụng cụ / lực / hóa chất / nhiệt độ / "
-            "sau xử lý: kiểm tra ánh sáng mạnh → còn vết thì làm lại (cấm sấy), phơi bóng mát thoáng, "
-            "tránh nắng gắt, nhắc dry_hint/iron_hint nếu có. "
+            "BẮT BUỘC khối giáo dục plain text: "
+            "[Tại sao thứ tự này] why/tip → 1)-6) nhận diện/dụng cụ/lực+Cap/hóa chất/nhiệt độ/"
+            "sau xử lý → [Kiểm tra giác quan] mắt/tay/mũi → [Tỷ lệ & báo khách] không cam kết 100% → "
+            "[Từ chối / chuyển] khi hỏng cấu trúc hoặc thiếu máy. "
+            "Dùng sense_check_*/success_rate_*/refuse_when_*/force_metaphor_* nếu có. "
             "CẤM bịa tỷ lệ trộn detergent A+B+C; xử lý tuần tự theo tính chất + xả giữa bước; test góc."
         )
 
