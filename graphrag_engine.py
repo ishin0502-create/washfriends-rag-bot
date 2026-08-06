@@ -78,9 +78,9 @@ def _normalize_text(value: str) -> str:
 Q_FULL_CONTEXT = """
 MATCH (s:Stain)
 WHERE ($stain_id <> '' AND s.id = $stain_id)
-   OR toLower(coalesce(s.name_vi, '')) CONTAINS toLower($stain_input)
-   OR toLower(coalesce(s.name, '')) CONTAINS toLower($stain_input)
-   OR toLower(coalesce(s.id, '')) CONTAINS toLower($stain_input)
+   OR ($stain_input <> '' AND toLower(coalesce(s.name_vi, '')) CONTAINS toLower($stain_input))
+   OR ($stain_input <> '' AND toLower(coalesce(s.name, '')) CONTAINS toLower($stain_input))
+   OR ($stain_input <> '' AND toLower(coalesce(s.id, '')) CONTAINS toLower($stain_input))
 WITH s LIMIT 1
 OPTIONAL MATCH (s)-[:BELONGS_TO]->(g:StainGroup)
 OPTIONAL MATCH (f:Fabric)
@@ -343,10 +343,10 @@ def _score_stain_row(row: dict, stain_norm: str) -> int:
 
 
 def _fallback_search(stain_input: str) -> list[dict]:
-    rows = _run_query(Q_STAIN_FALLBACK, {})
     stain_norm = _normalize_text(stain_input)
     if not stain_norm:
-        return rows[:5]
+        return []
+    rows = _run_query(Q_STAIN_FALLBACK, {})
     ranked = sorted(
         (( _score_stain_row(r, stain_norm), r) for r in rows),
         key=lambda x: x[0],
@@ -469,6 +469,20 @@ def _fetch_graph_context(entities: dict) -> dict:
         })
         context["graph"] = rows[0] if rows else {}
         context["query_type"] = "price"
+        return context
+
+    # Item-only care (no stain): skip stain lookup — empty stain_input used to
+    # match ALL stains via Cypher CONTAINS '' (LIMIT 1 → arbitrary e.g. blood).
+    if item_id and not stain_id and not stain_input:
+        context["graph"] = []
+        context["query_type"] = "empty"
+        item_rows = _run_query(Q_ITEM_CONTEXT, {"item_id": item_id})
+        if item_rows:
+            context = _merge_item_into_context(context, item_rows[0])
+            if isinstance(context.get("graph"), dict):
+                context["graph"] = _apply_delicate_s1_fallback(
+                    _apply_fabric_chem_safety(context["graph"])
+                )
         return context
 
     # Default: full treatment protocol
@@ -1517,8 +1531,8 @@ def generate_response(user_message: str) -> str:
     ) and not any(
         k in user_message
         for k in (
-            "이염", "피", "혈액", "커피", "김치", "잉크", "곰팡이", "기름", "케첩",
-            "누렇", "황변", "노랗", "누래", "변색", "노란",
+            "이염", "혈액", "커피", "김치", "잉크", "곰팡이", "기름", "케첩",
+            "누렇", "황변", "노랗", "누래", "변색", "노란", "핏자국", "피 묻",
         )
     ):
         entities["intent"] = "treatment"
