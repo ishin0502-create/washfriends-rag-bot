@@ -834,7 +834,7 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
             reasons.append("not_safe_on_silk")
         if is_wool and c.get("safe_on_wool") is False:
             reasons.append("not_safe_on_wool")
-        if (is_leather or is_suede or is_fur) and code in {"B1", "B2", "A4", "E1", "E2", "E3", "D3", "A3", "A5"}:
+        if (is_leather or is_suede or is_fur) and code in {"B1", "B2", "A4", "E1", "E2", "E3", "D3", "A3", "A5", "X1", "X2"}:
             reasons.append("not_safe_on_leather_suede_fur")
         if is_suede and code in {"A1", "D2"}:
             # Suede: avoid wet chemistry by default — professional path
@@ -844,7 +844,7 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
         # can_bleach = chlorine (B2) only — do NOT treat as oxygen ban
         if fabric.get("can_bleach") is False and code == "B2":
             reasons.append("fabric_no_chlorine")
-        # Oxygen B1 / A4: block on protein delicates + leather family (+ explicit can_oxygen=false)
+        # Oxygen B1 / A4 / reducing X1: block on protein delicates + leather family
         is_rayon = fid == "F7" or "rayon" in fname
         no_oxygen = (
             is_silk
@@ -855,9 +855,15 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
             or is_rayon
             or fabric.get("can_oxygen") is False
         )
-        if no_oxygen and code in {"B1", "A4"}:
+        if no_oxygen and code in {"B1", "A4", "X1"}:
             reasons.append("fabric_no_oxygen_bleach")
-        if fabric.get("acid_safe") is False and code in {"A3", "A5"} and not (is_leather or is_suede):
+        # X1 also never on polyester/denim (color / fiber risk) — white cotton/linen only
+        if code == "X1" and fid in {"F2", "F6"}:
+            reasons.append("x1_white_cotton_linen_only")
+        # X2 oxalic: never on silk/wool/rayon/leather (already in no_oxygen family for silk etc.)
+        if no_oxygen and code == "X2":
+            reasons.append("fabric_no_oxalic")
+        if fabric.get("acid_safe") is False and code in {"A3", "A5", "X2"} and not (is_leather or is_suede):
             reasons.append("fabric_no_acid")
         if fabric.get("enzyme_safe") is False and code in {"E1", "E2", "E3"}:
             reasons.append("fabric_no_enzyme")
@@ -980,6 +986,8 @@ def _chem_everyday_map(lang: str = "vi") -> dict[str, str]:
             "S1": "워시프렌즈 중성세제",
             "WF_SOFT": "워시프렌즈 섬유유연제",
             "WF_FRAG": "워시프렌즈 독일 향수 스프레이",
+            "X1": "환원 표백제(하이드로설파이트·흰 면/린넨 전용)",
+            "X2": "옥살산(녹·철·라테라이트용)",
         }
     return {
         "E1": "nuoc giat / bot ngam enzyme (protease)",
@@ -1001,6 +1009,8 @@ def _chem_everyday_map(lang: str = "vi") -> dict[str, str]:
         "S1": "nuoc giat trung tinh Wash Friends",
         "WF_SOFT": "nuoc xa Wash Friends",
         "WF_FRAG": "xit huong Wash Friends",
+        "X1": "bot tay khu (sodium hydrosulfite) — chi cotton/linen TRANG",
+        "X2": "acid oxalic — ri set / dat do (gang tay)",
     }
 
 

@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-edu-s1-bleach-safety",
+            "build": "2026-08-06-edu-s2-x1-x2",
             "checks": checks,
         },
         status_code=200,
@@ -315,6 +315,33 @@ UNWIND [
   {code:'WF_SOFT',name:'Wash Friends Softener',name_vi:'Nuoc xa Softener Wash Friends',role:'WF fabric softener - popular fragrance',safe_on_wool:true,safe_on_silk:true,shop_name_vi:'Nuoc xa / lam mem vai Wash Friends',buy_where_vi:'Kho hang Wash Friends',alt1_vi:'Giam lieu neu khach ghet huong dam',alt2_vi:'Bo qua neu khach yeu cau khong xa',alt3_vi:'',example_brands_vi:'Wash Friends supply',wf_supply:true,when_use_vi:'Chi khi hoan thien / xa vai — khong nhac moi cau vet ban'},
   {code:'WF_FRAG',name:'Wash Friends German Fragrance Spray',name_vi:'Xit huong Duc Wash Friends',role:'Premium fragrance spray after dry or before dry',safe_on_wool:true,safe_on_silk:true,shop_name_vi:'Xit huong (Duc) Wash Friends',buy_where_vi:'Kho hang Wash Friends',alt1_vi:'Xit nhe — dung qua nhieu',alt2_vi:'',alt3_vi:'',example_brands_vi:'Wash Friends supply',wf_supply:true,when_use_vi:'CHI: do cao cap / sau ui / khach ghet mui giat kho — xit nhe. Khong nhac neu chi hoi xu ly vet ban'}
 ] AS c MERGE (n:Chemical {code:c.code}) SET n += c RETURN count(n) AS created""")
+        # Stage2 additive: specialty chems from ops_gold / advanced_field — does NOT alter existing chem rows
+        _r(s, "E2_specialty_chems_x1_x2", """
+UNWIND [
+  {code:'X1',name:'Reducing Bleach (sodium hydrosulfite)',name_vi:'Tay khu X1 (sodium hydrosulfite)',name_ko:'환원 표백제(하이드로설파이트계)',role:'Severe white yellowing when oxygen fails — WHITE cotton/linen ONLY',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Bot tay khu / sodium hydrosulfite (hoa chat)',buy_where_vi:'Cua hoa chat chuyen dung — gang tay, pha moi',buy_where_ko:'화공점(전문) — 장갑 필수, 즉석 조제',alt1_vi:'Chi khi B1 that bai tren cotton/linen TRANG',alt2_vi:'CAM do mau / len / lua / da',alt3_vi:'Xa lanh ngay sau xu ly',alt1_ko:'산소표백 실패 후 흰 면·린넨만',alt2_ko:'유색·실크·울·가죽 금지',alt3_ko:'처리 후 즉시 찬물 헹굼',example_brands_vi:'',wf_supply:false,when_use_vi:'Vang o NANG khong het voi B1 — cotton/linen trang. Pha moi 40-50C, ngam 15-30 phut, xa lanh ngay. Gang tay. CAM B2 tron.',dilution_vi:'1 muong X1 / 1L nuoc 40-50C — PHA MOI, khong de lau',dilution_ko:'40–50℃ 물 1L에 X1 큰술 1 — 즉석만 사용, 15–30분 담금 후 즉시 헹굼'},
+  {code:'X2',name:'Oxalic Acid',name_vi:'Acid oxalic X2',name_ko:'옥살산(녹·철 얼룩용)',role:'Iron oxide / rust / laterite iron — PPE gloves required',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Acid oxalic / bot tay ri (hoa chat)',buy_where_vi:'Cua hoa chat — BAT BUOC gang tay',buy_where_ko:'화공점 — 반드시 장갑',alt1_vi:'A3 + nuoc chanh nhe neu khong co X2 (yeu hon)',alt2_vi:'CAM B2 tren sat oxit (co dinh sat)',alt3_vi:'Sau X2: xa + trung hoa N1 loang',alt1_ko:'없으면 식초·레몬(약함)',alt2_ko:'철 얼룩에 락스 금지(철 고착)',alt3_ko:'사용 후 헹굼 + 베이킹소다 약희석 중화',example_brands_vi:'',wf_supply:false,when_use_vi:'Ri set / dat do laterite (sat oxit). Cotton/linen/poly: 2-3% ~30 phut. Len/lua: KHONG X2 — dung A3 nhe. Gang tay. CAM B2.',dilution_vi:'Acid oxalic ~2-3% theo nhan; cotton/linen/poly ~30 phut; xa + N1 loang trung hoa',dilution_ko:'라벨 기준 약 2–3%; 면·린넨·폴리 ~30분; 헹굼 후 베이킹소다 약희석으로 중화'}
+] AS c
+MERGE (n:Chemical {code:c.code})
+SET n += c
+RETURN count(n) AS created""")
+        _r(s, "E2b_x_chem_safety_links", """
+MATCH (c:Chemical) WHERE c.code IN ['X1','X2']
+MATCH (f:Fabric) WHERE f.id IN ['F3','F4','F7','F8','F9','F10']
+MERGE (f)-[:NEVER_USE]->(c)
+WITH count(*) AS _
+MATCH (c2:Chemical {code:'X1'})
+MATCH (f2:Fabric) WHERE f2.id IN ['F2','F6']
+MERGE (f2)-[:NEVER_USE]->(c2)
+WITH count(*) AS _
+MATCH (s:Stain {id:'S_RUST'}),(x2:Chemical {code:'X2'})
+MERGE (s)-[:USES_CHEMICAL]->(x2)
+WITH count(*) AS _
+MATCH (s2:Stain {id:'S_LATERITE'}),(x2b:Chemical {code:'X2'})
+MERGE (s2)-[:USES_CHEMICAL]->(x2b)
+WITH count(*) AS _
+MATCH (s3:Stain {id:'S_SHIRT_YELLOW'}),(x1:Chemical {code:'X1'})
+MERGE (s3)-[:USES_CHEMICAL]->(x1)
+RETURN count(*) AS rels""")
         _r(s, "F_stains_protein", """
 UNWIND [
   {id:'S_BLOOD_FRESH',name:'Fresh Blood',name_vi:'Mau tuoi',group_id:'G1',water_spreads:true,contains_protein:true,contains_tannin:false,contains_oil:false,contains_dye:false,urgency:'immediate',tip:'Cold water only - hot sets protein'},
