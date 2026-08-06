@@ -207,6 +207,7 @@ _ITEM_FABRIC_TOKEN = {
     "I_DENIM": "denim",
     "I_COLOR_FADE": "cotton",
     "I_WHITE_FADE": "cotton",
+    "I_DRESS_SHIRT": "cotton",
 }
 Q_RESCUE = """
 MATCH (s:Stain)
@@ -419,7 +420,8 @@ def _fetch_graph_context(entities: dict) -> dict:
             stain_id = "S_RUST"
         elif alias_hit == "kim chi":
             stain_id = "S_KIMCHI"
-    elif not stain_input and raw_msg:
+    elif not stain_input and raw_msg and not (item_id and not stain_id):
+        # Item-only care (e.g. I_DRESS_SHIRT): do not fuzzy raw text into a stain
         stain_input = raw_msg
 
     if intent == "daily":
@@ -719,6 +721,16 @@ def _infer_item_from_text(text: str) -> str:
         return "I_RUNNING_MESH"
     if "스니커" in raw or "운동화" in raw or "sneaker" in t or "giay the thao" in t or (shoe and not leather and not suede):
         return "I_SNEAKER"
+    # Dress shirt care — skip when yellowing words (those route to S_SHIRT_YELLOW)
+    yellow_shirt = any(
+        k in raw for k in ("누렇", "황변", "노랗", "누래", "변색", "노란")
+    ) or ("vang" in t and ("ao so mi" in t or "so mi" in t))
+    if not yellow_shirt and (
+        any(k in raw for k in ("와이셔츠", "흰셔츠", "드레스셔츠", "드레스 셔츠"))
+        or "ao so mi" in t
+        or "dress shirt" in t
+    ):
+        return "I_DRESS_SHIRT"
     return ""
 
 
@@ -1473,26 +1485,37 @@ def generate_response(user_message: str) -> str:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_SHIRT_YELLOW"
         entities["stain_type"] = "ao so mi vang"
+        entities.pop("item_id", None)
     elif any(k in user_message for k in ("누렇게", "황변", "변색", "누래짐")) and any(
         k in user_message for k in ("셔츠", "와이", "흰옷", "흰 옷", "흰티", "흰 티")
     ):
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_SHIRT_YELLOW"
         entities["stain_type"] = "ao so mi vang"
+        entities.pop("item_id", None)
     elif any(k in user_message for k in ("황변 제거", "황변빼", "황변 빼", "누래짐 제거")):
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_SHIRT_YELLOW"
         entities["stain_type"] = "ao so mi vang"
-    # Generic dress-shirt wash (no other stain words) → yellowing SOP is the franchise default
-    elif any(k in user_message for k in ("와이셔츠", "흰셔츠", "드레스셔츠")) and any(
-        k in user_message for k in ("세탁", "빨래", "방법", "관리", "어떻게")
+        entities.pop("item_id", None)
+    # Generic dress-shirt wash (no yellowing) → item care, NOT yellowing SOP
+    elif (
+        any(k in user_message for k in ("와이셔츠", "흰셔츠", "드레스셔츠", "드레스 셔츠"))
+        or "ao so mi" in raw_n
+        or "dress shirt" in raw_n
+    ) and any(
+        k in user_message for k in ("세탁", "빨래", "방법", "관리", "어떻게", "다림질", "풀")
     ) and not any(
         k in user_message
-        for k in ("이염", "피", "혈액", "커피", "김치", "잉크", "곰팡이", "기름", "케첩")
+        for k in (
+            "이염", "피", "혈액", "커피", "김치", "잉크", "곰팡이", "기름", "케첩",
+            "누렇", "황변", "노랗", "누래", "변색", "노란",
+        )
     ):
         entities["intent"] = "treatment"
-        entities["stain_id"] = "S_SHIRT_YELLOW"
-        entities["stain_type"] = "ao so mi vang"
+        entities["item_id"] = "I_DRESS_SHIRT"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
         entities["fabric_type"] = entities.get("fabric_type") or "cotton"
     elif any(k in user_message for k in ("목때", "칼라때", "깃때")) or "vong co" in raw_n or "collar stain" in raw_n:
         entities["intent"] = "treatment"

@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-edu-s4-nameko-routes",
+            "build": "2026-08-06-edu-s5-dress-shirt",
             "checks": checks,
         },
         status_code=200,
@@ -1187,6 +1187,14 @@ UNWIND [
    motion_vi:'Chi khi chon but (cho nho): luc 1, cham/but ngoai→trong, khong cha, khong lan mau. Vua/lon: khong cham but toan bo.',
    water_temp_vi:'Buoc PHUC HOI: khong giat may/tay, khong ngam nong+thuoc nhuom tai quay. But mau: it am/kho theo nhan but. Sau khi xu ly xong, neu khach giu mon: giat rieng lat trai nuoc lanh (bao mau) — do la DUY TRI mau, khong phai phuc hoi.',
    aftercare_vi:'Anh sang manh kiem tra. Ghi ro: but = tam thoi; vua/lon = nhuom/boi thuong. Phoi bong mat, CAM nang gay. Khuyen khach giat lat trai + lanh + rieng de giam phai tiep.'},
+  {id:'I_DRESS_SHIRT',name:'Dress shirt / white business shirt care',name_vi:'Ao so mi cong so (cham soc thuong)',name_ko:'와이셔츠·드레스셔츠(일반 세탁·관리)',fabric_id:'F1',
+   precheck_vi:'Phan biet: (A) giat/quan ly thuong — dung I_DRESS_SHIRT. (B) ao VANG/hoi o nach/vong co vang — chuyen S_SHIRT_YELLOW / S_COLLAR_STAIN / S_SWEAT_YELLOW. Doc nhan giat. Tach trang vs mau.',
+   why_vi:'GIAO DUC: Ao so mi cotton/cotton-pha = giat thuong + pretreat co/tay ao. KHONG mac dinh = SOP tay vang. Cam Javel thuong xuyen (yeu soi + vang protein). Co/tay ban: enzyme/D2 len CHO KHO truoc. Ui: co → manchette → tay → than. Ho tinh bot (tuy chon) SAU khi sach.',
+   fresh_path_vi:'(1) Nhan: ao so mi sach/ban nhe, KHONG vang toan than. (2) Lat mat trai; kiem tra nut/cau. (3) Spotting co + manchette: D2/enzyme nho len CHO KHO 5-15 phut. (4) Giat tay hoac may nhe 30-40C, chat giat trung tinh/manh vua — tach trang. (5) Xa ky. (6) Ui/ho neu can: co→manchette→tay→than; phoi bong mat. Neu DA VANG: dung S_SHIRT_YELLOW (enzyme→B1; CAM Javel).',
+   dried_path_vi:'Ban kho o co: enzyme/D2 pretreat lai. Con vang: S_SHIRT_YELLOW. Iem: S_DYE_TRANSFER. CAM say khoa khi con vet.',
+   motion_vi:'Co/manchette: luc 2 sol mem mot chieu. Than: giat may nhe — khong cha manh.',
+   water_temp_vi:'30-40C cotton; nhan giat uu tien. Khong nuoc soi.',
+   aftercare_vi:'Phoi bong mat / say thap neu nhan cho. Ui theo thu tu co→tay→than. Treo moc. Ho (tuy chon) khi ao da sach kho.'},
   {id:'I_WHITE_FADE',name:'White / light fabric fade balance',name_vi:'Phuc hoi mat mau vai trang/sang (OBA)',name_ko:'흰·밝은 옷 탈색·얼룩 환 복원',fabric_id:'F1',
    precheck_vi:'CHI vai trang/sang. Chup anh. Dom trang sau tay = OBA bi pha. CAM ap dung len vai mau.',
    why_vi:'Vai trang: can bang bang tay oxy DEU TOAN BO (khong cham tung diem — de lo hon). Paste baking soda + oxy gia chi cho cho sot. Phoi nang ngan co the can bang UV — neu nhan/vai cho phep.',
@@ -1238,8 +1246,10 @@ FOREACH (_ IN CASE WHEN i.id = 'I_SHOE_LACES' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(n1))
 FOREACH (_ IN CASE WHEN i.id IN ['I_GORETEX','I_DOWN_JACKET','I_GOLF_GLOVE_SYNTH','I_FUR_FAUX'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_TOOL]->(cloth))
-FOREACH (_ IN CASE WHEN i.id IN ['I_GOLF_WEAR','I_GOLF_HAT','I_SUIT_SUMMER'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_GOLF_WEAR','I_GOLF_HAT','I_SUIT_SUMMER','I_DRESS_SHIRT'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(d2))
+FOREACH (_ IN CASE WHEN i.id = 'I_DRESS_SHIRT' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_CHEMICAL]->(n1))
 FOREACH (_ IN CASE WHEN i.id = 'I_GOLF_HAT' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft))
 FOREACH (_ IN CASE WHEN i.id = 'I_DENIM' THEN [1] ELSE [] END |
