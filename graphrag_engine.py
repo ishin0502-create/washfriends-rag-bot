@@ -870,10 +870,12 @@ def _scrub_internal_codes(text: str) -> str:
         "",
         text,
     )
-    # Awkward KO calque "1부분 … 4부분" → natural ratio phrasing
+    # Awkward KO calque "N부분 식초/물" → natural "식초 N : 물 M"
+    text = re.sub(r"(\d+)\s*부분\s*(흰\s*)?식초", r"\2식초 \1", text)
+    text = re.sub(r"(\d+)\s*부분\s*물", r"물 \1", text)
     text = re.sub(
-        r"(\d+)\s*부분\s*([^,\n]+?)\s*(?:와|과|및|,)?\s*(\d+)\s*부분\s*([^,\n\.]+)",
-        r"\2 \1 : \4 \3",
+        r"식초\s*(\d+)\s*(?:와|과|,|/|：|:)\s*물\s*(\d+)",
+        r"식초 \1 : 물 \2",
         text,
     )
     text = re.sub(r"(\d+)\s*부분", r"\1", text)
