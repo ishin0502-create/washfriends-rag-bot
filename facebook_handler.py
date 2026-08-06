@@ -21,8 +21,8 @@ from concurrent.futures import ThreadPoolExecutor
 import httpx
 from fastapi import Request, HTTPException, Query
 
-from graphrag_engine import generate_response, generate_response_from_entities
-from image_analyzer import analyze_stain_image, build_image_context_prefix
+from graphrag_engine import generate_response
+from image_flow import process_channel_image
 
 FB_PAGE_TOKEN    = os.environ.get("FB_PAGE_TOKEN", "")
 FB_VERIFY_TOKEN  = os.environ.get("FB_VERIFY_TOKEN", "washfriends_vn_2024")
@@ -182,15 +182,15 @@ async def _process_and_reply(sender_id: str, text: str) -> None:
 
 
 async def _process_image_and_reply(sender_id: str, image_url: str, caption: str = "") -> None:
-    """Analyze stain image via Claude Vision then generate GraphRAG response."""
+    """Stain photo → GraphRAG, or low-confidence → ask for care-label photo."""
     loop = asyncio.get_event_loop()
-
-    def _run_image_pipeline():
-        entities = analyze_stain_image(image_url=image_url, user_caption=caption)
-        prefix   = build_image_context_prefix(entities)
-        return generate_response_from_entities(entities, user_caption=caption, prefix=prefix)
-
     with ThreadPoolExecutor() as pool:
-        reply = await loop.run_in_executor(pool, _run_image_pipeline)
-
+        reply = await loop.run_in_executor(
+            pool,
+            process_channel_image,
+            "facebook",
+            sender_id,
+            image_url,
+            caption or "",
+        )
     await _send_fb_message(sender_id, reply)

@@ -23,8 +23,8 @@ from typing import Optional
 import httpx
 from fastapi import Request, HTTPException
 
-from graphrag_engine import generate_response, generate_response_from_entities
-from image_analyzer import analyze_stain_image, build_image_context_prefix
+from graphrag_engine import generate_response
+from image_flow import process_channel_image
 from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret, _app_id
 
 ZALO_API_BASE   = "https://openapi.zalo.me/v3.0"
@@ -118,15 +118,14 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
                 )
                 return
 
-            def _run_image_pipeline():
-                entities = analyze_stain_image(image_url=image_url, user_caption=text)
-                prefix = build_image_context_prefix(entities)
-                caption = text or entities.get("stain_type") or ""
-                return generate_response_from_entities(
-                    entities, user_caption=caption, prefix=prefix
-                )
-
-            reply_text = await loop.run_in_executor(_executor, _run_image_pipeline)
+            reply_text = await loop.run_in_executor(
+                _executor,
+                process_channel_image,
+                "zalo",
+                user_id,
+                image_url,
+                text or "",
+            )
         else:
             if not text:
                 return
