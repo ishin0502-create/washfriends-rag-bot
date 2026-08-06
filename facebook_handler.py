@@ -23,7 +23,12 @@ from fastapi import Request, HTTPException, Query
 
 from graphrag_engine import generate_response
 from image_flow import process_channel_image
-from brand_header import should_send_brand_header, public_header_url
+from brand_header import (
+    should_send_brand_header,
+    confirm_brand_header_sent,
+    clear_brand_header,
+    public_header_url,
+)
 from user_session import get_session
 
 FB_PAGE_TOKEN    = os.environ.get("FB_PAGE_TOKEN", "")
@@ -103,8 +108,13 @@ async def _send_fb_message(recipient_id: str, text: str, *, with_brand: bool = F
     """Optional brand image, then text. Text always attempted."""
     if with_brand:
         try:
-            await _send_fb_brand_image(recipient_id)
+            ok = await _send_fb_brand_image(recipient_id)
+            if ok:
+                confirm_brand_header_sent("facebook", recipient_id)
+            else:
+                clear_brand_header("facebook", recipient_id)
         except Exception as e:
+            clear_brand_header("facebook", recipient_id)
             print(f"[FB BRAND] skipped: {e}")
     url = f"{FB_API_BASE}/me/messages"
     params = {"access_token": FB_PAGE_TOKEN}

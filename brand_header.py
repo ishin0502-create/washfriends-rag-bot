@@ -141,11 +141,30 @@ def should_send_brand_header(
         else:
             sig = "general"
 
-    if prev and prev.get("topic") == sig:
-        # Same topic — no header
+    if prev and prev.get("topic") == sig and prev.get("header_sent"):
+        # Same topic already delivered — no header
         prev["ts"] = now
         return False
 
-    # New topic (or first message)
-    _brand[k] = {"topic": sig, "ts": now, "header_sent": True}
+    # New topic (or prior send failed) — provisional; confirm after image OK
+    _brand[k] = {"topic": sig, "ts": now, "header_sent": False}
     return True
+
+
+def confirm_brand_header_sent(channel: str, user_id: str) -> None:
+    """Mark header as delivered so same topic won't re-send."""
+    k = _key(channel, user_id)
+    if k in _brand:
+        _brand[k]["header_sent"] = True
+        _brand[k]["ts"] = time.time()
+
+
+def clear_brand_header(channel: str, user_id: str) -> None:
+    """Allow retry on next message (e.g. image send failed)."""
+    _brand.pop(_key(channel, user_id), None)
+
+
+def clear_all_brand_headers() -> int:
+    n = len(_brand)
+    _brand.clear()
+    return n

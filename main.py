@@ -125,7 +125,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-brand-header-square",
+            "build": "2026-08-06-brand-send-fix",
             "checks": checks,
         },
         status_code=200,
@@ -149,11 +149,12 @@ async def zalo_info():
 async def admin_brand_test(
     token: str = Query(...),
     user_id: Optional[str] = Query(None, description="Optional Zalo user_id to send test image"),
+    reset: int = Query(0, description="1 = clear brand topic cache so next chat retries header"),
 ):
-    """Diagnose brand header upload/send (Zalo v3). Token: washfriends2024seed"""
+    """Diagnose brand header upload/send. Token: washfriends2024seed"""
     if token != "washfriends2024seed":
         return JSONResponse({"error": "unauthorized"}, status_code=403)
-    return await diagnose_zalo_brand(user_id=user_id)
+    return await diagnose_zalo_brand(user_id=user_id, reset=bool(reset))
 
 
 # ─── Facebook webhook ─────────────────────────────────────────────────────────
