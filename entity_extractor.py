@@ -75,7 +75,9 @@ S_LATERITE=laterite/dat do/dat do laterite/red soil Vietnam,
 S_MOTORBIKE_OIL=motorbike oil/dau nhot xe may,
 S_MILDEW=mildew/nam moc/곰팡이, S_RUST=rust/ri set,
 S_LIPSTICK=lipstick/립스틱/son moi, S_FOUNDATION=foundation/파운데이션/쿠션/kem nen,
-S_DEODORANT=deodorant, S_PAINT_LATEX=latex paint/son nuoc, S_GLUE=glue/keo
+S_DEODORANT=deodorant/데오/땀억제제, S_PERFUME=perfume/향수/nuoc hoa,
+S_GUM=chewing gum/껌/keo cao su, S_CANDLE_WAX=candle wax/촛농/sap nen,
+S_PAINT_LATEX=latex paint/son nuoc, S_GLUE=glue/keo
 
 IMPORTANT: "dat do" / "laterite" / "đất đỏ" = S_LATERITE (red soil), NEVER blood.
 "đỏ" alone does not mean blood if "dat"/"laterite"/"đất" is present.
