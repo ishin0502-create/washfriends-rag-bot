@@ -1433,6 +1433,20 @@ def generate_response(user_message: str) -> str:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_MILDEW"
         entities["stain_type"] = "nam moc"
+    elif any(k in user_message for k in ("립스틱", "립스틱자국", "립스틱 자국")) or "lipstick" in raw_n or "son moi" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_LIPSTICK"
+        entities["stain_type"] = "son moi"
+    elif any(
+        k in user_message for k in ("파운데이션", "쿠션", "BB크림", "비비크림", "비비")
+    ) or "foundation" in raw_n or "kem nen" in raw_n or "cushion" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_FOUNDATION"
+        entities["stain_type"] = "kem nen"
+    elif any(k in user_message for k in ("화장품", "메이크업")) or "makeup" in raw_n or "trang diem" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_LIPSTICK"
+        entities["stain_type"] = "son moi"
     elif any(k in user_message for k in ("케첩", "켓찹", "케찹")) or "ketchup" in raw_n or "tuong ca" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_KETCHUP"

@@ -71,12 +71,15 @@ S_SHIRT_YELLOW=yellowed white shirt/와이셔츠 황변/누렇게,
 S_LATERITE=laterite/dat do/dat do laterite/red soil Vietnam,
 S_MOTORBIKE_OIL=motorbike oil/dau nhot xe may,
 S_MILDEW=mildew/nam moc/곰팡이, S_RUST=rust/ri set,
+S_LIPSTICK=lipstick/립스틱/son moi, S_FOUNDATION=foundation/파운데이션/쿠션/kem nen,
 S_DEODORANT=deodorant, S_PAINT_LATEX=latex paint/son nuoc, S_GLUE=glue/keo
 
 IMPORTANT: "dat do" / "laterite" / "đất đỏ" = S_LATERITE (red soil), NEVER blood.
 "đỏ" alone does not mean blood if "dat"/"laterite"/"đất" is present.
 Kimchi / 김치 / kim chi = S_KIMCHI (not tomato alone).
 Ketchup / 케첩 = S_KETCHUP (not generic tomato only).
+Lipstick / 립스틱 / son moi = S_LIPSTICK. Foundation/cushion/파운데이션 = S_FOUNDATION.
+Generic 화장품/makeup without type → prefer S_LIPSTICK if lip color; else S_FOUNDATION.
 이염 / dye transfer / mau lan = S_DYE_TRANSFER (not color fade restore).
 와이셔츠 누렇/황변 = S_SHIRT_YELLOW (not only armpit sweat).
 If the user names a specific stain, intent MUST be "treatment" (not mystery).
@@ -90,8 +93,8 @@ Language detection:
 
 Common stain names:
 - VI: vet dau, vet mau, vet ca phe, vet nuoc tuong, nuoc mam, co, muc, gi set, moc, kim chi, ketchup, lo mau
-- KO: 기름, 혈액, 커피, 간장, 액젓, 느억맘, 잔디, 잉크, 녹, 곰팡이, 김치, 케첩, 마요, 목때, 이염, 와이셔츠
-- EN: oil, blood, coffee, soy sauce, fish sauce, grass, ink, rust, mold, kimchi, ketchup, mayo, collar, dye transfer
+- KO: 기름, 혈액, 커피, 간장, 액젓, 느억맘, 잔디, 잉크, 녹, 곰팡이, 김치, 케첩, 마요, 목때, 이염, 와이셔츠, 립스틱, 화장품, 파운데이션
+- EN: oil, blood, coffee, soy sauce, fish sauce, grass, ink, rust, mold, kimchi, ketchup, mayo, collar, dye transfer, lipstick, makeup, foundation
 Common fabric names:
 - VI: lua, cotton, vai bong, len, tong hop, polyester, denim, vai lanh
 - KO: 실크, 면, 울, 합성섬유, 폴리에스터, 데님, 린넨

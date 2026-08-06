@@ -123,7 +123,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-edu-sop-v1",
+            "build": "2026-08-06-cosmetics-v1",
             "checks": checks,
         },
         status_code=200,
@@ -318,8 +318,8 @@ UNWIND [
   {id:'S_MAYO',name:'Mayonnaise',name_vi:'Sot mayonnaise',name_ko:'마요네즈',group_id:'G2',water_spreads:false,contains_protein:true,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'same_day',tip:'Scrape; dish soap for oil THEN protease enzyme for egg protein — order matters'},
   {id:'S_COLLAR_STAIN',name:'Collar Stain',name_vi:'Vong co / vet co ao so mi',name_ko:'목때·칼라 황변',group_id:'G2',water_spreads:false,contains_protein:true,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'low',tip:'Sebum+skin: enzyme on dry collar first; NEVER chlorine (yellow worsens); then oxygen'},
   {id:'S_SHOE_POLISH',name:'Shoe Polish',name_vi:'Xi giay',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'Solvent then dish soap - color dye difficult to remove'},
-  {id:'S_LIPSTICK',name:'Lipstick',name_vi:'Son moi',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'Dish soap blot no spread alcohol for pigment'},
-  {id:'S_FOUNDATION',name:'Foundation',name_vi:'Kem nen',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'Dish soap blot gently micellar water'},
+  {id:'S_LIPSTICK',name:'Lipstick',name_vi:'Son moi',name_ko:'립스틱·립스틱 자국',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'3-layer: wax scrape then oil (alcohol blot from back) then pigment (dish soap/oxy). Never rub — blot only. Silk/wool: test corner'},
+  {id:'S_FOUNDATION',name:'Foundation',name_vi:'Kem nen',name_ko:'파운데이션·쿠션·화장품',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'Oil base + pigment: blot gently dish soap first then alcohol spot if color remains. Silk/wool: S1 only'},
   {id:'S_CANDLE_WAX',name:'Candle Wax',name_vi:'Sap nen',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:false,urgency:'low',tip:'Freeze+break then iron with paper to absorb wax'},
   {id:'S_GUM',name:'Chewing Gum',name_vi:'Keo cao su',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:false,contains_dye:false,urgency:'low',tip:'Freeze with ice bag then break apart carefully'},
   {id:'S_MOTORBIKE_OIL',name:'Motorbike Oil',name_vi:'Dau nhot xe may',group_id:'G2',water_spreads:false,contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'VN specialty: N3 thick absorb twice then D1 ventilated then A1 spot then D3 wash - check before dry - silk/wool skip hot wash'},
@@ -417,7 +417,8 @@ MATCH (s:Stain) WHERE s.id IN [
   'S_GLUE','S_PAINT_LATEX','S_MUSTARD','S_CURRY','S_KIMCHI',
   'S_DYE_TRANSFER','S_STARCH_TRANSFER','S_SHIRT_YELLOW','S_MILDEW',
   'S_KETCHUP','S_TOMATO_SAUCE','S_MAYO','S_COLLAR_STAIN',
-  'S_SOY_SAUCE','S_FISH_SAUCE','S_COOKING_OIL','S_GREASE'
+  'S_SOY_SAUCE','S_FISH_SAUCE','S_COOKING_OIL','S_GREASE',
+  'S_LIPSTICK','S_FOUNDATION'
 ]
 OPTIONAL MATCH (s)-[old:USES_CHEMICAL]->()
 DELETE old
@@ -466,6 +467,12 @@ FOREACH (_ IN CASE WHEN s.id IN ['S_SOY_SAUCE','S_FISH_SAUCE'] THEN [1] ELSE [] 
 FOREACH (_ IN CASE WHEN s.id IN ['S_COOKING_OIL','S_GREASE'] THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(n3) MERGE (s)-[:USES_CHEMICAL]->(d2)
   MERGE (s)-[:USES_CHEMICAL]->(e3))
+FOREACH (_ IN CASE WHEN s.id = 'S_LIPSTICK' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a1)
+  MERGE (s)-[:USES_CHEMICAL]->(b1))
+FOREACH (_ IN CASE WHEN s.id = 'S_FOUNDATION' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a1)
+  MERGE (s)-[:USES_CHEMICAL]->(b1))
 RETURN count(DISTINCT s) AS stains""")
         _r(s, "O_force_levels", """
 MATCH (s:Stain)
@@ -783,7 +790,15 @@ UNWIND [
   {id:'S_MILDEW',
    why_vi:'GIAO DUC: Nam moc = nam + sac to. An toan: PPE, xu ly NGOAI TROI, chai/hut bot bao tu (CCI). Giam trang giet nam (acid). Bot tay oxy pha sac to. Javel CHI cotton trang + khong tron giam/ammonia. Oxy KHONG phai chat khu trung. CAM say khi con vet moc. Da/suede: chuyen chuyen nghiep.',
    fresh_path_vi:'(1) Dua ra ngoai, deo gang/khau trang neu nang. (2) Chai kho bot moc (khong hit). (3) Ngam giam trang pha (vd 1:4 den dam hon theo vai) nhieu gio. (4) Giat + bot tay oxy theo chai. (5) Trang cotton: Javel pha loang CHI neu an toan + KHONG tron giam. (6) Phoi nang/gio; CAM say khi con vet/mui.',
-   dried_path_vi:'Chai ngoai troi → giam ngam → oxy → giat. Bao khach vet moc nang co the vin vien; da/len/lua can than hoac chuyen pro.'}
+   dried_path_vi:'Chai ngoai troi → giam ngam → oxy → giat. Bao khach vet moc nang co the vin vien; da/len/lua can than hoac chuyen pro.'},
+  {id:'S_LIPSTICK',
+   why_vi:'GIAO DUC: Son moi = 3 lop: (1) sap ngoai — cao nhe, (2) dau giua — con isopropyl THAM mat trai (blot, khong cha), (3) pigment mau — nuoc rua chen roi bot tay oxy neu trang. THU TU BAT BUOC — bo qua sap hoac cha thay vi blot = that bai. Len/lua: test goc; co the chi D2 + S1. CAM say/ui khoa mau. Thong gio khi dung con.',
+   fresh_path_vi:'(1) Nhan: son moi, tuoi/kho, vai (dac biet len/lua). (2) Test goc khuat voi con 70% truoc. (3) Cao bot sap ngoai→trong (thia mem, luc 2). (4) Lat mat trai, lot giay tham trang duoi → nho con mat trai vung vet → THAM thang dung (blot) 3-5 chu ky, doi khan sach moi chu ky — KHONG cha ngang. (5) Mat phai con mau: nuoc rua chen 1-2 giot, chai mem 45°. (6) Trang/cotton con mau: bot tay oxy (test). (7) Giat am nhe. (8) Anh sang manh TRUOC say.',
+   dried_path_vi:'Neu da say/ui: ty le thap — van thu cao+con blot+oxy. Bao khach pigment co the vin vien. Len/lua: than trong hoac chuyen pro.'},
+  {id:'S_FOUNDATION',
+   why_vi:'GIAO DUC: Kem nen/cushion = dau nen + pigment. THAM nhe (blot) — KHONG cha lan. Nuoc rua chen cho dau TRUOC → con isopropyl cham cho mau neu can (test goc). Len/lua: chi S1 trung tinh + tham rat nhe. CAM say khi con mau.',
+   fresh_path_vi:'(1) Nhan: kem nen/cushion/BB, vai. (2) Test goc voi con neu can. (3) THAM khan trang ngoai→trong — khong cha. (4) Nuoc rua chen pha loang nhe cham/xit 5-10 phut. (5) Xa → con cham mat trai neu con mau (test). (6) Trang: bot tay oxy neu can. (7) Giat/S1 neu len/lua. (8) CAM say khi con vet.',
+   dried_path_vi:'Nuoc rua chen ngam → con blot → oxy trang neu can. Bao neu da say kho.'}
 ] AS o
 MATCH (s:Stain {id:o.id})
 SET s.why_vi = o.why_vi, s.fresh_path_vi = o.fresh_path_vi, s.dried_path_vi = o.dried_path_vi,
@@ -816,7 +831,9 @@ UNWIND [
   {id:'S_BLACK_COFFEE',name_ko:'커피(블랙)',precheck_vi:'Ca phe den — giam roi oxy'},
   {id:'S_MILK_COFFEE',name_ko:'라떼·우유커피',precheck_vi:'Ca phe sua — enzyme TRUOC giam'},
   {id:'S_FRUIT_JUICE',name_ko:'주스·과일즙',precheck_vi:'Juice — giam roi oxy'},
-  {id:'S_MOTORBIKE_OIL',name_ko:'오토바이 오일',precheck_vi:'Dau nhot — thong gio khi dung moi'}
+  {id:'S_MOTORBIKE_OIL',name_ko:'오토바이 오일',precheck_vi:'Dau nhot — thong gio khi dung moi'},
+  {id:'S_LIPSTICK',name_ko:'립스틱·립스틱 자국',precheck_vi:'Son moi — 3 lop: sap→dau(con blot mat trai)→pigment. KHONG cha'},
+  {id:'S_FOUNDATION',name_ko:'파운데이션·쿠션·화장품',precheck_vi:'Kem nen — blot; D2 roi con; len/lua → S1'}
 ] AS x
 MATCH (s:Stain {id:x.id})
 SET s.name_ko = x.name_ko, s.precheck_vi = x.precheck_vi
