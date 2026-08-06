@@ -520,6 +520,9 @@ def _fetch_graph_context(entities: dict) -> dict:
 def _item_as_stain_shaped(item_graph: dict) -> dict:
     """Map Item fields onto stain_context so existing owner 1)-6) prompt stays unchanged."""
     ic = item_graph.get("item_context") or {}
+    item_id = ic.get("id") or ""
+    # Real fur / leather golf glove: never surface shop detergents (LLM invents from WF supply)
+    no_shop_chem = item_id in {"I_FUR_REAL", "I_GOLF_GLOVE_LEATHER"}
     return {
         "stain_context": {
             "id": ic.get("id"),
@@ -538,9 +541,9 @@ def _item_as_stain_shaped(item_graph: dict) -> dict:
             "group": "item_care",
         },
         "fabric_context": item_graph.get("fabric_context"),
-        "chemicals": item_graph.get("chemicals") or [],
+        "chemicals": [] if no_shop_chem else (item_graph.get("chemicals") or []),
         "tools": item_graph.get("tools") or [],
-        "washfriends_supply": item_graph.get("washfriends_supply") or [],
+        "washfriends_supply": [] if no_shop_chem else (item_graph.get("washfriends_supply") or []),
         "force_levels": [],
         "fabric_cautions": [],
         "never_use_on_fabric": item_graph.get("never_use_on_fabric") or [],
@@ -576,7 +579,10 @@ def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
     # Prefer item tools/chems for specialty garments
     if item_graph.get("tools"):
         g["tools"] = item_graph.get("tools")
-    if item_graph.get("chemicals"):
+    if ic.get("id") in {"I_FUR_REAL", "I_GOLF_GLOVE_LEATHER"}:
+        g["chemicals"] = []
+        g["washfriends_supply"] = []
+    elif item_graph.get("chemicals") is not None:
         g["chemicals"] = item_graph.get("chemicals")
     if item_graph.get("never_use_on_fabric"):
         g["never_use_on_fabric"] = item_graph.get("never_use_on_fabric")
