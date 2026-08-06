@@ -572,6 +572,12 @@ def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
     g = dict(g)
     ic = item_graph.get("item_context") or {}
     g["item_context"] = ic
+    # Dress-shirt routine care must NOT overwrite real stain SOPs (collar/yellow/etc.)
+    if ic.get("id") == "I_DRESS_SHIRT":
+        if not g.get("fabric_context") and item_graph.get("fabric_context"):
+            g["fabric_context"] = item_graph["fabric_context"]
+        context["graph"] = g
+        return context
     if not g.get("fabric_context") and item_graph.get("fabric_context"):
         g["fabric_context"] = item_graph["fabric_context"]
     # Overlay item care SOP onto stain fields so 1)-6) follows the garment, not a generic stain
@@ -721,11 +727,14 @@ def _infer_item_from_text(text: str) -> str:
         return "I_RUNNING_MESH"
     if "스니커" in raw or "운동화" in raw or "sneaker" in t or "giay the thao" in t or (shoe and not leather and not suede):
         return "I_SNEAKER"
-    # Dress shirt care — skip when yellowing words (those route to S_SHIRT_YELLOW)
+    # Dress shirt care — skip when yellowing / collar / armpit (those are stain SOPs)
     yellow_shirt = any(
         k in raw for k in ("누렇", "황변", "노랗", "누래", "변색", "노란")
     ) or ("vang" in t and ("ao so mi" in t or "so mi" in t))
-    if not yellow_shirt and (
+    stain_cue = any(
+        k in raw for k in ("목때", "칼라때", "깃때", "겨드랑이", "암내")
+    ) or "vong co" in t or "collar" in t or "armpit" in t
+    if not yellow_shirt and not stain_cue and (
         any(k in raw for k in ("와이셔츠", "흰셔츠", "드레스셔츠", "드레스 셔츠"))
         or "ao so mi" in t
         or "dress shirt" in t
@@ -1521,6 +1530,7 @@ def generate_response(user_message: str) -> str:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_COLLAR_STAIN"
         entities["stain_type"] = "vong co"
+        entities.pop("item_id", None)
     elif any(k in user_message for k in ("곰팡이", "곰팡")) or "nam moc" in raw_n or "mildew" in raw_n or "mold" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_MILDEW"
