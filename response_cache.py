@@ -69,7 +69,7 @@ def max_entries() -> int:
 
 def cache_version() -> str:
     # v3: shop names + WF supply products in answers
-    return os.getenv("ANSWER_CACHE_VERSION", "v27")
+    return os.getenv("ANSWER_CACHE_VERSION", "v28")
 
 
 def _normalize_key(text: str) -> str:
@@ -97,26 +97,32 @@ _FABRIC_MARKERS = (
 _STAIN_MARKERS = (
     "mau", "blood", "ca phe", "coffee", "tra", "tea", "dau", "oil", "nuoc mam", "fish sauce",
     "laterite", "dat do", "xe may", "motorbike", "muc", "ink", "ca ri", "curry", "nghe",
+    # KO — prevent fuzzy cross-topic hits when Hangul questions have empty Latin signatures
+    "커피", "피", "혈액", "김치", "주스", "이염", "곰팡이", "케첩", "황변", "누렇", "와이셔츠",
+    "립스틱", "가죽", "정장", "색바램", "풀",
 )
 
 
 def _topic_signature(norm: str) -> frozenset:
     if not norm:
         return frozenset()
+    # Keep Hangul in signature space: normalize_key lowercases Latin but leaves Hangul
+    raw = norm
     sig = set()
     for m in _FABRIC_MARKERS:
-        if m in norm:
+        if m in raw:
             sig.add(f"f:{m}")
     for m in _STAIN_MARKERS:
-        if m in norm:
+        if m in raw:
             sig.add(f"s:{m}")
     return frozenset(sig)
 
 
 def _topics_compatible(a: str, b: str) -> bool:
     sa, sb = _topic_signature(a), _topic_signature(b)
+    # If either side has no topic tags, do not fuzzy-match (avoids KO↔VI / empty stubs)
     if not sa or not sb:
-        return True
+        return False
     return sa == sb
 
 
@@ -179,17 +185,21 @@ def lookup(question: str, context_key: str = "") -> Optional[str]:
                 ver=cache_version(),
             ).single()
             if row and row.get("answer"):
-                session.run(
-                    """
-                    MATCH (c:AnswerCache {id: $id})
-                    SET c.hit_count = coalesce(c.hit_count, 0) + 1,
-                        c.last_hit_at = $now
-                    """,
-                    id=eid,
-                    now=datetime.now(timezone.utc).isoformat(),
-                )
-                print(f"[CACHE HIT] exact id={eid[:8]}")
-                return row["answer"]
+                ans = row["answer"]
+                if _is_stub_answer(ans):
+                    print(f"[CACHE SKIP] stub exact id={eid[:8]}")
+                else:
+                    session.run(
+                        """
+                        MATCH (c:AnswerCache {id: $id})
+                        SET c.hit_count = coalesce(c.hit_count, 0) + 1,
+                            c.last_hit_at = $now
+                        """,
+                        id=eid,
+                        now=datetime.now(timezone.utc).isoformat(),
+                    )
+                    print(f"[CACHE HIT] exact id={eid[:8]}")
+                    return ans
 
             # Fuzzy scan — recent entries only (no OpenAI cost)
             threshold = similarity_threshold()
@@ -209,12 +219,15 @@ def lookup(question: str, context_key: str = "") -> Optional[str]:
             best_answer = None
             for r in rows:
                 qn = r.get("qn") or ""
+                ans = r.get("answer") or ""
+                if _is_stub_answer(ans):
+                    continue
                 if not _topics_compatible(norm_q, qn):
                     continue
                 score = _similarity(norm_q, qn)
                 if score > best_score:
                     best_score = score
-                    best_answer = r.get("answer")
+                    best_answer = ans
 
             if best_answer and best_score >= threshold:
                 print(f"[CACHE HIT] fuzzy score={best_score:.2f}")
@@ -234,7 +247,20 @@ def _should_store(answer: str) -> bool:
         return False
     if low.startswith("toi da nhan anh") and "kho xac dinh" in low:
         return False
+    if "해당 정보를 찾을 수 없" in answer or "정보를 찾을 수 없" in answer:
+        return False
     return True
+
+
+def _is_stub_answer(answer: str) -> bool:
+    if not answer:
+        return True
+    if "해당 정보를 찾을 수 없" in answer or "정보를 찾을 수 없" in answer:
+        return True
+    low = _normalize_key(answer)
+    if "khong tim thay thong tin" in low or "khong tim thay" in low[:80]:
+        return True
+    return False
 
 
 def store(question: str, answer: str, context_key: str = "") -> None:

@@ -81,7 +81,8 @@ Ketchup / 케첩 = S_KETCHUP (not generic tomato only).
 Lipstick / 립스틱 / son moi = S_LIPSTICK. Foundation/cushion/파운데이션 = S_FOUNDATION.
 Generic 화장품/makeup without type → prefer S_LIPSTICK if lip color; else S_FOUNDATION.
 이염 / dye transfer / mau lan = S_DYE_TRANSFER (not color fade restore).
-와이셔츠 누렇/황변 = S_SHIRT_YELLOW (not only armpit sweat).
+와이셔츠 누렇/황변/변색 = S_SHIRT_YELLOW (not only armpit sweat).
+와이셔츠 세탁 방법(얼룩 미지정) = S_SHIRT_YELLOW (franchise default yellowing SOP).
 If the user names a specific stain, intent MUST be "treatment" (not mystery).
 
 Group IDs: G1=protein, G2=oil, G3=tannin, G4=dye, G5=complex

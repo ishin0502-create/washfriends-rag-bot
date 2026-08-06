@@ -100,7 +100,7 @@ OPTIONAL MATCH (cr:ClimateRule)
 OPTIONAL MATCH (s)-[:USES_TOOL]->(tool:Tool)
 RETURN
   s {
-    .id, .name, .name_vi, .tip, .urgency,
+    .id, .name, .name_vi, .name_ko, .tip, .urgency,
     .contains_protein, .contains_tannin, .contains_oil, .contains_dye,
     .water_spreads, .precheck_vi, .motion_vi, .water_temp_vi, .aftercare_vi,
     .why_vi, .fresh_path_vi, .dried_path_vi,
@@ -1414,17 +1414,35 @@ def generate_response(user_message: str) -> str:
         entities["stain_type"] = "mau lan"
     elif any(
         k in user_message
-        for k in ("와이셔츠", "흰셔츠", "드레스셔츠")
-    ) and any(k in user_message for k in ("누렇", "황변", "노랗", "누래")):
-        entities["intent"] = "treatment"
-        entities["stain_id"] = "S_SHIRT_YELLOW"
-        entities["stain_type"] = "ao so mi vang"
-    elif any(k in user_message for k in ("누렇게", "황변")) and any(
-        k in user_message for k in ("셔츠", "와이", "흰옷", "흰 옷")
+        for k in ("와이셔츠", "흰셔츠", "드레스셔츠", "드레스 셔츠")
+    ) and any(
+        k in user_message
+        for k in ("누렇", "황변", "노랗", "누래", "변색", "노란", "누래짐", "누래졌")
     ):
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_SHIRT_YELLOW"
         entities["stain_type"] = "ao so mi vang"
+    elif any(k in user_message for k in ("누렇게", "황변", "변색", "누래짐")) and any(
+        k in user_message for k in ("셔츠", "와이", "흰옷", "흰 옷", "흰티", "흰 티")
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_SHIRT_YELLOW"
+        entities["stain_type"] = "ao so mi vang"
+    elif any(k in user_message for k in ("황변 제거", "황변빼", "황변 빼", "누래짐 제거")):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_SHIRT_YELLOW"
+        entities["stain_type"] = "ao so mi vang"
+    # Generic dress-shirt wash (no other stain words) → yellowing SOP is the franchise default
+    elif any(k in user_message for k in ("와이셔츠", "흰셔츠", "드레스셔츠")) and any(
+        k in user_message for k in ("세탁", "빨래", "방법", "관리", "어떻게")
+    ) and not any(
+        k in user_message
+        for k in ("이염", "피", "혈액", "커피", "김치", "잉크", "곰팡이", "기름", "케첩")
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_SHIRT_YELLOW"
+        entities["stain_type"] = "ao so mi vang"
+        entities["fabric_type"] = entities.get("fabric_type") or "cotton"
     elif any(k in user_message for k in ("목때", "칼라때", "깃때")) or "vong co" in raw_n or "collar stain" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_COLLAR_STAIN"
