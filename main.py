@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-fade-clarify-v2",
+            "build": "2026-08-06-fade-clarify-v2b",
             "checks": checks,
         },
         status_code=200,
@@ -412,8 +412,6 @@ MATCH (a1:Chemical {code:'A1'}),(a2:Chemical {code:'A2'}),(a3:Chemical {code:'A3
       (d3:Chemical {code:'D3'}),(n1:Chemical {code:'N1'}),(n3:Chemical {code:'N3'})
 FOREACH (_ IN CASE WHEN s.id = 'S_RUST' THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(a3))
-FOREACH (_ IN CASE WHEN s.id = 'S_GUM' THEN [1] ELSE [] END |
-  SET s = s)
 FOREACH (_ IN CASE WHEN s.id = 'S_CANDLE_WAX' THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(n3) MERGE (s)-[:USES_CHEMICAL]->(d2))
 FOREACH (_ IN CASE WHEN s.id IN ['S_MOTORBIKE_OIL','S_ENGINE_OIL'] THEN [1] ELSE [] END |
@@ -948,9 +946,7 @@ FOREACH (_ IN CASE WHEN i.id = 'I_GOLF_HAT' THEN [1] ELSE [] END |
 FOREACH (_ IN CASE WHEN i.id = 'I_DENIM' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(hard) MERGE (i)-[:USES_TOOL]->(cloth)
   MERGE (i)-[:USES_CHEMICAL]->(d2))
-FOREACH (_ IN CASE WHEN i.id = 'I_COLOR_FADE' THEN [1] ELSE [] END |
-  // No shop detergent / blot cloth — restore = fabric marker or re-dye (see fresh_path)
-  SET i = i)
+// I_COLOR_FADE: no tool/chem links — marker/re-dye only via fresh_path + engine synthetic tool
 FOREACH (_ IN CASE WHEN i.id = 'I_WHITE_FADE' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(spray)
   MERGE (i)-[:USES_CHEMICAL]->(b1) MERGE (i)-[:USES_CHEMICAL]->(n1) MERGE (i)-[:USES_CHEMICAL]->(a4))
