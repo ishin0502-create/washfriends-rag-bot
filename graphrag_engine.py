@@ -874,7 +874,7 @@ def _scrub_internal_codes(text: str) -> str:
     text = re.sub(r"(\d+)\s*부분\s*(흰\s*)?식초", r"\2식초 \1", text)
     text = re.sub(r"(\d+)\s*부분\s*물", r"물 \1", text)
     text = re.sub(
-        r"식초\s*(\d+)\s*(?:와|과|,|/|：|:)\s*물\s*(\d+)",
+        r"식초\s*(\d+)\s*(?:와|과|,|/|：|:)\s*물\s*(\d+)을?",
         r"식초 \1 : 물 \2",
         text,
     )
