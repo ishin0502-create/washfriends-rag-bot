@@ -1644,25 +1644,35 @@ def generate_response(user_message: str) -> str:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_DYE_TRANSFER"
         entities["stain_type"] = "mau lan"
+    elif any(k in user_message for k in ("향수",)) or "nuoc hoa" in raw_n or "perfume" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_PERFUME"
+        entities["stain_type"] = "nuoc hoa"
+    elif any(k in user_message for k in ("데오드란트", "땀억제제", "데오 ")) or "khu mui" in raw_n or "deodorant" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_DEODORANT"
+        entities["stain_type"] = "vet khu mui"
     elif any(
         k in user_message
         for k in ("와이셔츠", "흰셔츠", "드레스셔츠", "드레스 셔츠")
     ) and any(
         k in user_message
         for k in ("누렇", "황변", "노랗", "누래", "변색", "노란", "누래짐", "누래졌")
-    ):
+    ) and not any(k in user_message for k in ("향수", "데오", "데오드란트")):
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_SHIRT_YELLOW"
         entities["stain_type"] = "ao so mi vang"
         entities.pop("item_id", None)
     elif any(k in user_message for k in ("누렇게", "황변", "변색", "누래짐")) and any(
         k in user_message for k in ("셔츠", "와이", "흰옷", "흰 옷", "흰티", "흰 티")
-    ):
+    ) and not any(k in user_message for k in ("향수", "데오", "데오드란트")):
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_SHIRT_YELLOW"
         entities["stain_type"] = "ao so mi vang"
         entities.pop("item_id", None)
-    elif any(k in user_message for k in ("황변 제거", "황변빼", "황변 빼", "누래짐 제거")):
+    elif any(k in user_message for k in ("황변 제거", "황변빼", "황변 빼", "누래짐 제거")) and not any(
+        k in user_message for k in ("향수", "데오", "데오드란트")
+    ):
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_SHIRT_YELLOW"
         entities["stain_type"] = "ao so mi vang"
@@ -1871,14 +1881,6 @@ def generate_response(user_message: str) -> str:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_NAIL_POLISH"
         entities["stain_type"] = "son mong"
-    elif any(k in user_message for k in ("데오드란트", "땀억제제", "데오 ")) or "khu mui" in raw_n or "deodorant" in raw_n:
-        entities["intent"] = "treatment"
-        entities["stain_id"] = "S_DEODORANT"
-        entities["stain_type"] = "vet khu mui"
-    elif any(k in user_message for k in ("향수",)) or "nuoc hoa" in raw_n or "perfume" in raw_n:
-        entities["intent"] = "treatment"
-        entities["stain_id"] = "S_PERFUME"
-        entities["stain_type"] = "nuoc hoa"
     elif any(k in user_message for k in ("계란", "달걀")) or "trung ga" in raw_n or "long trang" in raw_n or (
         "egg" in raw_n and "eggplant" not in raw_n
     ):
