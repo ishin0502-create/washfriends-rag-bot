@@ -1046,21 +1046,16 @@ QUY TẮC TRẢ LỜI:
 3. Cảnh báo an toàn ĐẦU câu — chữ thường/hoa ngắn, CẤM markdown ** ## * _
 4. Mở đầu ngắn (2–4 câu) nếu có why_vi / tip — nguyên tắc ĐÚNG vết này, rồi mới 1)-6).
 5. Câu XỬ LÝ VẾT / CHĂM SÓC MÓN ĐỒ — 1)-6), dễ đọc (cùng một format cho stain và item_care):
-   (1) Nhận diện + tươi/khô hoặc tình trạng món (nội dung fresh/dried, không in tên field)
+   (1) Nhận diện: BẮT BUỘC nêu ĐÚNG loại vết từ stain_context (name_ko/name_vi) + tươi/khô + màu vải nếu user nói
+       (vd: "과일 주스, 젖은 상태, 흰 면"). CẤM câu mơ hồ kiểu "균일하게 분포/분류입니다" khi không có trong đồ thị.
    (2) Dụng cụ — chỉ tên người dùng (name_ko / name_vi), CẤM id T_…
        Nếu tools[] RỖNG: viết "해당 없음" / "khong can dung cu dac biet" HOẶC lấy từ fresh_path
        (vd bút màu vải, chụp ảnh) — CẤM bịa "흰 천·흡수지" khi không có trong tools[]
-   (3) Lực + hướng
-   (4) Hóa chất — xem quy tắc HÓA CHẤT bên dưới
+   (3) Lực + hướng — cụ thể (thấm/nhấn ngoài→trong), không chỉ "không lan"
+   (4) Hóa chất — nêu RÕ bước 1 / bước 2 theo fresh_path (vd A3 rồi B1). Xem quy tắc HÓA CHẤT.
        Nếu chemicals[] RỖNG: CẤM bịa nước giặt trung tính / detergent.
-       Viết rõ theo fresh_path (vd: không phục hồi bằng hóa chất cửa hàng; bút màu / gửi nhuộm)
-       hoặc "해당 약품 없음 — 프로토콜 따름"
    (5) Nhiệt độ nước + max_temp vải
-   (6) Sau xử lý / hoàn thiện (BẮT BUỘC đủ ý, ngắn gọn):
-       - Kiểm tra vết CÒN LẠI dưới ánh sáng mạnh TRƯỚC khi sấy/ủi; còn → xử lý lại, CẤM sấy khóa vết
-       - Phơi bóng mát, thoáng khí; tránh nắng gắt (phai màu) trừ khi dữ liệu cho phép
-       - Nếu có fabric dry_hint_vi / iron_hint_vi → nhắc 1 câu sấy/ủi đúng vải (không bịa nhiệt độ)
-       - Dùng aftercare_vi nếu có
+   (6) Sau xử lý: đủ ý kiểm tra ánh sáng / còn thì làm lại (đúng thứ tự hóa chất) / phơi bóng mát — CẤM câu kết kiểu quảng cáo "최상의 결과"
    Nếu có item_context: đây là chăm sóc món (giày/túi/áo phao/Gore-Tex…) — vẫn dùng 1)-6), không đổi giọng.
 6. KHÔNG tự chèn WF_SOFT / WF_FRAG. S1 chỉ khi có trong chemicals[] (lụa/len hoặc đã gắn).
 7. CẤM mẹo dân gian, thương hiệu ngoài, viện/web/AI/PDF
@@ -1135,6 +1130,10 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "실크·울이고 chemicals[]에 중성세제가 있을 때만 중성세제 사용. "
             "B1=산소계 표백제(산성 세제 아님). "
             "why/신선·굳음 내용만 쓰고 필드명 출력 금지. 민간요법·다른 오염법 금지. "
+            "(1)은 stain_context 이름+신선/굳음+원단색을 구체적으로 "
+            "(예: 과일 주스·젖음·흰 면). '균일 분포/분류입니다' 같은 모호 금지. "
+            "(3)은 찍기·흡수 동작까지. (4)는 1단계/2단계로. "
+            "(6) 광고형 맺음말 금지. "
             "1)오염·원단 2)도구(name_ko) 3)힘·방향 4)약품 5)수온 "
             "6)후관리: 강한 빛에서 잔존 확인→남으면 재처리(건조 금지), 그늘·통풍 건조, "
             "직사광선 피하기(색바램), fabric dry_hint/iron_hint 있으면 한 줄로 건조·다림질. "
@@ -1295,6 +1294,15 @@ def generate_response(user_message: str) -> str:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_MOTORBIKE_OIL"
         entities["stain_type"] = "dau nhot xe may"
+    elif any(
+        k in user_message
+        for k in ("주스", "쥬스", "과일즙", "과즙")
+    ) or "juice" in raw_n or "nuoc trai cay" in raw_n or "nuoc ep" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_FRUIT_JUICE"
+        entities["stain_type"] = "nuoc trai cay"
+        if any(k in user_message for k in ("흰", "화이트", "하얀")) or "trang" in raw_n or "white" in raw_n:
+            entities["fabric_type"] = entities.get("fabric_type") or "cotton"
     graph_context = _fetch_graph_context(entities)
     graph_data = graph_context.get("graph")
 

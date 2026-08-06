@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-fade-clarify-v2b",
+            "build": "2026-08-06-juice-clarify-v1",
             "checks": checks,
         },
         status_code=200,
@@ -328,7 +328,7 @@ UNWIND [
   {id:'S_RED_WINE',name:'Red Wine',name_vi:'Ruou vang do',group_id:'G3',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Salt immediately absorb then sparkling water then oxygen bleach'},
   {id:'S_WHITE_WINE_BEER',name:'White Wine/Beer',name_vi:'Ruou vang trang/Bia',group_id:'G3',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:false,urgency:'immediate',tip:'Cold water immediately - may become invisible then yellow over time'},
   {id:'S_SOFT_DRINK',name:'Soft Drink/Cola',name_vi:'Nuoc ngot',group_id:'G3',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold water vinegar if colored drink vinegar soak'},
-  {id:'S_FRUIT_JUICE',name:'Fruit Juice',name_vi:'Nuoc trai cay',group_id:'G3',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold water immediately oxygen bleach for stubborn'},
+  {id:'S_FRUIT_JUICE',name:'Fruit Juice',name_vi:'Nuoc trai cay / juice',group_id:'G3',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold water immediately; vinegar 1:4 then oxygen bleach if color remains — white cotton OK for B1; silk/wool no B1'},
   {id:'S_TOMATO_SAUCE',name:'Tomato Sauce',name_vi:'Sot ca chua',group_id:'G3',water_spreads:false,contains_protein:false,contains_tannin:true,contains_oil:true,contains_dye:true,urgency:'immediate',tip:'Scrape then dish soap for oil then vinegar for tannin'},
   {id:'S_SOY_SAUCE',name:'Soy Sauce',name_vi:'Nuoc tuong',group_id:'G3',water_spreads:true,contains_protein:true,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold water enzyme for protein then vinegar for tannin'},
   {id:'S_FISH_SAUCE',name:'Fish Sauce',name_vi:'Nuoc mam',group_id:'G3',water_spreads:true,contains_protein:true,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold water enzyme soak - difficult salt odor vinegar deodorize'},
@@ -519,7 +519,8 @@ UNWIND [
   {id:'S_INK_PEN',precheck_vi:'Test goc khuat; lot giay tham duoi',motion_vi:'Cham A1 mat trai, thay khan — khong cha',water_temp_vi:'Xu ly o nhiet do phong; giat lanh sau',aftercare_vi:'Het muc moi say'},
   {id:'S_INK_PERMANENT',precheck_vi:'But long kho — test vai; co the khong het 100%',motion_vi:'A2/A1 cham nhe mat trai',water_temp_vi:'Nhiet phong',aftercare_vi:'Thong bao khach neu con vet'},
   {id:'S_MOTORBIKE_OIL',precheck_vi:'Dau nhot xe may — thong gio khi dung D1',motion_vi:'N3 day 2 lan → D1 → A1 cham → D3',water_temp_vi:'Giat am/nong chi cotton-poly; khong silk/wool',aftercare_vi:'Kiem tra nhon truoc say'},
-  {id:'S_LATERITE',precheck_vi:'Dat do — de KHO roi chai bot truoc',motion_vi:'Chai kho → xa lanh → A3 → B1',water_temp_vi:'Lanh/am; khong say khi con mau do',aftercare_vi:'Lap lai neu con sat oxit'}
+  {id:'S_LATERITE',precheck_vi:'Dat do — de KHO roi chai bot truoc',motion_vi:'Chai kho → xa lanh → A3 → B1',water_temp_vi:'Lanh/am; khong say khi con mau do',aftercare_vi:'Lap lai neu con sat oxit'},
+  {id:'S_FRUIT_JUICE',precheck_vi:'Nuoc trai cay / juice tren vai — xu ly SOM. Ghi ro vai trang hay mau. Test goc khuat.',motion_vi:'Tham/nhan nhe ngoai→trong mat trai — khong cha lan',water_temp_vi:'Bat dau nuoc LANH; sau A3 co the giat am neu vai cho',aftercare_vi:'Anh sang manh: con mau → lap A3 roi B1 (vai trang/cotton cho phep; CAM len/lua). Phoi bong mat, tranh nang gay.'}
 ] AS o
 MATCH (s:Stain {id:o.id})
 SET s.precheck_vi = o.precheck_vi, s.motion_vi = o.motion_vi,
@@ -663,11 +664,15 @@ UNWIND [
   {id:'S_MILK_COFFEE',
    why_vi:'Ca phe sua: tannin + protein sua. Xu ly protein (E1/lanh) TRUOC, roi tannin (A3) — khong dao thu tu.',
    fresh_path_vi:'Xa lanh → E1 cho phan sua neu can → A3 cho tannin → giat.',
-   dried_path_vi:'E1 ngam lanh → A3 → kiem tra truoc say; B1 chi khi con mau va vai cho phep.'}
+   dried_path_vi:'E1 ngam lanh → A3 → kiem tra truoc say; B1 chi khi con mau va vai cho phep.'},
+  {id:'S_FRUIT_JUICE',
+   why_vi:'Nuoc trai cay / juice = tannin + mau hoa qua. Xu ly SOM bang nuoc lanh. Buoc 1: A3 (giam 1:4). Buoc 2 neu con mau: B1 oxy (vai trang/cotton OK; CAM len/lua). Khong goi la "phan bo deu" — noi ro loai vet + tuoi/kho + mau vai.',
+   fresh_path_vi:'(1) Nhan: juice/trai cay, tuoi/kho, vai trang hay mau. (2) Tham/xa LANH mat trai. (3) Buoc1 A3 1:4 cham/xit → tham. (4) Con mau: Buoc2 B1 theo chai (vai trang uu tien; test goc). (5) Giat am nhe neu vai cho. CAM say khi con mau.',
+   dried_path_vi:'Ngam/cham A3 → neu con mau B1 (khong len/lua) → kiem tra anh sang manh truoc say. Vai mau: can than B1 (test); uu tien A3 lap.'}
 ] AS o
 MATCH (s:Stain {id:o.id})
 SET s.why_vi = o.why_vi, s.fresh_path_vi = o.fresh_path_vi, s.dried_path_vi = o.dried_path_vi,
-    s.tip = coalesce(s.tip, s.why_vi)
+    s.tip = coalesce(o.why_vi, s.tip)
 RETURN count(s) AS updated""")
         # Priority 1–2 item care — same field names as stain paths (owner 1)-6) flow)
         _r(s, "I_items_care", """
