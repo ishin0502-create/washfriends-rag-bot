@@ -80,7 +80,11 @@ S_DEODORANT=deodorant/데오/땀억제제, S_PERFUME=perfume/향수/nuoc hoa,
 S_GUM=chewing gum/껌/keo cao su, S_CANDLE_WAX=candle wax/촛농/sap nen,
 S_BBQ_SAUCE=BBQ sauce/바베큐, S_MUSTARD=mustard/머스터드/겨자,
 S_NAIL_POLISH=nail polish/매니큐어/son mong, S_GLUE=glue/접착제/keo dan,
-S_PAINT_LATEX=latex paint/수성페인트/son nuoc
+S_PAINT_LATEX=latex paint/수성페인트/son nuoc,
+S_SUNSCREEN=sunscreen/선크림/kem chong nang, S_TAR=tar/타르/nhua duong,
+S_MASCARA=mascara/마스카라, S_HAIR_DYE=hair dye/염색약/thuoc nhuom,
+I_BED_SHEET=bed sheet/시트, I_TOWEL=towel/수건, I_BABY_WEAR=baby clothes/아기옷,
+I_SWIMWEAR=swimwear/수영복, I_ODOR_SMOKE=smoke odor/담배냄새
 
 IMPORTANT: "dat do" / "laterite" / "đất đỏ" = S_LATERITE (red soil), NEVER blood.
 "đỏ" alone does not mean blood if "dat"/"laterite"/"đất" is present.
@@ -94,6 +98,8 @@ Generic 화장품/makeup without type → prefer S_LIPSTICK if lip color; else S
 버블티/밀크티/타피오카 = S_BUBBLE_TEA.
 우레탄·비닐·샤워 커튼 = I_CURTAIN_URETHANE. 일반 커튼 세탁 = I_CURTAIN_FABRIC.
 구스/거위/다운 이불 = I_DUVET_GOOSE. 솜이불/폴리이불 = I_DUVET_COTTON.
+침대 시트 = I_BED_SHEET. 수건/타월 = I_TOWEL. 아기옷 = I_BABY_WEAR. 수영복 = I_SWIMWEAR.
+담배냄새 = I_ODOR_SMOKE. 선크림 = S_SUNSCREEN. 마스카라 = S_MASCARA. 타르 = S_TAR. 염색약 = S_HAIR_DYE.
 모자/캡 세탁(비골프) = I_HAT_CAP. 골프모자 = I_GOLF_HAT.
 If the user names a specific stain, intent MUST be "treatment" (not mystery).
 

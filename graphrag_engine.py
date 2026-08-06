@@ -217,6 +217,11 @@ _ITEM_FABRIC_TOKEN = {
     "I_CURTAIN_URETHANE": "polyester",
     "I_DUVET_GOOSE": "cotton",
     "I_DUVET_COTTON": "cotton",
+    "I_BED_SHEET": "cotton",
+    "I_TOWEL": "cotton",
+    "I_BABY_WEAR": "cotton",
+    "I_SWIMWEAR": "polyester",
+    "I_ODOR_SMOKE": "cotton",
 }
 Q_RESCUE = """
 MATCH (s:Stain)
@@ -735,6 +740,16 @@ def _infer_item_from_text(text: str) -> str:
         and not any(k in raw for k in ("구스", "거위", "다운", "오리털"))
     ) or "comforter" in t or "chan bong" in t:
         return "I_DUVET_COTTON"
+    if any(k in raw for k in ("시트", "침대시트", "매트리스커버", "매트리스 커버")) or "ga giuong" in t or "bed sheet" in t or "fitted sheet" in t or "drap" in t:
+        return "I_BED_SHEET"
+    if any(k in raw for k in ("수건", "타월", "목욕타월")) or "khan tam" in t or "towel" in t:
+        return "I_TOWEL"
+    if any(k in raw for k in ("아기옷", "유아복", "신생아", "아기 옷")) or "do em be" in t or "baby wear" in t or "infant" in t:
+        return "I_BABY_WEAR"
+    if any(k in raw for k in ("수영복", "래시가드", "비키니")) or "do boi" in t or "swimwear" in t or "swimsuit" in t:
+        return "I_SWIMWEAR"
+    if any(k in raw for k in ("담배냄새", "담배 냄새", "연기냄새", "연기 냄새")) or "mui thuoc" in t or "cigarette" in t or "smoke odor" in t:
+        return "I_ODOR_SMOKE"
 
     # Hats (non-golf)
     if any(k in raw for k in ("야구모자", "볼캡", "모자", "캡")) or "baseball cap" in t or (
@@ -1724,6 +1739,47 @@ def generate_response(user_message: str) -> str:
         entities["item_id"] = "I_DUVET_COTTON"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
+    elif any(k in user_message for k in ("시트", "침대시트", "매트리스커버")) or "ga giuong" in raw_n or "bed sheet" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_BED_SHEET"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("수건", "타월", "목욕타월")) or "khan tam" in raw_n or "towel" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_TOWEL"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("아기옷", "유아복", "신생아옷", "아기 옷")) or "do em be" in raw_n or "baby clothes" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_BABY_WEAR"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("수영복", "래시가드")) or "do boi" in raw_n or "swimwear" in raw_n or "swimsuit" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_SWIMWEAR"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("담배냄새", "담배 냄새", "연기냄새")) or "mui thuoc" in raw_n or "cigarette" in raw_n or "smoke odor" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_ODOR_SMOKE"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("선크림", "자외선차단", "자외선 차단")) or "kem chong nang" in raw_n or "sunscreen" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_SUNSCREEN"
+        entities["stain_type"] = "kem chong nang"
+    elif any(k in user_message for k in ("타르", "아스팔트")) or "nhua duong" in raw_n or "tar" in raw_n or "asphalt" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_TAR"
+        entities["stain_type"] = "nhua duong"
+    elif any(k in user_message for k in ("마스카라",)) or "mascara" in raw_n or "masca" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_MASCARA"
+        entities["stain_type"] = "mascara"
+    elif any(k in user_message for k in ("염색약", "염모제", "헤어염색")) or "thuoc nhuom" in raw_n or "hair dye" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_HAIR_DYE"
+        entities["stain_type"] = "thuoc nhuom toc"
     elif any(k in user_message for k in ("야구모자", "볼캡")) or (
         any(k in user_message for k in ("모자", "캡")) and any(k in user_message for k in ("세탁", "빨래", "빨", "청소", "방법", "어떻게"))
         and "골프" not in user_message
