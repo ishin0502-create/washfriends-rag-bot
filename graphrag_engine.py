@@ -939,8 +939,71 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
     return out
 
 
-def _scrub_internal_codes(text: str) -> str:
-    """Remove leftover internal codes / markdown from owner-facing replies."""
+def _chem_everyday_map(lang: str = "vi") -> dict[str, str]:
+    """Internal code → owner everyday name (KO/VI)."""
+    if lang == "ko":
+        return {
+            "E1": "효소(프로테아제) 세제·효소제",
+            "E2": "전분 분해 효소 세제",
+            "E3": "유지 분해 효소 세제",
+            "D1": "기름·오일 용제(탈지제)",
+            "D2": "주방세제(중성)",
+            "D3": "일반 세탁 세제(강력)",
+            "B1": "산소계 표백제(과탄산·옥시클린 계열)",
+            "B2": "염소계 표백제(락스/자벨)",
+            "A1": "이소프로필 알코올(소독용 알코올)",
+            "A2": "아세톤(매니큐어 리무버 계열)",
+            "A3": "흰 식초(식용 식초 약 5%)",
+            "A4": "과산화수소 3%(옥시)",
+            "A5": "암모니아 희석액",
+            "N1": "베이킹소다",
+            "N2": "소금(식염)",
+            "N3": "옥수수 전분·베이비파우더(오일 흡착)",
+            "S1": "워시프렌즈 중성세제",
+            "WF_SOFT": "워시프렌즈 섬유유연제",
+            "WF_FRAG": "워시프렌즈 독일 향수 스프레이",
+        }
+    return {
+        "E1": "nuoc giat / bot ngam enzyme (protease)",
+        "E2": "nuoc giat enzyme (tinh bot)",
+        "E3": "nuoc giat enzyme (dau mo)",
+        "D1": "dung moi tay dau / tay nhot",
+        "D2": "nuoc rua chen",
+        "D3": "nuoc giat / bot giat dam",
+        "B1": "bot tay oxy / tay mau an toan (oxyclean-type)",
+        "B2": "nuoc Javel / tay trang",
+        "A1": "con sat khuan / con y te 70-90%",
+        "A2": "acetone / dung moi son mong",
+        "A3": "giam trang 5%",
+        "A4": "oxy gia 3%",
+        "A5": "ammonia pha loang",
+        "N1": "baking soda",
+        "N2": "muoi an",
+        "N3": "bot ngo / phan rom",
+        "S1": "nuoc giat trung tinh Wash Friends",
+        "WF_SOFT": "nuoc xa Wash Friends",
+        "WF_FRAG": "xit huong Wash Friends",
+    }
+
+
+def _expand_chem_codes_in_text(text: str, lang: str = "vi") -> str:
+    """Replace bare chem codes with everyday names so scrub/LLM never leave empty particles."""
+    if not text:
+        return text
+    mapping = _chem_everyday_map(lang)
+    # Longer tokens first
+    for code in sorted(mapping.keys(), key=len, reverse=True):
+        name = mapping[code]
+        text = re.sub(
+            rf"(?<![A-Za-z0-9]){re.escape(code)}(?![A-Za-z0-9])",
+            name,
+            text,
+        )
+    return text
+
+
+def _scrub_internal_codes(text: str, lang: str = "vi") -> str:
+    """Expand leftover internal codes to everyday names; strip markdown."""
     if not text:
         return text
     # Markdown bold/headers/emphasis (Zalo plain text)
@@ -948,17 +1011,13 @@ def _scrub_internal_codes(text: str) -> str:
     text = re.sub(r"__([^_]+)__", r"\1", text)
     text = re.sub(r"(?m)^#{1,6}\s*", "", text)
     text = text.replace("**", "")
-    # Parenthetical chem codes: (S1), (A3)
-    text = re.sub(r"\s*\((?:S1|WF_SOFT|WF_FRAG|A[1-5]|B[12]|D[1-3]|E[1-3]|N[1-3])\)", "", text)
+    # Expand codes BEFORE deleting (owner must see salt / enzyme names)
+    text = _expand_chem_codes_in_text(text, lang=lang)
+    # Parenthetical leftovers after expansion rare; strip empty ()
+    text = re.sub(r"\s*\(\s*\)", "", text)
     # Tool / node ids leaked by the model
     text = re.sub(r"\s*\((?:T_[A-Z0-9_]+)\)", "", text)
-    text = re.sub(r"(?<![A-Za-z0-9])T_(?:BRUSH_SOFT|BRUSH_HARD|BRUSH_ULTRA|BRUSH_SHOE|CLOTH|SPRAY)(?![A-Za-z0-9])", "", text)
-    # Standalone chem tokens
-    text = re.sub(
-        r"(?<![A-Za-z0-9])(?:S1|WF_SOFT|WF_FRAG|A[1-5]|B[12]|D[1-3]|E[1-3]|N[1-3])(?![A-Za-z0-9])",
-        "",
-        text,
-    )
+    text = re.sub(r"(?<![A-Za-z0-9])T_(?:BRUSH_SOFT|BRUSH_HARD|BRUSH_ULTRA|BRUSH_SHOE|CLOTH|SPRAY|FABRIC_MARKER)(?![A-Za-z0-9])", "", text)
     # Awkward KO calque "N부분 식초/물" → natural "식초 N : 물 M"
     text = re.sub(r"(\d+)\s*부분\s*(흰\s*)?식초", r"\2식초 \1", text)
     text = re.sub(r"(\d+)\s*부분\s*물", r"물 \1", text)
@@ -975,7 +1034,9 @@ def _scrub_internal_codes(text: str) -> str:
 
 
 def _sanitize_graph_for_owner(graph, lang: str):
-    """Drop ids / wrong-language fields so the LLM cannot echo them."""
+    """Drop ids / wrong-language fields so the LLM cannot echo them.
+    Expand chem codes inside path/why text to everyday names.
+    """
     if not isinstance(graph, dict):
         return graph
     g = dict(graph)
@@ -1005,6 +1066,9 @@ def _sanitize_graph_for_owner(graph, lang: str):
             "alt1_vi": c.get("alt1_vi"),
             "alt2_vi": c.get("alt2_vi"),
             "alt3_vi": c.get("alt3_vi"),
+            "alt1_ko": c.get("alt1_ko"),
+            "alt2_ko": c.get("alt2_ko"),
+            "alt3_ko": c.get("alt3_ko"),
             "when_use_vi": c.get("when_use_vi"),
             "dilution_vi": c.get("dilution_vi"),
             "dilution_ko": c.get("dilution_ko"),
@@ -1012,6 +1076,10 @@ def _sanitize_graph_for_owner(graph, lang: str):
             "safe_on_wool": c.get("safe_on_wool"),
             "safe_on_silk": c.get("safe_on_silk"),
         }
+        # Expand any leftover codes inside alt/role strings
+        for k in list(keep.keys()):
+            if isinstance(keep[k], str):
+                keep[k] = _expand_chem_codes_in_text(keep[k], lang=lang)
         if lang == "ko":
             for k in ("name_vi", "shop_name_vi", "buy_where_vi", "alt1_vi", "alt2_vi", "alt3_vi",
                       "when_use_vi", "dilution_vi", "example_brands_vi"):
@@ -1020,7 +1088,34 @@ def _sanitize_graph_for_owner(graph, lang: str):
             keep.pop("name_ko", None)
             keep.pop("buy_where_ko", None)
             keep.pop("dilution_ko", None)
+            keep.pop("alt1_ko", None)
+            keep.pop("alt2_ko", None)
+            keep.pop("alt3_ko", None)
         return {k: v for k, v in keep.items() if v is not None and v != ""}
+
+    # Expand codes in narrative fields BEFORE LLM sees them
+    sc = g.get("stain_context")
+    if isinstance(sc, dict):
+        sc2 = dict(sc)
+        for field in (
+            "tip", "why_vi", "fresh_path_vi", "dried_path_vi",
+            "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
+            "group_care_order_vi", "group_care_order_ko",
+        ):
+            if sc2.get(field):
+                sc2[field] = _expand_chem_codes_in_text(str(sc2[field]), lang=lang)
+        g["stain_context"] = sc2
+
+    ic = g.get("item_context")
+    if isinstance(ic, dict):
+        ic2 = dict(ic)
+        for field in (
+            "why_vi", "fresh_path_vi", "dried_path_vi",
+            "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
+        ):
+            if ic2.get(field):
+                ic2[field] = _expand_chem_codes_in_text(str(ic2[field]), lang=lang)
+        g["item_context"] = ic2
 
     if g.get("tools"):
         g["tools"] = [_tool(t) for t in g["tools"] if t]
@@ -1052,8 +1147,13 @@ QUY TẮC TRẢ LỜI:
        Nếu tools[] RỖNG: viết "해당 없음" / "khong can dung cu dac biet" HOẶC lấy từ fresh_path
        (vd bút màu vải, chụp ảnh) — CẤM bịa "흰 천·흡수지" khi không có trong tools[]
    (3) Lực + hướng — cụ thể (thấm/nhấn ngoài→trong), không chỉ "không lan"
-   (4) Hóa chất — nêu RÕ bước 1 / bước 2 theo fresh_path (vd A3 rồi B1). Xem quy tắc HÓA CHẤT.
-       Nếu chemicals[] RỖNG: CẤM bịa nước giặt trung tính / detergent.
+   (4) Hóa chất — BẮT BUỘC ghi TÊN THƯỜNG NGÀY từ chemicals[] (name_ko / shop_name_vi):
+       muối, enzyme, giấm, nước rửa chén, bột tẩy oxy, nước giặt trung tính Wash Friends…
+       Kèm: pha loãng (dilution_*), nơi mua (buy_where_*), thay thế nếu có (alt*).
+       Nêu rõ từng bước + thời gian ngâm nếu có trong fresh_path / dilution.
+       CẤM để trống kiểu "를 1리터" / "cho X vào…" mà không nói X là gì.
+       CẤM mã nội bộ. CẤM mẹo dân gian (kem đánh răng, cafe/trà nhuộm…).
+       Chỉ trộn 2 chất khi fresh_path / dilution ghi rõ tỷ lệ; còn lại xử lý tuần tự + xả.
    (5) Nhiệt độ nước + max_temp vải
    (6) Sau xử lý: đủ ý kiểm tra ánh sáng / còn thì làm lại (đúng thứ tự hóa chất) / phơi bóng mát — CẤM câu kết kiểu quảng cáo "최상의 결과"
    Nếu có item_context: đây là chăm sóc món (giày/túi/áo phao/Gore-Tex…) — vẫn dùng 1)-6), không đổi giọng.
@@ -1130,10 +1230,11 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "실크·울이고 chemicals[]에 중성세제가 있을 때만 중성세제 사용. "
             "B1=산소계 표백제(산성 세제 아님). "
             "why/신선·굳음 내용만 쓰고 필드명 출력 금지. 민간요법·다른 오염법 금지. "
-            "(1)은 stain_context 이름+신선/굳음+원단색을 구체적으로 "
-            "(예: 과일 주스·젖음·흰 면). '균일 분포/분류입니다' 같은 모호 금지. "
-            "(3)은 찍기·흡수 동작까지. (4)는 1단계/2단계로. "
-            "(6) 광고형 맺음말 금지. "
+            "(4)약품: chemicals[]의 name_ko를 반드시 이름 그대로 쓸 것 "
+            "(소금·효소세제·식초·주방세제·산소계 표백제·워시프렌즈 중성세제 등). "
+            "희석(dilution_ko)·구매처(buy_where_ko)·대체(alt*_ko) 있으면 함께. "
+            "'를 1리터'처럼 약품명 빠진 문장 금지. 민간요법(치약 등) 금지. "
+            "혼합 비율은 그래프에 있을 때만; 없으면 순차 처리+헹굼. "
             "1)오염·원단 2)도구(name_ko) 3)힘·방향 4)약품 5)수온 "
             "6)후관리: 강한 빛에서 잔존 확인→남으면 재처리(건조 금지), 그늘·통풍 건조, "
             "직사광선 피하기(색바램), fabric dry_hint/iron_hint 있으면 한 줄로 건조·다림질. "
@@ -1171,7 +1272,7 @@ Null/thiếu → hỏi thêm hoặc bỏ qua — tuyệt đối không bịa và
 Giọng nội bộ Wash Friends — không nêu nguồn bên ngoài."""
 
 
-def _call_llm(llm_prompt: str) -> str:
+def _call_llm(llm_prompt: str, lang: str = "vi") -> str:
     response = _openai.chat.completions.create(
         model="gpt-4o-mini",
         max_tokens=1024,
@@ -1180,7 +1281,7 @@ def _call_llm(llm_prompt: str) -> str:
             {"role": "user", "content": llm_prompt},
         ],
     )
-    return _scrub_internal_codes(response.choices[0].message.content.strip())
+    return _scrub_internal_codes(response.choices[0].message.content.strip(), lang=lang)
 
 
 def _empty_graph_reply(entities: dict, *, image: bool = False) -> str:
@@ -1232,7 +1333,7 @@ def _answer_with_optional_cache(
 
     base_prompt = _build_llm_prompt(cache_question, graph_context, lang=lang)
     llm_prompt = (prefix + "\n\n" + base_prompt) if prefix else base_prompt
-    answer = _call_llm(llm_prompt)
+    answer = _call_llm(llm_prompt, lang=lang)
     cache_store(cache_question, answer, ctx_key)
     return answer
 

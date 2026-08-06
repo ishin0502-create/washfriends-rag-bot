@@ -123,7 +123,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-brand-header-v1",
+            "build": "2026-08-06-chem-names-v1",
             "checks": checks,
         },
         status_code=200,
@@ -542,10 +542,32 @@ UNWIND [
   {code:'A4',dilution_vi:'Dung 3% nguyen (vai trang cotton)',dilution_ko:'3% 원액 (흰 면만, 구석 테스트)'},
   {code:'A1',dilution_vi:'Cham bang bong/khan — khong do ngap',dilution_ko:'솜·흰 천으로 가볍게 찍기 (흠뻑 붓지 말 것)'},
   {code:'D2',dilution_vi:'1-2 giot nguyen chat len vet hoac pha loang nhe',dilution_ko:'얼룩에 1–2방울 또는 약하게 희석'},
-  {code:'S1',dilution_vi:'Theo huong dan chai Wash Friends — uu tien lua/len',dilution_ko:'워시프렌즈 중성세제 병 안내 따름 — 실크·울 우선'}
+  {code:'S1',dilution_vi:'Theo huong dan chai Wash Friends — uu tien lua/len',dilution_ko:'워시프렌즈 중성세제 병 안내 따름 — 실크·울 우선'},
+  {code:'B1',dilution_vi:'Theo nhan chai; thuong ngam 15-45 phut nuoc am/lanh — test mau',dilution_ko:'병 라벨 따름; 보통 찬물·미지근 15–45분 담금 — 구석 색 테스트'},
+  {code:'D3',dilution_vi:'Theo nhan chai; uu tien chuong trinh thuong sau khi da xu ly vet',dilution_ko:'병 라벨 따름; 얼룩 전처리 후 일반 세탁 용량'},
+  {code:'N1',dilution_vi:'Paste: baking soda + it nuoc; hoac 1-2 muong / 1 lit khi ngam',dilution_ko:'페이스트: 베이킹소다+물 약간; 또는 담글 때 1리터에 1–2큰술'},
+  {code:'N3',dilution_vi:'Phu day len vet dau 10-30 phut roi chai bot',dilution_ko:'기름 얼룩에 두껍게 덮어 10–30분 후 털어내기'},
+  {code:'D1',dilution_vi:'Cham it, thong gio; khong do ngap — theo nhan san pham',dilution_ko:'환기 필수, 소량 찍기 — 제품 라벨 따름'},
+  {code:'E3',dilution_vi:'Theo nhan enzyme; thuong ngam am nhe 15-30 phut sau khi tay dau',dilution_ko:'라벨 따름; 보통 탈지 후 미지근 15–30분 담금'}
 ] AS d
 MATCH (c:Chemical {code:d.code})
 SET c.dilution_vi = d.dilution_vi, c.dilution_ko = d.dilution_ko
+RETURN count(c) AS updated""")
+        _r(s, "V2b_chem_alt_ko", """
+UNWIND [
+  {code:'E1',alt1_ko:'슈퍼 효소 표기 세제·효소 담금제',alt2_ko:'실크·울이면 워시프렌즈 중성세제만 (효소 금지)',alt3_ko:''},
+  {code:'N2',alt1_ko:'식용 소금(정제염)',alt2_ko:'',alt3_ko:''},
+  {code:'N1',alt1_ko:'베이킹소다(슈퍼)',alt2_ko:'',alt3_ko:''},
+  {code:'D2',alt1_ko:'중성 주방세제',alt2_ko:'',alt3_ko:''},
+  {code:'D3',alt1_ko:'일반 세탁 세제(액체/분말)',alt2_ko:'',alt3_ko:''},
+  {code:'B1',alt1_ko:'산소계·과탄산 표백제(옥시클린 계열 등)',alt2_ko:'실크·울·모피 금지',alt3_ko:''},
+  {code:'A3',alt1_ko:'식용 흰 식초 약 5%',alt2_ko:'레몬즙 희석(색 테스트)',alt3_ko:''},
+  {code:'A4',alt1_ko:'약국 과산화수소 3%',alt2_ko:'흰 면에만; 없으면 산소계 표백제 약하게',alt3_ko:''},
+  {code:'A1',alt1_ko:'약국 소독용 알코올 70–90%',alt2_ko:'',alt3_ko:''},
+  {code:'S1',alt1_ko:'워시프렌즈 창고 중성세제',alt2_ko:'일시품절 시 울샴푸·극약 손세탁',alt3_ko:'효소·산소계와 병행 금지(민감 원단)'}
+] AS x
+MATCH (c:Chemical {code:x.code})
+SET c.alt1_ko = x.alt1_ko, c.alt2_ko = x.alt2_ko, c.alt3_ko = x.alt3_ko
 RETURN count(c) AS updated""")
         _r(s, "V2_chem_owner_labels", """
 UNWIND [
@@ -653,29 +675,29 @@ RETURN count(s) AS updated""")
         _r(s, "Z_paths_overrides", """
 UNWIND [
   {id:'S_BLOOD_FRESH',
-   why_vi:'Mau = hemoglobin (protein + sat). Nuoc lanh giu protein hoa tan; nuoc nong/say bien tinh → sat bam soi tao vet nau vinh vien. E1 cat chuoi protein; A4 (vai trang) oxy hoa hemoglobin.',
-   fresh_path_vi:'(1) Lat mat trai, xa nuoc LANH 2-3 phut den khi nuoc hong→trong. (2) Ngam N2 2 muong/1L lanh 15-30 phut. (3) Con nhat: nho E1 len vet 15 phut. (4) Giat D3 nuoc lanh. KHONG cha manh, KHONG say khi con vet.',
-   dried_path_vi:'Neu da kho: cao nhe vay kho → ngam lanh 30-60 phut → E1 pha loang 30-60 phut → chai mem Cap2. Cotton TRANG: A4 3% test goc khuat 10 phut. Len/lua: KHONG E1/A4 — N2 + S1, bao khach.'},
+   why_vi:'Mau tuoi = hemoglobin (protein + sat). Nuoc LANH giu protein hoa tan — nuoc nong/say bien tinh → sat bam soi tao vet nau vinh vien. Muoi an hut mau tuoi; enzyme protease cat chuoi protein; giat thuong sau. Vai trang: oxy gia 3% co the oxy hoa them (test goc).',
+   fresh_path_vi:'(1) Lat mat trai, xa nuoc LANH 2-3 phut den khi nuoc hong→trong. (2) Ngam muoi an 2 muong canh / 1 lit nuoc lanh 15-30 phut (mua sieu thi). (3) Con nhat: nho nuoc giat/bot ngam enzyme protease len vet 15 phut (nhan chai ghi enzyme; sieu thi) — KHONG dung tren len/lua (dung nuoc giat trung tinh Wash Friends). (4) Giat nuoc giat thuong nuoc lanh. KHONG cha manh, KHONG say khi con vet.',
+   dried_path_vi:'Neu da kho: cao nhe vay kho → ngam lanh 30-60 phut → enzyme protease pha loang 30-60 phut → chai mem. Cotton TRANG: oxy gia 3% test goc khuat 10 phut. Len/lua: KHONG enzyme/oxy — muoi + nuoc giat trung tinh Wash Friends, bao khach.'},
   {id:'S_BLOOD_DRY',
-   why_vi:'Mau kho: protein da gan soi. Can enzyme pha chuoi; nhiet van CAM truoc khi sach hoan toan.',
+   why_vi:'Mau kho: protein da gan soi. Can enzyme protease pha chuoi; nhiet van CAM truoc khi sach hoan toan.',
    fresh_path_vi:'Neu con am: xu ly nhu mau tuoi — xa lanh mat trai truoc moi buoc khac.',
-   dried_path_vi:'Cao nhe → ngam lanh → E1 30-60 phut → chai mem. A4 chi cotton trang sau test. Kiem tra anh sang manh TRUOC say; con nau → lap E1.'},
+   dried_path_vi:'Cao nhe → ngam lanh → enzyme protease 30-60 phut → chai mem. Oxy gia 3% chi cotton trang sau test. Kiem tra anh sang manh TRUOC say; con nau → lap enzyme.'},
   {id:'S_MOTORBIKE_OIL',
-   why_vi:'Dau nhot xe may: dau kho + carbon. Can hut N3 + dung moi D1; thong gio khi dung dung moi.',
-   fresh_path_vi:'N3 day hut dau → D1 cham mat trai → A1 neu can → D3/giat cotton-poly.',
-   dried_path_vi:'N3 2 lan → D1 lap → kiem tra het nhon truoc say. Khong silk/wool nhiet cao.'},
+   why_vi:'Dau nhot xe may: dau kho + carbon. Can hut bot ngo/phan rom + dung moi tay dau (thong gio); sau do giat.',
+   fresh_path_vi:'Bot ngo/phan rom day hut dau → dung moi tay dau cham mat trai (thong gio) → con sat khuan neu can → giat nuoc giat thuong (cotton-poly).',
+   dried_path_vi:'Bot hut 2 lan → dung moi lap → kiem tra het nhon truoc say. Khong silk/wool nhiet cao.'},
   {id:'S_BLACK_COFFEE',
-   why_vi:'Ca phe den = tannin + mau. Xu ly SOM bang nuoc lanh; A3 (giam 1:4) ho tro pha tannin; say som khoa mau.',
-   fresh_path_vi:'Tham/xa lanh mat trai ngay → A3 1 phan giam / 4 phan nuoc → giat. Test goc khuat truoc tay manh.',
-   dried_path_vi:'A3 ngam/cham → neu con mau dung B1 (KHONG len/lua) → kiem tra mau truoc say.'},
+   why_vi:'Ca phe den = tannin + mau. Xu ly SOM bang nuoc lanh; giam trang 5% (1:4) pha tannin; say som khoa mau.',
+   fresh_path_vi:'Tham/xa lanh mat trai ngay → giam trang 1 phan + nuoc 4 phan → giat. Test goc khuat truoc tay manh.',
+   dried_path_vi:'Giam trang ngam/cham → neu con mau dung bot tay oxy (KHONG len/lua) → kiem tra mau truoc say.'},
   {id:'S_MILK_COFFEE',
-   why_vi:'Ca phe sua: tannin + protein sua. Xu ly protein (E1/lanh) TRUOC, roi tannin (A3) — khong dao thu tu.',
-   fresh_path_vi:'Xa lanh → E1 cho phan sua neu can → A3 cho tannin → giat.',
-   dried_path_vi:'E1 ngam lanh → A3 → kiem tra truoc say; B1 chi khi con mau va vai cho phep.'},
+   why_vi:'Ca phe sua: tannin + protein sua. Xu ly protein (enzyme) TRUOC, roi tannin (giam) — khong dao thu tu.',
+   fresh_path_vi:'Xa lanh → enzyme protease cho phan sua neu can → giam trang cho tannin → giat.',
+   dried_path_vi:'Enzyme ngam lanh → giam trang → kiem tra truoc say; bot tay oxy chi khi con mau va vai cho phep.'},
   {id:'S_FRUIT_JUICE',
-   why_vi:'Nuoc trai cay / juice = tannin + mau hoa qua. Xu ly SOM bang nuoc lanh. Buoc 1: A3 (giam 1:4). Buoc 2 neu con mau: B1 oxy (vai trang/cotton OK; CAM len/lua). Khong goi la "phan bo deu" — noi ro loai vet + tuoi/kho + mau vai.',
-   fresh_path_vi:'(1) Nhan: juice/trai cay, tuoi/kho, vai trang hay mau. (2) Tham/xa LANH mat trai. (3) Buoc1 A3 1:4 cham/xit → tham. (4) Con mau: Buoc2 B1 theo chai (vai trang uu tien; test goc). (5) Giat am nhe neu vai cho. CAM say khi con mau.',
-   dried_path_vi:'Ngam/cham A3 → neu con mau B1 (khong len/lua) → kiem tra anh sang manh truoc say. Vai mau: can than B1 (test); uu tien A3 lap.'}
+   why_vi:'Nuoc trai cay / juice = tannin + mau hoa qua. Xu ly SOM bang nuoc lanh. Buoc 1: giam trang 1:4. Buoc 2 neu con mau: bot tay oxy (vai trang/cotton OK; CAM len/lua).',
+   fresh_path_vi:'(1) Nhan: juice/trai cay, tuoi/kho, vai trang hay mau. (2) Tham/xa LANH mat trai. (3) Buoc1 giam trang 1:4 cham/xit → tham. (4) Con mau: Buoc2 bot tay oxy theo chai (vai trang uu tien; test goc). (5) Giat am nhe neu vai cho. CAM say khi con mau.',
+   dried_path_vi:'Ngam/cham giam trang → neu con mau bot tay oxy (khong len/lua) → kiem tra anh sang manh truoc say. Vai mau: can than oxy (test); uu tien giam lap.'}
 ] AS o
 MATCH (s:Stain {id:o.id})
 SET s.why_vi = o.why_vi, s.fresh_path_vi = o.fresh_path_vi, s.dried_path_vi = o.dried_path_vi,
