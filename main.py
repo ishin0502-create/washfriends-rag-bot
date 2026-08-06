@@ -123,7 +123,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-kimchi-coffee-v1",
+            "build": "2026-08-06-kimchi-coffee-v2",
             "checks": checks,
         },
         status_code=200,
@@ -434,7 +434,7 @@ FOREACH (_ IN CASE WHEN s.id IN ['S_MUSTARD','S_CURRY'] THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(n1) MERGE (s)-[:USES_CHEMICAL]->(b1)
   MERGE (s)-[:USES_CHEMICAL]->(d2))
 FOREACH (_ IN CASE WHEN s.id = 'S_KIMCHI' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(n3) MERGE (s)-[:USES_CHEMICAL]->(a3)
+  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a3)
   MERGE (s)-[:USES_CHEMICAL]->(b1))
 RETURN count(DISTINCT s) AS stains""")
         _r(s, "O_force_levels", """
