@@ -851,20 +851,93 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
 
 
 def _scrub_internal_codes(text: str) -> str:
-    """Remove leftover internal chem codes from owner-facing replies."""
+    """Remove leftover internal codes / markdown from owner-facing replies."""
     if not text:
         return text
-    # Parenthetical codes first: (S1), (A3)
+    # Markdown bold/headers/emphasis (Zalo plain text)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"__([^_]+)__", r"\1", text)
+    text = re.sub(r"(?m)^#{1,6}\s*", "", text)
+    text = text.replace("**", "")
+    # Parenthetical chem codes: (S1), (A3)
     text = re.sub(r"\s*\((?:S1|WF_SOFT|WF_FRAG|A[1-5]|B[12]|D[1-3]|E[1-3]|N[1-3])\)", "", text)
-    # Standalone tokens
+    # Tool / node ids leaked by the model
+    text = re.sub(r"\s*\((?:T_[A-Z0-9_]+)\)", "", text)
+    text = re.sub(r"(?<![A-Za-z0-9])T_(?:BRUSH_SOFT|BRUSH_HARD|BRUSH_ULTRA|BRUSH_SHOE|CLOTH|SPRAY)(?![A-Za-z0-9])", "", text)
+    # Standalone chem tokens
     text = re.sub(
         r"(?<![A-Za-z0-9])(?:S1|WF_SOFT|WF_FRAG|A[1-5]|B[12]|D[1-3]|E[1-3]|N[1-3])(?![A-Za-z0-9])",
         "",
         text,
     )
+    # Awkward KO calque "1부분 … 4부분" → natural ratio phrasing
+    text = re.sub(
+        r"(\d+)\s*부분\s*([^,\n]+?)\s*(?:와|과|및|,)?\s*(\d+)\s*부분\s*([^,\n\.]+)",
+        r"\2 \1 : \4 \3",
+        text,
+    )
+    text = re.sub(r"(\d+)\s*부분", r"\1", text)
     text = re.sub(r"[ \t]{2,}", " ", text)
     text = re.sub(r" ?،", ",", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
+
+
+def _sanitize_graph_for_owner(graph, lang: str):
+    """Drop ids / wrong-language fields so the LLM cannot echo them."""
+    if not isinstance(graph, dict):
+        return graph
+    g = dict(graph)
+
+    def _tool(t: dict) -> dict:
+        out = {
+            "name_ko": t.get("name_ko"),
+            "name_vi": t.get("name_vi"),
+            "use_for_vi": t.get("use_for_vi"),
+        }
+        if lang == "ko":
+            out.pop("name_vi", None)
+            out.pop("use_for_vi", None)
+        elif lang == "vi":
+            out.pop("name_ko", None)
+        return {k: v for k, v in out.items() if v}
+
+    def _chem(c: dict) -> dict:
+        keep = {
+            "name": c.get("name"),
+            "name_vi": c.get("name_vi"),
+            "name_ko": c.get("name_ko"),
+            "role": c.get("role"),
+            "shop_name_vi": c.get("shop_name_vi"),
+            "buy_where_vi": c.get("buy_where_vi"),
+            "buy_where_ko": c.get("buy_where_ko"),
+            "alt1_vi": c.get("alt1_vi"),
+            "alt2_vi": c.get("alt2_vi"),
+            "alt3_vi": c.get("alt3_vi"),
+            "when_use_vi": c.get("when_use_vi"),
+            "dilution_vi": c.get("dilution_vi"),
+            "dilution_ko": c.get("dilution_ko"),
+            "wf_supply": c.get("wf_supply"),
+            "safe_on_wool": c.get("safe_on_wool"),
+            "safe_on_silk": c.get("safe_on_silk"),
+        }
+        if lang == "ko":
+            for k in ("name_vi", "shop_name_vi", "buy_where_vi", "alt1_vi", "alt2_vi", "alt3_vi",
+                      "when_use_vi", "dilution_vi", "example_brands_vi"):
+                keep.pop(k, None)
+        elif lang == "vi":
+            keep.pop("name_ko", None)
+            keep.pop("buy_where_ko", None)
+            keep.pop("dilution_ko", None)
+        return {k: v for k, v in keep.items() if v is not None and v != ""}
+
+    if g.get("tools"):
+        g["tools"] = [_tool(t) for t in g["tools"] if t]
+    if g.get("chemicals"):
+        g["chemicals"] = [_chem(c) for c in g["chemicals"] if c]
+    if g.get("washfriends_supply"):
+        g["washfriends_supply"] = [_chem(c) for c in g["washfriends_supply"] if c]
+    return g
 
 
 # ─── LLM Responder ────────────────────────────────────────────────────────────
@@ -875,15 +948,15 @@ Giọng điệu: kinh nghiệm nội bộ Wash Friends — tự tin, dễ đọc
 
 QUY TẮC TRẢ LỜI:
 1. NGÔN NGỮ BẮT BUỘC: trả lời ĐÚNG ngôn ngữ câu hỏi.
-   - Câu hỏi tiếng Hàn → CHỈ tiếng Hàn. Câu hỏi tiếng Việt → CHỈ tiếng Việt.
-   - Tiếng Hàn: tools.name_ko; hóa chất dùng name_ko / cách gọi cửa hàng (không để nguyên tiếng Việt).
+   - Câu hỏi tiếng Hàn → CHỈ tiếng Hàn (không xen Việt/Anh). Câu hỏi tiếng Việt → CHỈ tiếng Việt.
+   - Tiếng Hàn: tools.name_ko; hóa chất name_ko. CẤM in name_vi, id dụng cụ (T_CLOTH…), mã hóa chất.
 2. CHỈ dùng DỮ LIỆU TỪ ĐỒ THỊ của ĐÚNG vết này — không bịa, không mẹo dân gian, không lẫn vết khác.
-   Thiếu field → bỏ qua hoặc hỏi 1 câu. CẤM in tên field kỹ thuật (why_vi, fresh_path_vi, code…).
-3. Cảnh báo an toàn ĐẦU câu (chữ in hoa ngắn, không markdown **)
+   Thiếu field → bỏ qua hoặc hỏi 1 câu. CẤM in tên field kỹ thuật (why_vi, fresh_path_vi, code, id…).
+3. Cảnh báo an toàn ĐẦU câu — chữ thường/hoa ngắn, CẤM markdown ** ## * _
 4. Mở đầu ngắn (2–4 câu) nếu có why_vi / tip — nguyên tắc ĐÚNG vết này, rồi mới 1)-6).
 5. Câu XỬ LÝ VẾT / CHĂM SÓC MÓN ĐỒ — 1)-6), dễ đọc (cùng một format cho stain và item_care):
    (1) Nhận diện + tươi/khô hoặc tình trạng món (nội dung fresh/dried, không in tên field)
-   (2) Dụng cụ — tools.name_ko nếu trả lời Hàn
+   (2) Dụng cụ — chỉ tên người dùng (name_ko / name_vi), CẤM id T_…
    (3) Lực + hướng
    (4) Hóa chất — xem quy tắc HÓA CHẤT bên dưới
    (5) Nhiệt độ nước + max_temp vải
@@ -935,14 +1008,17 @@ def detect_reply_lang(text: str) -> str:
 
 
 def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") -> str:
-    graph_json = json.dumps(graph_context["graph"], ensure_ascii=False, indent=2, default=str)
+    raw_graph = graph_context.get("graph")
+    safe_graph = _sanitize_graph_for_owner(raw_graph, lang) if isinstance(raw_graph, dict) else raw_graph
+    graph_json = json.dumps(safe_graph, ensure_ascii=False, indent=2, default=str)
     query_type = graph_context.get("query_type", "unknown")
     if lang == "ko":
         lang_rule = (
-            "청자: 워시프렌즈 점주(동료). 한국어만. 마크다운(** ##) 금지. "
+            "청자: 워시프렌즈 점주(동료). 한국어만(베트남어·영어 금지). 마크다운(** ## *) 금지. "
             "힘·방향은 '바깥→안'처럼 한국어만 (external/internal 금지). "
             "약품은 name_ko·일상명만 (A3/B1/S1 코드 말하지 말 것). "
-            "희석은 dilution_ko만 사용; 없으면 '병 라벨·본사 안내 따름' — 비율 지어내기 금지. "
+            "도구는 name_ko만 — T_CLOTH 같은 id, name_vi 출력 금지. "
+            "희석은 dilution_ko만: '식초 1 : 물 4' 형식. '1부분' 금지. "
             "'세탁소에서 구입' 금지 — 슈퍼/약국/화공, WF는 본사·창고 공급. "
             "실크·울이면 비안전 약품 추천 금지, 워시프렌즈 중성세제 우선. "
             "B1=산소계 표백제(산성 세제 아님). "
