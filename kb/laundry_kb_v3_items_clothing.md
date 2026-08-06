@@ -222,3 +222,17 @@ Trả lời điểm chủ theo chuẩn Wash Friends: rõ bước, rõ hóa chấ
 | 2 | Hồ quân phục (nếp quân đội) | 0 | Dung dịch hồ: 15-20g bột bắp + 1L nước. Ngâm quân phục hoàn toàn rồi vắt. Ủi khi còn hơi ẩm. 200-220°C cao. Dùng thước tạo nếp thẳng — một đường thẳng. Kết quả: nếp sắc như dao dù gãy móng. | 👁️ Nếp sắc như dao = quân phục hoàn thành |
 
 ---
+
+## PROTOCOL: Mũ / Nón / Baseball cap
+**Tên**: Mũ lưỡi trai & mũ có cấu trúc / 야구모자·캡·일반 모자 / Structured & Soft Caps
+**Độ khó**: ★★★☆☆
+**Hóa chất**: D2, S1, A3 (vành mồ hôi)
+**Quy tắc vàng**: Mũ cứng (buckram/fitted): CHỈ spot-clean — CẤM máy / máy rửa bát (New Era). Giữ form khi phơi (bát/khăn nhồi). Golf mũ → I_GOLF_HAT.
+
+| Bước | Thao tác | Lực tay | Chi tiết | Checkpoint |
+|---|---|---|---|---|
+| 1 | Phân loại mũ cứng vs mềm | 0 | Fitted/cứng: không ngâm cả mũ. Soft/dad cap: tay lạnh được; máy chỉ khi nhãn cho + túi lưới. | 📋 Nhầm máy = vành méo vĩnh viễn |
+| 2 | Spotting vành mồ hôi | 1–2 | Lật vành → D2/S1 loãng + bàn chải mềm. Vàng: A3 1:4 test màu 5–10 phút. Lau khăn ẩm hết xà phòng. | 👃 Hết mùi mồ hôi vành |
+| 3 | Phơi giữ form | 0 | Nhồi bát/khăn giữ crown. Chỉnh vành. Phơi bóng mát đứng. CẤM sấy / ủi / dishwasher. | 👁️ Form như lúc mua |
+
+---

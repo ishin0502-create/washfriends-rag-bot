@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-edu-s5c-empty-stain-fix",
+            "build": "2026-08-06-edu-s6-home-hat-bubble",
             "checks": checks,
         },
         status_code=200,
@@ -388,7 +388,8 @@ UNWIND [
   {id:'S_SOY_SAUCE',name:'Soy Sauce',name_vi:'Nuoc tuong',name_ko:'간장',group_id:'G3',water_spreads:true,contains_protein:true,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold water enzyme for protein then vinegar for tannin/dye'},
   {id:'S_FISH_SAUCE',name:'Fish Sauce',name_vi:'Nuoc mam',name_ko:'느억맘·액젓',group_id:'G3',water_spreads:true,contains_protein:true,contains_tannin:true,contains_oil:false,contains_dye:true,urgency:'immediate',tip:'Cold enzyme; salt odor needs vinegar deodorize; dye may need oxygen on white'},
   {id:'S_BBQ_SAUCE',name:'BBQ Sauce',name_vi:'Sot BBQ',name_ko:'BBQ 소스',group_id:'G3',water_spreads:false,contains_protein:true,contains_tannin:true,contains_oil:true,contains_dye:true,urgency:'same_day',tip:'Triple: enzyme then dish soap then vinegar sequential'},
-  {id:'S_KIMCHI',name:'Kimchi / kimchi broth',name_vi:'Kim chi / nuoc kim chi',name_ko:'김치·김치국물',group_id:'G3',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:true,contains_dye:true,urgency:'immediate',tip:'Kimchi: chili dye + oil + salt/acid. Cold rinse ASAP; dish soap for oil then vinegar; oxygen bleach on white only'}
+  {id:'S_KIMCHI',name:'Kimchi / kimchi broth',name_vi:'Kim chi / nuoc kim chi',name_ko:'김치·김치국물',group_id:'G3',water_spreads:true,contains_protein:false,contains_tannin:true,contains_oil:true,contains_dye:true,urgency:'immediate',tip:'Kimchi: chili dye + oil + salt/acid. Cold rinse ASAP; dish soap for oil then vinegar; oxygen bleach on white only'},
+  {id:'S_BUBBLE_TEA',name:'Bubble tea / milk tea boba',name_vi:'Tra sua tran chau / bubble tea',name_ko:'버블티·밀크티·타피오카',group_id:'G3',water_spreads:true,contains_protein:true,contains_tannin:true,contains_oil:true,contains_dye:true,urgency:'immediate',tip:'4 layers: tea tannin + milk protein + tapioca starch + sugar. Order: cold rinse → enzyme → dish soap → vinegar → oxygen on white. NEVER hot first'}
 ] AS s MERGE (n:Stain {id:s.id}) SET n += s RETURN count(n) AS created""")
         _r(s, "I_stains_dye", """
 UNWIND [
@@ -465,7 +466,7 @@ MATCH (s:Stain) WHERE s.id IN [
   'S_DYE_TRANSFER','S_STARCH_TRANSFER','S_SHIRT_YELLOW','S_MILDEW',
   'S_KETCHUP','S_TOMATO_SAUCE','S_MAYO','S_COLLAR_STAIN',
   'S_SOY_SAUCE','S_FISH_SAUCE','S_COOKING_OIL','S_GREASE',
-  'S_LIPSTICK','S_FOUNDATION'
+  'S_LIPSTICK','S_FOUNDATION','S_BUBBLE_TEA'
 ]
 OPTIONAL MATCH (s)-[old:USES_CHEMICAL]->()
 DELETE old
@@ -490,9 +491,11 @@ FOREACH (_ IN CASE WHEN s.id = 'S_PAINT_LATEX' THEN [1] ELSE [] END |
 FOREACH (_ IN CASE WHEN s.id IN ['S_MUSTARD','S_CURRY'] THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(n1) MERGE (s)-[:USES_CHEMICAL]->(b1)
   MERGE (s)-[:USES_CHEMICAL]->(d2))
-FOREACH (_ IN CASE WHEN s.id IN ['S_KIMCHI','S_KETCHUP','S_TOMATO_SAUCE'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN s.id IN ['S_KIMCHI','S_KETCHUP','S_TOMATO_SAUCE','S_BUBBLE_TEA'] THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a3)
   MERGE (s)-[:USES_CHEMICAL]->(b1))
+FOREACH (_ IN CASE WHEN s.id = 'S_BUBBLE_TEA' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(e1) MERGE (s)-[:USES_CHEMICAL]->(e2))
 FOREACH (_ IN CASE WHEN s.id = 'S_DYE_TRANSFER' THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(b1) MERGE (s)-[:USES_CHEMICAL]->(a3)
   MERGE (s)-[:USES_CHEMICAL]->(b2) MERGE (s)-[:USES_CHEMICAL]->(d3))
@@ -564,12 +567,14 @@ RETURN count(*) AS rels""")
         # Additive ops fields — fail-soft; never deletes existing stain/chem nodes
         _r(s, "T_tools", """
 UNWIND [
-  {id:'T_BRUSH_SOFT',name_vi:'Ban chai spotting mem',name_ko:'연질 스포팅 솔',use_for_vi:'Cotton, polyester, vet thuong'},
+  {id:'T_BRUSH_SOFT',name_vi:'Ban chai spotting mem',name_ko:'연질 스포팅 솔',use_for_vi:'Cotton, polyester, vet thuong, vanh mu'},
   {id:'T_BRUSH_HARD',name_vi:'Ban chai spotting cung',name_ko:'경질 스포팅 솔',use_for_vi:'Denim, canvas, giay the thao'},
   {id:'T_BRUSH_ULTRA',name_vi:'Ban chai sieu mem / mieng fot',name_ko:'초연질 솔·스펀지',use_for_vi:'Lua, len, vai mong — khong cha manh'},
   {id:'T_CLOTH',name_vi:'Khan trang sach / giay tham',name_ko:'흰 천·흡수지',use_for_vi:'Tham, lot duoi, khong cha lan'},
-  {id:'T_SPRAY',name_vi:'Binh xit rieng (dan nhan)',name_ko:'분무기(라벨 필수)',use_for_vi:'Pha loang A3/D2/B1 — khong tron binh'},
-  {id:'T_BRUSH_SHOE',name_vi:'Ban chai de giay (long cung)',name_ko:'운동화 밑창용 경질 솔',use_for_vi:'De cao su — KHONG dung tren mesh/lua'}
+  {id:'T_SPRAY',name_vi:'Binh xit rieng (dan nhan)',name_ko:'분무기(라벨 필수)',use_for_vi:'Pha loang A3/D2/B1 — khong tron binh; PPE khi xit hoa chat'},
+  {id:'T_BRUSH_SHOE',name_vi:'Ban chai de giay (long cung)',name_ko:'운동화 밑창용 경질 솔',use_for_vi:'De cao su — KHONG dung tren mesh/lua'},
+  {id:'T_GLOVE_NITRILE',name_vi:'Gang tay nitrile (PPE)',name_ko:'니트릴 장갑(PPE)',use_for_vi:'BAT BUOC voi X2/B2/A1/A2/dung moi — khong dung gang mong voi acid/tay'},
+  {id:'T_MESH_BAG',name_vi:'Tui luoi giat',name_ko:'세탁망',use_for_vi:'Do mong, mu mem (neu cho phep), gang, day giay — giam ma sat may'}
 ] AS t MERGE (n:Tool {id:t.id}) SET n += t RETURN count(n) AS created""")
         _r(s, "U_stain_ops_protein", """
 MATCH (s:Stain) WHERE s.contains_protein = true
@@ -968,6 +973,18 @@ UNWIND [
 MATCH (s:Stain {id:x.id})
 SET s.name_ko = coalesce(s.name_ko, x.name_ko)
 RETURN count(s) AS updated""")
+        _r(s, "Z6_bubble_tea_path", """
+MATCH (s:Stain {id:'S_BUBBLE_TEA'})
+SET s.name_ko = '버블티·밀크티·타피오카',
+    s.precheck_vi = 'Tra sua tran chau: 4 lop (tannin + protein sua + tinh bot + duong). CAM nuoc nong dau. Cao tran chau.',
+    s.why_vi = 'GIAO DUC: Bubble tea = tannin tra + protein sua + tinh bot san + duong. THU TU: xa LANH → enzyme (protein+tinh bot) → D2 (mo sua) → A3 (tannin) → B1 neu trang. Bo enzyme = kem hieu qua.',
+    s.fresh_path_vi = '(1) Cao/bo tran chau. (2) Xa LANH ngay. (3) Enzyme E1/E2 ngam lanh 15-30 phut. (4) D2 1-2 giot cham. (5) A3 1:4 ~15 phut. (6) Giat; con mau trang → B1. CAM say khi con vet.',
+    s.dried_path_vi = 'Ngam enzyme dai → D2 → A3 → B1 trang. Duong kho de vang — B1 phong.',
+    s.motion_vi = 'Tham ngoai→trong; khong cha lan',
+    s.water_temp_vi = 'LANH luc dau; sau do ~40C neu vai cho',
+    s.aftercare_vi = 'Anh sang truoc say. Phoi bong mat.',
+    s.tip = coalesce(s.why_vi, s.tip)
+RETURN count(s) AS updated""")
         # Priority 1–2 item care — same field names as stain paths (owner 1)-6) flow)
         _r(s, "I_items_care", """
 UNWIND [
@@ -1124,13 +1141,21 @@ UNWIND [
    water_temp_vi:'<=30C; da = it nuoc',
    aftercare_vi:'Kho han moi mang. CAM say nong. Bao quan kho.'},
   {id:'I_GOLF_HAT',name:'Golf / sports cap',name_vi:'Mu golf / mu luoi trai',name_ko:'골프모자·캡',fabric_id:'F2',
-   precheck_vi:'Giu form vanh. CAM may/say (hong vanh).',
-   why_vi:'Mu: tay + giu hinh. Spotting mo hoi vanh truoc. Chi chat giat NHE/trung tinh — CAM bot dam.',
-   fresh_path_vi:'Spotting vanh (chat nhe/trung tinh) → tay lanh + chai mem → nhet bat/bong giu form → phoi bong mat. CAM bot giat manh.',
-   dried_path_vi:'Lap spotting vanh bang chat nhe. Khong may.',
-   motion_vi:'Luc 2 — chai mem, khong vo vanh',
-   water_temp_vi:'Lanh. CHI tay',
-   aftercare_vi:'Giu form den kho. CAM say may.'},
+   precheck_vi:'Phan biet mu CUNG (vanh buckram/cardboard) vs mu MEM. Golf/cap: CAM may/dishwasher/say (hong vanh). Spotting vanh mo hoi TRUOC.',
+   why_vi:'GIAO DUC: Mu cau truc = giu form. New Era/cap: CHI spot-clean vanh + panel — CAM ngam toan bo / may (vanh vo). Chat NHE/trung tinh + chai mem. A3 loang chi vanh neu vang mo hoi (test mau). Nhet bat/bong giu form khi kho.',
+   fresh_path_vi:'(1) Lat vanh mo hoi. (2) D2/S1 loang + chai mem vanh (vong tron nhe). (3) Khan am lau xa xa phong. (4) Panel: spot tung mau (tranh lo mau). (5) Nhet khan/bat giu crown. (6) Phoi bong mat dung — CAM say/ui/dishwasher.',
+   dried_path_vi:'Lap spotting vanh. Vang cu: A3 1:4 chi vanh 5-10 phut (test). Khong het → bao khach.',
+   motion_vi:'Luc 1-2 — chai mem; KHONG vo vanh',
+   water_temp_vi:'Lanh. Spot/tay cuc bo — CAM may',
+   aftercare_vi:'Giu form den kho han (VN: quat, <4h bat dau kho). CAM say may.'},
+  {id:'I_HAT_CAP',name:'Baseball / fashion cap (structured or soft)',name_vi:'Mu luoi trai / baseball cap',name_ko:'야구모자·캡·일반 모자',fabric_id:'F2',
+   precheck_vi:'(A) Mu CUNG/fitted: CHI spot-clean — CAM may/dishwasher. (B) Mu MEM/dad cap: tay lanh duoc; may CHI neu nhan cho + tui luoi. Da/suede vanh → pro.',
+   why_vi:'GIAO DUC: Mo hoi vanh = dau+muoi+protein. Thu tu: spot vanh → giu form khi kho. CAM nhiet (vanh mem/vo). Len: lanh cuc, khong cha. Tham khao New Era care: mild detergent, air dry natural position.',
+   fresh_path_vi:'(1) Phan loai cung/mem. (2) Spotting vanh: D2/S1 + chai mem. (3) Mu mem: tay chau lanh ngam ngan + chai vanh, KHONG vat vanh. (4) Xa/khan am. (5) Nhet bat/khan giu crown + chinh vanh. (6) Phoi bong mat. CAM dishwasher/say.',
+   dried_path_vi:'Vanh vang: A3 1:4 test → enzyme nhe neu can. Logo theu: khong cha manh.',
+   motion_vi:'Luc 1-2 sol mem; khong gap vanh',
+   water_temp_vi:'Lanh. Mu cung = spot; mu mem = tay/lanh',
+   aftercare_vi:'Kho dung form. CAM say/ui. Bao quan khong dep vanh.'},
   {id:'I_GOLF_GLOVE_LEATHER',name:'Leather golf glove',name_vi:'Gang golf da (cabretta)',name_ko:'골프장갑(가죽)',fabric_id:'F8',
    precheck_vi:'Da cabretta: CAM may. Nuoc toi thieu. Khong giat qua thuong. CAM con sat khuan/alcohol (lam kho nut da).',
    why_vi:'Gang golf da: may/ngam = cung/nut. Chi lau nhe + kem da. CAM tay oxy, CAM alcohol.',
@@ -1195,6 +1220,38 @@ UNWIND [
    motion_vi:'Co/manchette: luc 2 sol mem mot chieu. Than: giat may nhe — khong cha manh.',
    water_temp_vi:'30-40C cotton; nhan giat uu tien. Khong nuoc soi.',
    aftercare_vi:'Phoi bong mat / say thap neu nhan cho. Ui theo thu tu co→tay→than. Treo moc. Ho (tuy chon) khi ao da sach kho.'},
+  {id:'I_CURTAIN_FABRIC',name:'Fabric window curtain',name_vi:'Rem vai thuong (cua so)',name_ko:'일반 커튼·패브릭 커튼',fabric_id:'F2',
+   precheck_vi:'Do dai/rong TRUOC giat (bao khach co cotton 3-5%, linen 5-8%). Thao moc/moc treo. Phan loai mau. Rem moc → S_MILDEW + PPE. Rem lot blackout: doc nhan — co the chi dry-clean.',
+   why_vi:'GIAO DUC: Rem vai = rut + moc (VN am). Giat tinh te 30C, D2/D3 it, vat ngan. Treo UOT de trong luc keo phang. Chu ky: 1 thang (phong), 2 tuan (tam). CAM Javel mau.',
+   fresh_path_vi:'(1) Do size + anh. (2) Hut/chai bui. (3) Spotting vet. (4) May tui luoi/tinh te ~30C chat nhe — hoac tay. (5) Vat ngan. (6) Treo ngay len thanh khi con am. VN: bat dau kho <4h.',
+   dried_path_vi:'Moc: PPE + protocol S_MILDEW. Rut: bao khach. Ui nhe neu can khi am.',
+   motion_vi:'Luc 1-2 — khong cha manh rem mong',
+   water_temp_vi:'~30C; cotton toi da 40C neu nhan cho',
+   aftercare_vi:'Treo thang. Kiem moc dinh ky. Tranh AC thoi thang rem (dong condens).'},
+  {id:'I_CURTAIN_URETHANE',name:'Urethane / vinyl / PU coated curtain',name_vi:'Rem phu urethane / vinyl / PU (tam tam)',name_ko:'우레탄·비닐·PU 코팅 커튼·샤워커튼',fabric_id:'F2',
+   precheck_vi:'Phan biet: (A) PU/urethane coated (B) vinyl/PVC/PEVA liner (C) rem vai thuong. Anh. Nhieu hang CAM may — uu tien lau tai cho.',
+   why_vi:'GIAO DUC: Lop phu PU/vinyl: may nhieu = boc/lot (IFI/coated fabric). Uu tien: xa phong TRUNG TINH + nuoc am + mien fot/sol mem. CAM dung moi manh/A2. Neu may (chi khi nhan cho): tinh te, <=40C, them khan can bang, CAM xa vai, CAM say — treo kho. Phenol CAM tren urethane; ammonia pha OK hon tren PU (medical fabric guides).',
+   fresh_path_vi:'(1) Nhan chat lieu. (2) Lau mat: D2/S1 loang + nuoc am, sol mem. (3) Vet moc: A3 1:4 + PPE, xa, kho thoang — CAM say nong. (4) Neu nhan cho may: tinh te lanh/am, it bot, vat nhe + khan. (5) Treo kho — CAM dryer. (6) Boc lot → thay / bao khach.',
+   dried_path_vi:'Khong ngam dai. Con moc: lap A3/PPE. Vinyl gia: thay dinh ky 2-3 nam neu cung/nut.',
+   motion_vi:'Luc 1-2 — lau/spot; khong cha cot',
+   water_temp_vi:'Am nhe; may (neu cho) <=40C',
+   aftercare_vi:'Treo kho thoang. Mo rem sau tam (chong moc). CAM ui/say nong.'},
+  {id:'I_DUVET_GOOSE',name:'Goose / duck down duvet',name_vi:'Chan long ngong/vit (down)',name_ko:'구스이불·거위털·다운 이불',fabric_id:'F1',
+   precheck_vi:'Doc nhan. Ra/rach = sua TRUOC. May NHO → gui may lon (7kg+/laundromat). Vo chan (duvet cover) giat thuong — loi down it giat (1-3 nam).',
+   why_vi:'GIAO DUC: Down = giu dau tu nhien. CAM dry-clean PERC (hut dau, gion). Uu tien giat nuoc: may LON front-load, nuoc LANH/<=30C, chat down-wash / trung tinh IT, THEM xa. Say thap + bong tennis/dryer ball, dung-fluff 2-3h — KHO 100% (moc). Feathered Friends/FabricCare: mild, no bleach/softener.',
+   fresh_path_vi:'(1) Kiem rach. (2) Spotting vo. (3) May lon: delicate, lanh, down detergent/S1 it, extra rinse. (4) CAM vat manh/vat tay. (5) Say thap + 2-3 bong sach; 20-30 phut dung, vo cum tay, lap den kho GIUA. (6) Phoi them neu can.',
+   dried_path_vi:'Cum uot = moc 24h — say/phoi tiep. Con mui: lap xa + say kho.',
+   motion_vi:'Luc 0-1 — khong vat xoan',
+   water_temp_vi:'Lanh / <=30C',
+   aftercare_vi:'Dung vo chan. Bao quan kho thoang. CAM bleach/xa vai.'},
+  {id:'I_DUVET_COTTON',name:'Cotton batting / synthetic fill comforter',name_vi:'Chan bong / chan poly (khong long)',name_ko:'솜이불·폴리이불·일반 충전 이불',fabric_id:'F1',
+   precheck_vi:'Phan biet long (I_DUVET_GOOSE) vs bong/poly. May nho → may lon. Kiem rach. Nhieu queen/king CAN laundromat.',
+   why_vi:'GIAO DUC: Bong/poly ben hon down nhung de von neu thieu xa/say. May lon, tinh te/bulky, 30-40C, D2/D3 IT, THEM xa (bot ton = cung). Say thap/vua + bong tennis; dung-fluff. CAM xa vai. Acme/Bedsure: drum phai du cho tumbling.',
+   fresh_path_vi:'(1) Do size vs may. (2) Spotting. (3) May: 30-40C, bot it, extra rinse. (4) Say thap + bong; 20-30 phut vo. (5) Kiem giua chan khong am. (6) VN: bat dau kho <4h.',
+   dried_path_vi:'Von: say lai + bong. Moc: S_MILDEW + PPE neu nang.',
+   motion_vi:'Luc 0 — may; spotting luc 2 sol mem',
+   water_temp_vi:'30-40C (khong soi)',
+   aftercare_vi:'Vo chan giat thuong. Chan: 2-4 lan/nam neu co vo.'},
   {id:'I_WHITE_FADE',name:'White / light fabric fade balance',name_vi:'Phuc hoi mat mau vai trang/sang (OBA)',name_ko:'흰·밝은 옷 탈색·얼룩 환 복원',fabric_id:'F1',
    precheck_vi:'CHI vai trang/sang. Chup anh. Dom trang sau tay = OBA bi pha. CAM ap dung len vai mau.',
    why_vi:'Vai trang: can bang bang tay oxy DEU TOAN BO (khong cham tung diem — de lo hon). Paste baking soda + oxy gia chi cho cho sot. Phoi nang ngan co the can bang UV — neu nhan/vai cho phep.',
@@ -1216,20 +1273,21 @@ MERGE (i)-[:MADE_OF]->(f)
 RETURN count(i) AS created""")
         _r(s, "I_items_chem_tools", """
 MATCH (cloth:Tool {id:'T_CLOTH'}), (soft:Tool {id:'T_BRUSH_SOFT'}), (ultra:Tool {id:'T_BRUSH_ULTRA'}),
-      (hard:Tool {id:'T_BRUSH_HARD'}), (shoe:Tool {id:'T_BRUSH_SHOE'}), (spray:Tool {id:'T_SPRAY'})
-WITH cloth, soft, ultra, hard, shoe, spray
-MATCH (d2:Chemical {code:'D2'}), (d3:Chemical {code:'D3'}), (a1:Chemical {code:'A1'}),
-      (a4:Chemical {code:'A4'}), (n1:Chemical {code:'N1'}), (b1:Chemical {code:'B1'}),
-      (s1:Chemical {code:'S1'})
-WITH cloth, soft, ultra, hard, shoe, spray, d2, d3, a1, a4, n1, b1, s1
+      (hard:Tool {id:'T_BRUSH_HARD'}), (shoe:Tool {id:'T_BRUSH_SHOE'}), (spray:Tool {id:'T_SPRAY'}),
+      (glove:Tool {id:'T_GLOVE_NITRILE'}), (mesh:Tool {id:'T_MESH_BAG'})
+WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh
+MATCH (d2:Chemical {code:'D2'}),(d3:Chemical {code:'D3'}),(a1:Chemical {code:'A1'}),
+      (a3:Chemical {code:'A3'}),(a4:Chemical {code:'A4'}),(n1:Chemical {code:'N1'}),
+      (b1:Chemical {code:'B1'}),(s1:Chemical {code:'S1'}),(e1:Chemical {code:'E1'})
+WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, d2, d3, a1, a3, a4, n1, b1, s1, e1
 // Full rewire Item tools/chems (drop stale wrong links)
 MATCH (i:Item)
 OPTIONAL MATCH (i)-[oldt:USES_TOOL]->()
 DELETE oldt
-WITH cloth, soft, ultra, hard, shoe, spray, d2, d3, a1, a4, n1, b1, s1, i
+WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, d2, d3, a1, a3, a4, n1, b1, s1, e1, i
 OPTIONAL MATCH (i)-[oldc:USES_CHEMICAL]->()
 DELETE oldc
-WITH cloth, soft, ultra, hard, shoe, spray, d2, d3, a1, a4, n1, b1, s1, i
+WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, d2, d3, a1, a3, a4, n1, b1, s1, e1, i
 FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_GLOVE_LEATHER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(a1))
 FOREACH (_ IN CASE WHEN i.id = 'I_LEATHER_SHOE' THEN [1] ELSE [] END |
@@ -1242,16 +1300,24 @@ FOREACH (_ IN CASE WHEN i.id IN ['I_SNEAKER','I_RUNNING_MESH','I_SNEAKER_WHITE',
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(shoe)
   MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(n1))
 FOREACH (_ IN CASE WHEN i.id = 'I_SHOE_LACES' THEN [1] ELSE [] END |
-  MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth)
+  MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(mesh)
   MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(n1))
 FOREACH (_ IN CASE WHEN i.id IN ['I_GORETEX','I_DOWN_JACKET','I_GOLF_GLOVE_SYNTH','I_FUR_FAUX'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_TOOL]->(cloth))
-FOREACH (_ IN CASE WHEN i.id IN ['I_GOLF_WEAR','I_GOLF_HAT','I_SUIT_SUMMER','I_DRESS_SHIRT'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_GOLF_WEAR','I_GOLF_HAT','I_HAT_CAP','I_SUIT_SUMMER','I_DRESS_SHIRT'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(d2))
 FOREACH (_ IN CASE WHEN i.id = 'I_DRESS_SHIRT' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_CHEMICAL]->(n1))
-FOREACH (_ IN CASE WHEN i.id = 'I_GOLF_HAT' THEN [1] ELSE [] END |
-  MERGE (i)-[:USES_TOOL]->(soft))
+FOREACH (_ IN CASE WHEN i.id IN ['I_GOLF_HAT','I_HAT_CAP'] THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_CHEMICAL]->(a3) MERGE (i)-[:USES_CHEMICAL]->(s1))
+FOREACH (_ IN CASE WHEN i.id IN ['I_CURTAIN_FABRIC','I_DUVET_COTTON'] THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(mesh)
+  MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(d3))
+FOREACH (_ IN CASE WHEN i.id = 'I_CURTAIN_URETHANE' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(glove)
+  MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(a3) MERGE (i)-[:USES_CHEMICAL]->(s1))
+FOREACH (_ IN CASE WHEN i.id = 'I_DUVET_GOOSE' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(s1) MERGE (i)-[:USES_CHEMICAL]->(d2))
 FOREACH (_ IN CASE WHEN i.id = 'I_DENIM' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(hard) MERGE (i)-[:USES_TOOL]->(cloth)
   MERGE (i)-[:USES_CHEMICAL]->(d2))
@@ -1264,6 +1330,9 @@ FOREACH (_ IN CASE WHEN i.id IN ['I_SUIT','I_AO_DAI','I_HANBOK'] THEN [1] ELSE [
   MERGE (i)-[:USES_CHEMICAL]->(s1))
 FOREACH (_ IN CASE WHEN i.id = 'I_FUR_REAL' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth))
+// PPE glove available as graph tool for chem-heavy workflows
+FOREACH (_ IN CASE WHEN i.id IN ['I_CURTAIN_URETHANE','I_DUVET_GOOSE','I_DUVET_COTTON'] THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(glove))
 RETURN count(i) AS items""")
         _r(s, "S_clear_answer_cache", """
 MATCH (c:AnswerCache)
@@ -1280,6 +1349,13 @@ RETURN size(nodes) AS cleared""")
             "RETURN s.id AS id, s.name_vi AS name_vi ORDER BY id"
         )
         log["vn_specialty_stains"] = [dict(row) for row in r4]
+        log["kb_docs"] = {
+            "note": "Graph education is seeded via /admin/seed (Neo4j). Markdown under kb/ is the human protocol mirror — run python ingest.py to refresh Chroma if used.",
+            "home": "kb/laundry_kb_v3_items_home.md",
+            "hats": "kb/laundry_kb_v3_items_clothing.md",
+            "tools_ppe": "kb/laundry_kb_v3_tools_equipment.md",
+            "bubble_tea": "kb/laundry_kb_v3_stains_tannin.md",
+        }
     _drv.close()
     return JSONResponse(log)
 

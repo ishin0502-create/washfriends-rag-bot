@@ -52,6 +52,47 @@ Trả lời điểm chủ theo chuẩn Wash Friends: rõ bước, rõ hóa chấ
 
 ---
 
+## PROTOCOL: Rèm phủ urethane / vinyl / PU (rèm phòng tắm)
+**Tên**: Rèm urethane·vinyl·PU / 우레탄·비닐·PU 코팅 커튼 / Coated & Shower Curtains
+**Độ khó**: ★★★☆☆
+**Hóa chất**: D2, S1, A3
+**Quy tắc vàng**: Ưu tiên lau tại chỗ. Giặt máy nhiều lần = bóc lớp phủ (IFI / coated fabric). CẤM dung môi mạnh. Phơi treo — CẤM sấy nóng.
+
+| Bước | Thao tác | Lực tay | Chi tiết | Checkpoint |
+|---|---|---|---|---|
+| 1 | Phân loại PU vs vinyl vs rèm vải | 0 | PU/urethane: lau trung tính. Vinyl/PEVA: tương tự, tránh acetone. Nhãn cấm máy → chỉ lau. | 📋 Nhầm rèm vải = rủi ro co/hỏng lớp |
+| 2 | Làm sạch bề mặt | 1 | Xà phòng trung tính + nước ấm + miếng fot/bàn chải mềm. Mốc: giấm 1:4 + PPE, xả, phơi thoáng. | 👃 Hết mùi ẩm / hết mốc bề mặt |
+| 3 | Nếu nhãn cho phép máy | 0 | Tinh tế ≤40°C, ít bột, thêm khăn cân bằng, vắt nhẹ. Treo khô. CẤM softener / dryer. | 👁️ Lớp phủ không bong |
+
+---
+
+## PROTOCOL: Chăn lông ngỗng / down
+**Tên**: Chăn lông ngỗng (goose/duck down) / 구스이불·다운 이불 / Goose Down Duvet
+**Độ khó**: ★★★★☆
+**Hóa chất**: S1 / down-wash
+**Quy tắc vàng**: CẤM dry-clean PERC (hút dầu tự nhiên). Máy LỚN front-load. Nước lạnh. Xả thêm. Sấy thấp + bóng tennis đến khô 100%.
+
+| Bước | Thao tác | Lực tay | Chi tiết | Checkpoint |
+|---|---|---|---|---|
+| 1 | Kiểm tra / máy đủ lớn | 0 | Vá lỗ trước. Máy nhỏ → tiệm máy lớn. Vỏ chăn giặt thường; lõi down 1–3 năm/lần. | 📋 Không đủ chỗ trống trong lồng = dừng |
+| 2 | Giặt | 0 | Delicate, ≤30°C, bột down/trung tính ÍT, extra rinse. Không vắt xoắn. | 👁️ Nước xả trong |
+| 3 | Sấy + fluff | 0 | Nhiệt thấp + 2–3 bóng sạch. Mỗi 20–30 phút dừng, bóp cục tay. Khô giữa chăn mới thôi. | 🖐️ Giữa chăn không lạnh/ẩm |
+
+---
+
+## PROTOCOL: Chăn bông & Chăn điền đầy
+**Tên**: Chăn bông & Chăn poly / 솜이불·폴리이불 / Cotton batting & Synthetic comforter
+**Độ khó**: ★★★☆☆
+**Hóa chất**: D3
+**Quy tắc vàng**: Máy lớn. Bột ÍT + xả thêm (cặn = cứng/vón). Sấy thấp + bóng tennis. Phân biệt với chăn lông (I_DUVET_GOOSE).
+
+| Bước | Thao tác | Lực tay | Chi tiết | Checkpoint |
+|---|---|---|---|---|
+| 1 | Kiểm tra trước khi giặt chăn | 0 | Kiểm tra dung lượng: chăn đôi = cần ít nhất 7kg. Nhãn: lông vũ vs độn tổng hợp/bông. | 📋 Máy nhỏ quá → gửi tiệm máy lớn |
+| 2 | Giặt + sấy (kỹ thuật bóng tennis) | 0 | Giặt: tinh tế, 30-40°C, D3 ít, thêm 1 lần xả. Sấy: nhiệt thấp, thêm 3 quả bóng tennis sạch. 20-30 phút rũ lại. Khô hoàn toàn giữa chăn. | 🖐️ Giữa chăn không lạnh = khô hoàn toàn |
+
+---
+
 ## PROTOCOL: Khăn tắm & Đồ phòng tắm
 **Tên**: Khăn tắm & Đồ phòng tắm / 수건 & 목욕 용품 / Towels & Bath Items
 **Độ khó**: ★☆☆☆☆
@@ -62,19 +103,6 @@ Trả lời điểm chủ theo chuẩn Wash Friends: rõ bước, rõ hóa chấ
 |---|---|---|---|---|
 | 1 | Tiền xử lý khăn (khử mùi) | 0 | Khăn có mùi: A3(giấm) 250ml + nước 5L. Ngâm 30 phút. Giặt bình thường. Nguyên lý: acid giấm diệt vi khuẩn gây mùi. | 👃 Mùi tươi mới phục hồi |
 | 2 | Giặt + hoàn thiện khăn | 0 | 60°C + D3. KHÔNG xả vải (hỏng khả năng thấm). Máy sấy nhiệt vừa/cao (xốp). Không có máy sấy: khô xong rũ mạnh. Sau vắt phơi ngay — VN phải bắt đầu khô trong 4 giờ. | 🖐️ Xốp dày = hoàn thiện tốt nhất |
-
----
-
-## PROTOCOL: Chăn bông & Chăn điền đầy
-**Tên**: Chăn bông & Chăn điền đầy / 이불 & 솜이불 / Duvets & Comforters
-**Độ khó**: ★★★☆☆
-**Hóa chất**: D3
-**Quy tắc vàng**: Giặt chăn = cần máy giặt dung tích lớn (7kg+). Chăn lông vũ sấy cùng 3 quả bóng tennis — chống vón cục.
-
-| Bước | Thao tác | Lực tay | Chi tiết | Checkpoint |
-|---|---|---|---|---|
-| 1 | Kiểm tra trước khi giặt chăn | 0 | Kiểm tra dung lượng: chăn đôi = cần ít nhất 7kg. Nhãn: lông vũ vs độn tổng hợp. Lông vũ: 30°C max, bột chuyên cho lông hoặc D3 ít. Độn tổng hợp: 40°C được. | 📋 Máy nhỏ quá → gửi tiệm máy lớn |
-| 2 | Giặt + sấy (kỹ thuật bóng tennis) | 0 | Giặt: tinh tế, 30-40°C, D3 ít, thêm 1 lần xả. Sấy: nhiệt thấp, thêm 3 quả bóng tennis sạch (ngăn vón cục). 5-10 phút rũ lại 1 lần. Kiểm tra khô hoàn toàn (kể cả trung tâm). | 🖐️ Giữa chăn không lạnh = khô hoàn toàn |
 
 ---
 

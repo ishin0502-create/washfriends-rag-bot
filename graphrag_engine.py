@@ -208,6 +208,11 @@ _ITEM_FABRIC_TOKEN = {
     "I_COLOR_FADE": "cotton",
     "I_WHITE_FADE": "cotton",
     "I_DRESS_SHIRT": "cotton",
+    "I_HAT_CAP": "polyester",
+    "I_CURTAIN_FABRIC": "polyester",
+    "I_CURTAIN_URETHANE": "polyester",
+    "I_DUVET_GOOSE": "cotton",
+    "I_DUVET_COTTON": "cotton",
 }
 Q_RESCUE = """
 MATCH (s:Stain)
@@ -708,6 +713,32 @@ def _infer_item_from_text(text: str) -> str:
         return "I_GOLF_SHOE"
     if golf:
         return "I_GOLF_WEAR"
+
+    # Home textiles — specific before generic
+    urethane_curtain = any(
+        k in raw for k in ("우레탄", "비닐커튼", "비닐 커튼", "샤워커튼", "샤워 커튼", "PEVA", "PVC커튼")
+    ) or "urethane" in t or "vinyl curtain" in t or "shower curtain" in t or "rem nhua" in t or "rem vinyl" in t
+    if urethane_curtain or (
+        ("커튼" in raw or "curtain" in t or "rem " in t) and any(k in raw for k in ("우레탄", "비닐", "코팅", "방수"))
+    ):
+        return "I_CURTAIN_URETHANE"
+    if any(k in raw for k in ("커튼",)) or "curtain" in t or "rem cua" in t or "rem vai" in t:
+        return "I_CURTAIN_FABRIC"
+    if any(k in raw for k in ("구스이불", "거위털", "다운이불", "오리털이불")) or "goose" in t or "down duvet" in t or "chan long" in t:
+        return "I_DUVET_GOOSE"
+    if any(k in raw for k in ("솜이불", "폴리이불", "충전 이불")) or (
+        "이불" in raw and any(k in raw for k in ("세탁", "빨래", "방법", "어떻게"))
+        and not any(k in raw for k in ("구스", "거위", "다운", "오리털"))
+    ) or "comforter" in t or "chan bong" in t:
+        return "I_DUVET_COTTON"
+
+    # Hats (non-golf)
+    if any(k in raw for k in ("야구모자", "볼캡", "모자", "캡")) or "baseball cap" in t or (
+        ("mu " in t or t.startswith("mu") or " hat" in f" {t}" or t.endswith(" hat")) and "mua" not in t
+    ):
+        if any(k in raw for k in ("가죽모자",)) or ("leather" in t and "hat" in t):
+            return "I_LEATHER_GARMENT"
+        return "I_HAT_CAP"
 
     if "등산화" in raw or "hiking" in t or "giay leo" in t or "outdoor shoe" in t:
         return "I_HIKING_SHOE"
@@ -1540,6 +1571,42 @@ def generate_response(user_message: str) -> str:
         entities["stain_id"] = ""
         entities["stain_type"] = ""
         entities["fabric_type"] = entities.get("fabric_type") or "cotton"
+    elif any(
+        k in user_message
+        for k in ("우레탄 커튼", "비닐 커튼", "샤워커튼", "샤워 커튼", "우레탄커튼", "비닐커튼")
+    ) or "urethane" in raw_n or "shower curtain" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_CURTAIN_URETHANE"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("커튼",)) and any(
+        k in user_message for k in ("세탁", "빨래", "방법", "관리", "어떻게", "청소")
+    ):
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_CURTAIN_FABRIC"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("구스이불", "거위털이불", "다운이불", "오리털이불")) or "goose duvet" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_DUVET_GOOSE"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("솜이불", "폴리이불")) or (
+        "이불" in user_message and any(k in user_message for k in ("세탁", "빨래", "방법", "어떻게"))
+        and not any(k in user_message for k in ("구스", "거위", "다운", "오리털"))
+    ):
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_DUVET_COTTON"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("야구모자", "볼캡")) or (
+        any(k in user_message for k in ("모자", "캡")) and any(k in user_message for k in ("세탁", "빨래", "빨", "청소", "방법", "어떻게"))
+        and "골프" not in user_message
+    ):
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_HAT_CAP"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
     elif any(k in user_message for k in ("목때", "칼라때", "깃때")) or "vong co" in raw_n or "collar stain" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_COLLAR_STAIN"
@@ -1615,6 +1682,11 @@ def generate_response(user_message: str) -> str:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_KIMCHI"
         entities["stain_type"] = "kim chi"
+    elif any(k in user_message for k in ("버블티", "밀크티", "타피오카", "버블 티")) or "bubble tea" in raw_n or "tra sua" in raw_n or "boba" in raw_n or "milk tea" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_BUBBLE_TEA"
+        entities["stain_type"] = "tra sua tran chau"
+        entities.pop("item_id", None)
     elif any(k in user_message for k in ("레드와인", "적포도주")) or "ruou vang do" in raw_n or "red wine" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_RED_WINE"

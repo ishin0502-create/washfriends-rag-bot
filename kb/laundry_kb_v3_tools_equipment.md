@@ -109,7 +109,8 @@ Trả lời điểm chủ theo chuẩn Wash Friends: rõ bước, rõ hóa chấ
 
 | Bước | Thao tác | Lực tay | Chi tiết | Checkpoint |
 |---|---|---|---|---|
-| 1 | Chọn găng tay theo hóa chất | 0 | Găng nitrile (xanh): D1, A1, A2, B2 dung môi hữu cơ. Găng latex: D2, D3, E1-E3, chất giặt thông thường. Găng cao su dày: acid mạnh, xử lý B2. Chú ý: tẩy trắng + găng mỏng = găng bị hỏng. | 📋 Kiểm tra găng = trước mỗi lần dùng |
+| 1 | Chọn găng tay theo hóa chất | 0 | Găng nitrile (xanh) T_GLOVE_NITRILE: D1, A1, A2, B2, X2 acid/dung môi. Găng latex: D2, D3, E1-E3. Găng cao su dày: acid mạnh, B2. Tẩy + găng mỏng = hỏng găng. X2/oxalic = BẮT BUỘC nitrile. | 📋 Kiểm tra găng = trước mỗi lần dùng |
+| 2 | PPE tối thiểu khi hóa chất mạnh | 0 | Găng + thông gió. Phun A3/B1: kính nếu có. Mốc ngoài trời + khẩu trang khi chải bào tử. Không trộn B2+acid/ammonia. | 📋 PPE trước khi mở nắp hóa chất |
 
 ---
 

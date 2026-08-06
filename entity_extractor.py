@@ -83,6 +83,10 @@ Generic 화장품/makeup without type → prefer S_LIPSTICK if lip color; else S
 이염 / dye transfer / mau lan = S_DYE_TRANSFER (not color fade restore).
 와이셔츠 누렇/황변/변색 = S_SHIRT_YELLOW (not only armpit sweat).
 와이셔츠 세탁 방법(얼룩·황변 미지정) = item I_DRESS_SHIRT (일반 세탁·관리), NOT S_SHIRT_YELLOW.
+버블티/밀크티/타피오카 = S_BUBBLE_TEA.
+우레탄·비닐·샤워 커튼 = I_CURTAIN_URETHANE. 일반 커튼 세탁 = I_CURTAIN_FABRIC.
+구스/거위/다운 이불 = I_DUVET_GOOSE. 솜이불/폴리이불 = I_DUVET_COTTON.
+모자/캡 세탁(비골프) = I_HAT_CAP. 골프모자 = I_GOLF_HAT.
 If the user names a specific stain, intent MUST be "treatment" (not mystery).
 
 Group IDs: G1=protein, G2=oil, G3=tannin, G4=dye, G5=complex
