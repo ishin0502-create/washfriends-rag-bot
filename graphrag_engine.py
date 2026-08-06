@@ -106,7 +106,8 @@ RETURN
     .contains_protein, .contains_tannin, .contains_oil, .contains_dye,
     .water_spreads, .precheck_vi, .motion_vi, .water_temp_vi, .aftercare_vi,
     .why_vi, .fresh_path_vi, .dried_path_vi,
-    group: g.name_vi, group_id: g.id
+    group: g.name_vi, group_id: g.id,
+    group_care_order_vi: g.care_order_vi, group_care_order_ko: g.care_order_ko
   } AS stain_context,
   CASE WHEN f IS NULL THEN null ELSE f {
     .id, .name, .name_vi, .max_temp, .can_bleach, .enzyme_safe, .acid_safe,
@@ -886,7 +887,11 @@ QUY TẮC TRẢ LỜI:
    (3) Lực + hướng
    (4) Hóa chất — xem quy tắc HÓA CHẤT bên dưới
    (5) Nhiệt độ nước + max_temp vải
-   (6) Sau xử lý — kiểm tra TRƯỚC sấy/ủi
+   (6) Sau xử lý / hoàn thiện (BẮT BUỘC đủ ý, ngắn gọn):
+       - Kiểm tra vết CÒN LẠI dưới ánh sáng mạnh TRƯỚC khi sấy/ủi; còn → xử lý lại, CẤM sấy khóa vết
+       - Phơi bóng mát, thoáng khí; tránh nắng gắt (phai màu) trừ khi dữ liệu cho phép
+       - Nếu có fabric dry_hint_vi / iron_hint_vi → nhắc 1 câu sấy/ủi đúng vải (không bịa nhiệt độ)
+       - Dùng aftercare_vi nếu có
    Nếu có item_context: đây là chăm sóc món (giày/túi/áo phao/Gore-Tex…) — vẫn dùng 1)-6), không đổi giọng.
 6. WF_SOFT / WF_FRAG chỉ khi đúng when_use_vi
 7. CẤM mẹo dân gian, thương hiệu ngoài, viện/web/AI/PDF
@@ -904,6 +909,11 @@ HÓA CHẤT (bắt buộc):
 - Pha loãng: CHỈ dùng dilution_ko (Hàn) hoặc dilution_vi (Việt) nếu có.
   Không có dilution_* → "병 라벨·본사 안내 따름" / "theo hướng dẫn trên chai / kho WF" — CẤM bịa tỷ lệ (vd 1:4 cho S1).
   Hàn tự nhiên: "식초 1 : 물 4". Việt: "1 phần giấm + 4 phần nước". CẤM "1부분…4부분".
+- THỨ TỰ theo tính chất vết (KHÔNG pha cocktail "detergent A+B+C" kiểu 2:1:1 / 1:2:1):
+  Protein → nước lạnh + enzyme (nếu vải cho). Dầu → hút bột rồi surfactant. Tannin/màu → acid nhẹ rồi oxy (nếu vải cho).
+  Vết phức hợp: làm TỪNG BƯỚC theo fresh_path / care_order nhóm, XẢ giữa bước — không đổ chung một chậu.
+  Chỉ dùng paste tỷ lệ khi ĐỒ THỊ / fresh_path ghi rõ; còn lại CẤM bịa tỷ lệ trộn.
+  Test góc khuất trước khi xử lý cả món. Tuyệt đối không trộn chất trong never_mix_alerts (vd ammonia + javel).
 - B1 = thuốc tẩy oxy (KHÔNG phải "세제 axit"). A3 = giấm / axit nhẹ.
 - Vải lụa/len HOẶC chemical.safe_on_silk/safe_on_wool = false HOẶC fabric enzyme_safe/acid_safe/can_bleach = false:
   → KHÔNG khuyến nghị hóa chất không an toàn. Ưu tiên nước giặt trung tính Wash Friends + nước lạnh + lực nhẹ.
@@ -937,7 +947,11 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "실크·울이면 비안전 약품 추천 금지, 워시프렌즈 중성세제 우선. "
             "B1=산소계 표백제(산성 세제 아님). "
             "why/신선·굳음 내용만 쓰고 필드명 출력 금지. 민간요법·다른 오염법 금지. "
-            "1)오염·원단 2)도구(name_ko) 3)힘·방향 4)약품 5)수온 6)건조 전 확인."
+            "1)오염·원단 2)도구(name_ko) 3)힘·방향 4)약품 5)수온 "
+            "6)후관리: 강한 빛에서 잔존 확인→남으면 재처리(건조 금지), 그늘·통풍 건조, "
+            "직사광선 피하기(색바램), fabric dry_hint/iron_hint 있으면 한 줄로 건조·다림질. "
+            "약 혼합: A/B/C 칵테일 비율(2:1:1 등) 지어내기 금지. 성분별 순차 처리+중간 헹굼. "
+            "구석 테스트 후 전체. never_mix는 절대 준수."
         )
     else:
         lang_rule = (
@@ -949,7 +963,10 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "Lụa/len: không khuyến nghị chất bị chặn; ưu tiên nước giặt trung tính Wash Friends. "
             "B1 = tẩy oxy (không gọi chất tẩy axit). "
             "Không in tên field. Không mẹo dân gian. "
-            "1)-6) nhận diện / dụng cụ / lực / hóa chất / nhiệt độ / sau xử lý."
+            "1)-6) nhận diện / dụng cụ / lực / hóa chất / nhiệt độ / "
+            "sau xử lý: kiểm tra ánh sáng mạnh → còn vết thì làm lại (cấm sấy), phơi bóng mát thoáng, "
+            "tránh nắng gắt, nhắc dry_hint/iron_hint nếu có. "
+            "CẤM bịa tỷ lệ trộn detergent A+B+C; xử lý tuần tự theo tính chất + xả giữa bước; test góc."
         )
 
     return f"""Câu hỏi từ chủ cửa hàng: {user_message}

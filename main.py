@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-specialty-v3",
+            "build": "2026-08-06-aftercare-v1",
             "checks": checks,
         },
         status_code=200,
@@ -221,11 +221,21 @@ async def seed_database(token: str = ""):
         log["before"] = {row["l"]: row["c"] for row in r}
         _r(s, "A_groups", """
 UNWIND [
-  {id:'G1',name:'Protein',name_vi:'Protein',description:'Blood egg milk vomit urine - cold water + enzyme',contains_protein:true,contains_tannin:false,contains_oil:false,contains_dye:false},
-  {id:'G2',name:'Oil',name_vi:'Dau mo',description:'Cooking oil butter engine oil cosmetics - absorbent then surfactant',contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:false},
-  {id:'G3',name:'Tannin',name_vi:'Tannin',description:'Coffee tea wine juice sauces - acid then oxidizer',contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:false},
-  {id:'G4',name:'Dye',name_vi:'Thuoc nhuom',description:'Curry turmeric mustard ink - UV and/or solvent',contains_protein:false,contains_tannin:false,contains_oil:false,contains_dye:true},
-  {id:'G5',name:'Complex',name_vi:'Phuc hop',description:'Fish sauce BBQ sweat - multiple components',contains_protein:true,contains_tannin:true,contains_oil:true,contains_dye:false}
+  {id:'G1',name:'Protein',name_vi:'Protein',description:'Blood egg milk vomit urine - cold water + enzyme',contains_protein:true,contains_tannin:false,contains_oil:false,contains_dye:false,
+   care_order_vi:'Thu tu: nuoc LANH → enzyme (neu vai cho phep) → xa ky. CAM nuoc nong dau. CAM tron enzyme+tay chlorine. Test goc truoc.',
+   care_order_ko:'순서: 찬물 → 효소(원단 허용 시) → 충분히 헹굼. 처음부터 온수 금지. 효소+염소계 표백 혼합 금지. 구석 테스트.'},
+  {id:'G2',name:'Oil',name_vi:'Dau mo',description:'Cooking oil butter engine oil cosmetics - absorbent then surfactant',contains_protein:false,contains_tannin:false,contains_oil:true,contains_dye:false,
+   care_order_vi:'Thu tu: hut bot (N3) → surfactant/dung moi (thong gio) → giat. CAM say khi con nhon. Khong pha cocktail ty le bi a.',
+   care_order_ko:'순서: 흡착 가루 → 계면활성/탈지(환기) → 세탁. 기름 남은 채 건조 금지. 임의 혼합 비율 금지.'},
+  {id:'G3',name:'Tannin',name_vi:'Tannin',description:'Coffee tea wine juice sauces - acid then oxidizer',contains_protein:false,contains_tannin:true,contains_oil:false,contains_dye:false,
+   care_order_vi:'Thu tu: xu ly SOM + lanh → acid nhe (A3 neu vai cho) → xa → oxy bleach neu con mau (khong len/lua). Test goc.',
+   care_order_ko:'순서: 빨리·찬물 → 약한 산(원단 허용 시) → 헹굼 → 남은 색만 산소계(실크·울 금지). 구석 테스트.'},
+  {id:'G4',name:'Dye',name_vi:'Thuoc nhuom',description:'Curry turmeric mustard ink - UV and/or solvent',contains_protein:false,contains_tannin:false,contains_oil:false,contains_dye:true,
+   care_order_vi:'Thu tu: test phai mau → dung moi/cham mat trai → giat. CAM cha lan. CAM say khi con mau (nhiet khoa mau).',
+   care_order_ko:'순서: 이염 테스트 → 용제·뒷면 찍기 → 세탁. 문질러 번지게 금지. 색 남은 채 건조·열 금지.'},
+  {id:'G5',name:'Complex',name_vi:'Phuc hop',description:'Fish sauce BBQ sweat - multiple components',contains_protein:true,contains_tannin:true,contains_oil:true,contains_dye:false,
+   care_order_vi:'Vet phuc hop: XU LY TUNG THANH PHAN theo fresh_path, XA giua buoc. CAM do chung A+B+C ty le 2:1:1. CAM tron never_mix.',
+   care_order_ko:'복합 얼룩: fresh_path대로 성분별 순차 처리, 단계마다 헹굼. A+B+C 2:1:1 혼합 금지. never_mix 절대 준수.'}
 ] AS g MERGE (n:StainGroup {id:g.id}) SET n += g RETURN count(n) AS created""")
         _r(s, "B_forces", """
 UNWIND [
@@ -403,28 +413,52 @@ MATCH (s:Stain) WHERE s.contains_protein = true
 SET s.precheck_vi = coalesce(s.precheck_vi, 'Xac nhan vai + vet tuoi/kho + KHONG dung nuoc nong dau'),
     s.motion_vi = coalesce(s.motion_vi, 'Tham/cao tu NGOAI vao TAM — khong cha lan'),
     s.water_temp_vi = coalesce(s.water_temp_vi, 'Nuoc LANH (duoi 40C). Enzyme toi uu ~30-37C sau khi da an toan'),
-    s.aftercare_vi = coalesce(s.aftercare_vi, 'Kiem tra anh sang manh TRUOC khi say/ui. Con vet → xu ly lai, khong say')
+    s.aftercare_vi = coalesce(s.aftercare_vi,
+      'Anh sang manh: con vet → xu ly lai, CAM say. Phoi bong mat thoang; tranh nang gay (phai mau). Ui theo iron_hint vai neu can.')
 RETURN count(s) AS updated""")
         _r(s, "U_stain_ops_oil", """
 MATCH (s:Stain) WHERE s.contains_oil = true AND coalesce(s.contains_protein,false) = false
 SET s.precheck_vi = coalesce(s.precheck_vi, 'Xac nhan vai + hut dau truoc (N3) — khong say khi con dau'),
     s.motion_vi = coalesce(s.motion_vi, 'Hut bot → xit/tham mat trai → cha nhe vong tron ngoai→trong'),
     s.water_temp_vi = coalesce(s.water_temp_vi, 'Am 30-40C sau khi da tay dau; cotton co the am hon neu nhan cho phep'),
-    s.aftercare_vi = coalesce(s.aftercare_vi, 'Het cam giac nhon + kiem tra truoc say. Con loang → lap D1/D2')
+    s.aftercare_vi = coalesce(s.aftercare_vi,
+      'Het cam giac nhon + kiem tra truoc say. Con loang → lap. Phoi thoang bong mat; tranh nang gay. Ui theo vai.')
 RETURN count(s) AS updated""")
         _r(s, "U_stain_ops_tannin", """
 MATCH (s:Stain) WHERE s.contains_tannin = true AND coalesce(s.contains_protein,false) = false AND coalesce(s.contains_oil,false) = false
 SET s.precheck_vi = coalesce(s.precheck_vi, 'Xu ly SOM + nuoc lanh; test goc khuat truoc acid/tay'),
     s.motion_vi = coalesce(s.motion_vi, 'Tham mat trai, ngoai→trong — khong cha lan mau'),
     s.water_temp_vi = coalesce(s.water_temp_vi, 'Nuoc lanh luc dau; sau A3 co the giat am nhe neu vai cho phep'),
-    s.aftercare_vi = coalesce(s.aftercare_vi, 'Kiem tra mau con lai truoc say; B1 neu con mau (khong len/lua)')
+    s.aftercare_vi = coalesce(s.aftercare_vi,
+      'Kiem tra mau con lai truoc say; con → lap (B1 neu vai cho, khong len/lua). Phoi bong mat thoang, tranh nang gay.')
 RETURN count(s) AS updated""")
         _r(s, "U_stain_ops_dye", """
 MATCH (s:Stain) WHERE s.contains_dye = true AND coalesce(s.contains_oil,false) = false AND coalesce(s.contains_protein,false) = false AND coalesce(s.contains_tannin,false) = false
 SET s.precheck_vi = coalesce(s.precheck_vi, 'Test phai mau o goc khuat; xac nhan muc but hay but long'),
     s.motion_vi = coalesce(s.motion_vi, 'CHAM/THAM tu mat trai — TUYET DOI khong cha lan'),
     s.water_temp_vi = coalesce(s.water_temp_vi, 'Phong nhiet; giat lanh/am nhe sau khi het muc'),
-    s.aftercare_vi = coalesce(s.aftercare_vi, 'Kiem tra ky truoc say — nhiet khoa mau muc')
+    s.aftercare_vi = coalesce(s.aftercare_vi,
+      'Kiem tra ky truoc say — nhiet khoa mau. Phoi bong mat thoang; tranh nang gay. Ui thap theo vai.')
+RETURN count(s) AS updated""")
+        # Enrich short/default aftercare already stored (additive; keeps stain-specific overrides that mention specialty paths)
+        _r(s, "W_aftercare_enrich", """
+MATCH (s:Stain)
+WHERE s.aftercare_vi IN [
+  'Kiem tra anh sang manh TRUOC khi say/ui. Con vet → xu ly lai, khong say',
+  'Het cam giac nhon + kiem tra truoc say. Con loang → lap D1/D2',
+  'Kiem tra mau con lai truoc say; B1 neu con mau (khong len/lua)',
+  'Kiem tra ky truoc say — nhiet khoa mau muc'
+]
+SET s.aftercare_vi = CASE
+  WHEN s.contains_oil = true AND coalesce(s.contains_protein,false) = false
+    THEN 'Het nhon + anh sang manh truoc say. Con → lap. Phoi thoang bong mat; tranh nang gay (phai mau). Ui theo iron_hint vai.'
+  WHEN s.contains_tannin = true AND coalesce(s.contains_protein,false) = false AND coalesce(s.contains_oil,false) = false
+    THEN 'Anh sang manh: con mau → lap (oxy chi neu vai cho, khong silk/wool). Phoi bong mat thoang; tranh nang gay.'
+  WHEN s.contains_dye = true
+    THEN 'Anh sang manh truoc say — nhiet khoa mau. Phoi bong mat thoang; tranh nang gay. Ui thap theo vai.'
+  ELSE
+    'Anh sang manh: con vet → xu ly lai, CAM say. Phoi bong mat thoang; tranh nang gay. Ui theo iron_hint vai neu can.'
+END
 RETURN count(s) AS updated""")
         _r(s, "U_stain_ops_overrides", """
 UNWIND [
