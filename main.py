@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-polish-v1",
+            "build": "2026-08-06-polish-v2",
             "checks": checks,
         },
         status_code=200,
@@ -729,9 +729,9 @@ UNWIND [
    aftercare_vi:'Moc go rong vai. Tui vai thoang (khong nilon kin). Nghi giua lan mac. CAM say may.'},
   {id:'I_SUIT_SUMMER',name:'Summer linen/cotton suit',name_vi:'Suit he linen/cotton mong',name_ko:'여름 정장(린넨·코튼 얇은)',fabric_id:'F5',
    precheck_vi:'Phan biet linen/cotton vs len. Nhan truoc. Co lot/canvas → xu ly nhu suit dong neu khong chac.',
-   why_vi:'Linen/cotton: de nhao, co the tay/may nhe NEU khong canvas phuc tap. Van uu tien steamer + ui khi am. Cam nhiet cao say.',
-   fresh_path_vi:'Spotting nhe → tay/may tinh te ~30C chat trung tinh (neu nhan cho phep) → xa ky → phoi/treo → ui khi am (linen can ui). Co lot phuc tap → dry-clean.',
-   dried_path_vi:'Vet kho: ngam ngan + spotting, khong cha manh. Khong het → chuyen.',
+   why_vi:'Linen/cotton: de nhao. Chi chat giat TRUNG TINH / nhe — CAM bot dam. Tay/may tinh te neu khong canvas. Uu tien steamer + ui khi am.',
+   fresh_path_vi:'Spotting nhe → tay/may tinh te ~30C chat TRUNG TINH (neu nhan cho phep) → xa ky → phoi/treo → ui khi am. Co lot phuc tap → dry-clean. CAM bot giat manh.',
+   dried_path_vi:'Vet kho: ngam ngan + spotting trung tinh, khong cha manh. Khong het → chuyen.',
    motion_vi:'Luc 2 — nhe, tui luoi neu may',
    water_temp_vi:'~30C; khong nong',
    aftercare_vi:'Ui am. Treo moc rong. CAM say nong.'},
@@ -769,9 +769,9 @@ UNWIND [
    aftercare_vi:'Kho han moi mang. CAM say nong. Bao quan kho.'},
   {id:'I_GOLF_HAT',name:'Golf / sports cap',name_vi:'Mu golf / mu luoi trai',name_ko:'골프모자·캡',fabric_id:'F2',
    precheck_vi:'Giu form vanh. CAM may/say (hong vanh).',
-   why_vi:'Mu: tay + giu hinh. Spotting mo hoi vanh truoc.',
-   fresh_path_vi:'Spotting vanh (chat nhe) → tay lanh + chai mem → nhet bat/bong giu form → phoi bong mat.',
-   dried_path_vi:'Lap spotting vanh. Khong may.',
+   why_vi:'Mu: tay + giu hinh. Spotting mo hoi vanh truoc. Chi chat giat NHE/trung tinh — CAM bot dam.',
+   fresh_path_vi:'Spotting vanh (chat nhe/trung tinh) → tay lanh + chai mem → nhet bat/bong giu form → phoi bong mat. CAM bot giat manh.',
+   dried_path_vi:'Lap spotting vanh bang chat nhe. Khong may.',
    motion_vi:'Luc 2 — chai mem, khong vo vanh',
    water_temp_vi:'Lanh. CHI tay',
    aftercare_vi:'Giu form den kho. CAM say may.'},
@@ -832,8 +832,8 @@ MATCH (cloth:Tool {id:'T_CLOTH'}), (soft:Tool {id:'T_BRUSH_SOFT'}), (ultra:Tool 
 WITH cloth, soft, ultra, hard, shoe
 MATCH (d2:Chemical {code:'D2'}), (d3:Chemical {code:'D3'}), (a1:Chemical {code:'A1'}), (n1:Chemical {code:'N1'})
 WITH cloth, soft, ultra, hard, shoe, d2, d3, a1, n1
-// Drop stale chem links before re-wire (golf glove must not keep A1 alcohol)
-MATCH (bad:Item) WHERE bad.id IN ['I_GOLF_GLOVE_LEATHER','I_GOLF_WEAR']
+// Drop stale chem links before re-wire (no heavy D3 on golf hat / summer suit / glove)
+MATCH (bad:Item) WHERE bad.id IN ['I_GOLF_GLOVE_LEATHER','I_GOLF_WEAR','I_GOLF_HAT','I_SUIT_SUMMER']
 OPTIONAL MATCH (bad)-[oldc:USES_CHEMICAL]->()
 DELETE oldc
 WITH cloth, soft, ultra, hard, shoe, d2, d3, a1, n1
@@ -850,10 +850,12 @@ FOREACH (_ IN CASE WHEN i.id IN ['I_SNEAKER','I_RUNNING_MESH','I_SNEAKER_WHITE',
 FOREACH (_ IN CASE WHEN i.id = 'I_SHOE_LACES' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth)
   MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_CHEMICAL]->(n1))
-FOREACH (_ IN CASE WHEN i.id IN ['I_GORETEX','I_DOWN_JACKET','I_GOLF_HAT','I_GOLF_GLOVE_SYNTH','I_FUR_FAUX','I_SUIT_SUMMER'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_GORETEX','I_DOWN_JACKET','I_GOLF_GLOVE_SYNTH','I_FUR_FAUX'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_TOOL]->(cloth))
-FOREACH (_ IN CASE WHEN i.id = 'I_GOLF_WEAR' THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_GOLF_WEAR','I_GOLF_HAT','I_SUIT_SUMMER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(d2))
+FOREACH (_ IN CASE WHEN i.id = 'I_GOLF_HAT' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(soft))
 FOREACH (_ IN CASE WHEN i.id IN ['I_SUIT','I_AO_DAI','I_HANBOK'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(ultra) MERGE (i)-[:USES_TOOL]->(cloth))
 FOREACH (_ IN CASE WHEN i.id = 'I_FUR_REAL' THEN [1] ELSE [] END |
