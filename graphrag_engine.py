@@ -1540,6 +1540,10 @@ def generate_response(user_message: str) -> str:
             k in user_message for k in ("마른", "굳은", "오래된")
         ) or "mau kho" in raw_n or "dried" in raw_n else "S_BLOOD_FRESH"
         entities["stain_type"] = "mau"
+    elif any(k in user_message for k in ("엔진오일", "기계유", "모터오일")) or "engine oil" in raw_n or "dau dong co" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_ENGINE_OIL"
+        entities["stain_type"] = "dau dong co"
     elif any(k in user_message for k in ("식용유", "식용 오일")) or "dau an" in raw_n or "cooking oil" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_COOKING_OIL"
@@ -1564,6 +1568,64 @@ def generate_response(user_message: str) -> str:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_KIMCHI"
         entities["stain_type"] = "kim chi"
+    elif any(k in user_message for k in ("레드와인", "적포도주")) or "ruou vang do" in raw_n or "red wine" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_RED_WINE"
+        entities["stain_type"] = "ruou vang do"
+    elif any(k in user_message for k in ("화이트와인", "맥주", "백포도주")) or "ruou vang trang" in raw_n or "white wine" in raw_n or (
+        " bia" in f" {raw_n}" or raw_n.startswith("bia") or "beer" in raw_n
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_WHITE_WINE_BEER"
+        entities["stain_type"] = "ruou vang trang"
+    elif any(k in user_message for k in ("콜라", "사이다", "탄산음료", "탄산")) or "nuoc ngot" in raw_n or "soft drink" in raw_n or "cola" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_SOFT_DRINK"
+        entities["stain_type"] = "nuoc ngot"
+    elif any(k in user_message for k in ("녹차", "홍차", "우롱차", "차 얼룩", "찻물")) or (
+        ("차" in user_message and any(k in user_message for k in ("묻", "얼룩", "쏟", "세탁")))
+    ) or (("tra " in raw_n or raw_n.startswith("tra") or " tea" in f" {raw_n}" or raw_n.endswith(" tea")) and "ca phe" not in raw_n):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_TEA"
+        entities["stain_type"] = "nuoc tra"
+    elif any(k in user_message for k in ("초콜릿", "초코")) or "socola" in raw_n or "chocolate" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_CHOCOLATE"
+        entities["stain_type"] = "socola"
+    elif any(k in user_message for k in ("머스터드", "겨자")) or "mu-ta-det" in raw_n or "mustard" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_MUSTARD"
+        entities["stain_type"] = "mu-ta-det"
+    elif any(k in user_message for k in ("껌", "풍선껌")) or "keo cao su" in raw_n or "chewing gum" in raw_n or (
+        "gum" in raw_n and "glue" not in raw_n
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_GUM"
+        entities["stain_type"] = "keo cao su"
+    elif any(k in user_message for k in ("촛농", "양초", "촛물")) or "sap nen" in raw_n or "candle wax" in raw_n or (
+        "wax" in raw_n and "polish" not in raw_n and "ear" not in raw_n
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_CANDLE_WAX"
+        entities["stain_type"] = "sap nen"
+    elif any(k in user_message for k in ("매니큐어", "네일폴리시", "네일 ")) or "son mong" in raw_n or "nail polish" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_NAIL_POLISH"
+        entities["stain_type"] = "son mong"
+    elif any(k in user_message for k in ("데오드란트", "땀억제제", "데오 ")) or "khu mui" in raw_n or "deodorant" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_DEODORANT"
+        entities["stain_type"] = "vet khu mui"
+    elif any(k in user_message for k in ("향수",)) or "nuoc hoa" in raw_n or "perfume" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_PERFUME"
+        entities["stain_type"] = "nuoc hoa"
+    elif any(k in user_message for k in ("계란", "달걀")) or "trung ga" in raw_n or "long trang" in raw_n or (
+        "egg" in raw_n and "eggplant" not in raw_n
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_EGG"
+        entities["stain_type"] = "trung"
     elif any(
         k in user_message
         for k in ("라떼", "우유커피", "카페라떼", "카푸치노", "밀크커피")

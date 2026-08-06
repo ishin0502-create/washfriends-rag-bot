@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-edu-s3-rich-thin",
+            "build": "2026-08-06-edu-s4-nameko-routes",
             "checks": checks,
         },
         status_code=200,
@@ -936,6 +936,37 @@ UNWIND [
 ] AS x
 MATCH (s:Stain {id:x.id})
 SET s.name_ko = x.name_ko, s.precheck_vi = coalesce(x.precheck_vi, s.precheck_vi)
+RETURN count(s) AS updated""")
+        _r(s, "Z4_name_ko_remaining", """
+UNWIND [
+  {id:'S_EGG',name_ko:'계란·달걀 얼룩'},
+  {id:'S_MILK',name_ko:'우유·유제품 얼룩'},
+  {id:'S_VOMIT',name_ko:'토·구토물'},
+  {id:'S_URINE',name_ko:'소변·오줌 얼룩'},
+  {id:'S_FECES',name_ko:'대변·분변 오염'},
+  {id:'S_BABY_FORMULA',name_ko:'분유 얼룩'},
+  {id:'S_GRASS',name_ko:'잔디·풀물'},
+  {id:'S_MUD',name_ko:'진흙·흙탕물'},
+  {id:'S_CHOCOLATE',name_ko:'초콜릿'},
+  {id:'S_BUTTER',name_ko:'버터'},
+  {id:'S_ENGINE_OIL',name_ko:'엔진오일·기계유'},
+  {id:'S_SHOE_POLISH',name_ko:'구두약'},
+  {id:'S_CANDLE_WAX',name_ko:'양초·촛농'},
+  {id:'S_GUM',name_ko:'껌'},
+  {id:'S_DEODORANT',name_ko:'데오드란트·땀억제제 얼룩'},
+  {id:'S_PAINT_LATEX',name_ko:'수성 페인트'},
+  {id:'S_TEA',name_ko:'차·녹차·홍차'},
+  {id:'S_RED_WINE',name_ko:'레드와인'},
+  {id:'S_WHITE_WINE_BEER',name_ko:'화이트와인·맥주'},
+  {id:'S_SOFT_DRINK',name_ko:'탄산음료·콜라'},
+  {id:'S_MUSTARD',name_ko:'머스터드·겨자'},
+  {id:'S_GLUE',name_ko:'접착제·본드'},
+  {id:'S_NAIL_POLISH',name_ko:'매니큐어·네일'},
+  {id:'S_SWEAT_FRESH',name_ko:'땀(신선)·땀냄새'},
+  {id:'S_PERFUME',name_ko:'향수·알코올 스프레이'}
+] AS x
+MATCH (s:Stain {id:x.id})
+SET s.name_ko = coalesce(s.name_ko, x.name_ko)
 RETURN count(s) AS updated""")
         # Priority 1–2 item care — same field names as stain paths (owner 1)-6) flow)
         _r(s, "I_items_care", """
