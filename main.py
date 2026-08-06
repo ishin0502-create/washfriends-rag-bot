@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-polish-v2",
+            "build": "2026-08-06-fade-v1",
             "checks": checks,
         },
         status_code=200,
@@ -814,7 +814,31 @@ UNWIND [
    dried_path_vi:'Lap. Khong say may. Bao khach neu keo long.',
    motion_vi:'Than sol mem; de sol cung nhe',
    water_temp_vi:'<=30C',
-   aftercare_vi:'Kho han. CAM say nong. Bao quan kho.'}
+   aftercare_vi:'Kho han. CAM say nong. Bao quan kho.'},
+  {id:'I_DENIM',name:'Denim jeans / jacket / skirt',name_vi:'Do denim (quan jean / ao / vay)',name_ko:'청바지·청자켓·청치마(데님)',fabric_id:'F6',
+   precheck_vi:'Denim indigo: lan dau ra mau = BINH THUONG. Giat RIENG / mau tuong tu — CAM chung do trang. Lat trai. Chup anh neu khach kieu phai mau.',
+   why_vi:'Denim: bao mau bang lat trai + nuoc lanh/~30C + bot it. Phoi bong mat (nang gay = phai mau nhanh). Van bac theo thoi gian = dac trung, khong phai loi giat neu da bao khach.',
+   fresh_path_vi:'Lat trai → 30C/lanh, chat giat it → giat rieng 2-3 lan dau → han che say may (co) → phoi bong mat. Vet: spotting nhe, khong tay chlorine.',
+   dried_path_vi:'Vet kho: spotting + giat nhe. Phai mau/bac mau do nang/tuoi: giai thich dac trung hoac chuyen nhuom/but mau — khong hao danh 100%. CAM meo con+dau+say.',
+   motion_vi:'Luc 2-3 — sol mem/cung nhe tuy cho',
+   water_temp_vi:'Lanh / ~30C',
+   aftercare_vi:'Phoi bong mat thoang. Tranh nang gay. CAM giat chung trang. Bao khach lan dau ra mau.'},
+  {id:'I_COLOR_FADE',name:'Faded colored garment restore',name_vi:'Phuc hoi mat mau / phai mau (vai mau)',name_ko:'유색 옷 색바램·탈색 복원',fabric_id:'F1',
+   precheck_vi:'Chup anh + do dien tich phai mau. Phan biet: (a) UV/thoi gian (b) tay hoa chat pha mau (c) loang mau. Thong bao: thuoc nhuom bi pha = kho/khong phuc hoi 100%.',
+   why_vi:'Vai mau mat mau: CAM meo ethanol+dau+may say (khong an toan, tam thoi, de hong). Huong dung: nho → but mau vai (noi ro tam thoi). Vua/lon → gui nhuom lai chuyen / giai thich + boi thuong hop ly. Khong xu ly them bang tay manh.',
+   fresh_path_vi:'(1) Anh + dong y khach. (2) Nho (<= dong xu): but mau vai phu hop → co dinh nhiet — NO RO co the phai khi giat. (3) Vua/lon: chuyen co so nhuom, khong cam ket khop mau 100%. (4) CAM tron con+dau roi say may.',
+   dried_path_vi:'Da xu ly sai (tay/oxy len mau): dung lai, chup anh, tu van nhuom/boi thuong. Khong lap tay.',
+   motion_vi:'Luc 1 — chi cham but mau neu chon phuong an nho',
+   water_temp_vi:'Khong giat tay mau tren cho phai; theo nhan neu chi cham soc',
+   aftercare_vi:'Ghi ro gioi han phuc hoi. Phoi bong mat sau. Khuyen khach tranh nang de giam phai tiep.'},
+  {id:'I_WHITE_FADE',name:'White / light fabric fade balance',name_vi:'Phuc hoi mat mau vai trang/sang (OBA)',name_ko:'흰·밝은 옷 탈색·얼룩 환 복원',fabric_id:'F1',
+   precheck_vi:'CHI vai trang/sang. Chup anh. Dom trang sau tay = OBA bi pha. CAM ap dung len vai mau.',
+   why_vi:'Vai trang: can bang bang tay oxy DEU TOAN BO (khong cham tung diem — de lo hon). Paste chi cho cho sot. Phoi nang ngan co the can bang UV — neu nhan/vai cho phep.',
+   fresh_path_vi:'Ngam TOAN BO bot tay oxy pha loang deu ~45 phut (theo huong dan) → xa → neu con dom: paste baking soda + oxy gia nhe 10 phut chi cho sot → giat ~40C neu cotton cho → kiem tra duoi anh sang.',
+   dried_path_vi:'Con lech mau: lap ngam deu (khong cham diem). Khong het → bao khach gioi han.',
+   motion_vi:'Luc 0-1 — ngam deu, khong cha manh',
+   water_temp_vi:'Theo nhan; cotton thuong ~40C sau xu ly',
+   aftercare_vi:'Kiem tra trang deu. Vai mau → CAM quy trinh nay (chuyen I_COLOR_FADE).'}
 ] AS it
 MERGE (i:Item {id:it.id})
 SET i.name = it.name, i.name_vi = it.name_vi, i.name_ko = it.name_ko,
@@ -830,13 +854,13 @@ RETURN count(i) AS created""")
 MATCH (cloth:Tool {id:'T_CLOTH'}), (soft:Tool {id:'T_BRUSH_SOFT'}), (ultra:Tool {id:'T_BRUSH_ULTRA'}),
       (hard:Tool {id:'T_BRUSH_HARD'}), (shoe:Tool {id:'T_BRUSH_SHOE'})
 WITH cloth, soft, ultra, hard, shoe
-MATCH (d2:Chemical {code:'D2'}), (d3:Chemical {code:'D3'}), (a1:Chemical {code:'A1'}), (n1:Chemical {code:'N1'})
-WITH cloth, soft, ultra, hard, shoe, d2, d3, a1, n1
+MATCH (d2:Chemical {code:'D2'}), (d3:Chemical {code:'D3'}), (a1:Chemical {code:'A1'}), (n1:Chemical {code:'N1'}), (b1:Chemical {code:'B1'})
+WITH cloth, soft, ultra, hard, shoe, d2, d3, a1, n1, b1
 // Drop stale chem links before re-wire (no heavy D3 on golf hat / summer suit / glove)
 MATCH (bad:Item) WHERE bad.id IN ['I_GOLF_GLOVE_LEATHER','I_GOLF_WEAR','I_GOLF_HAT','I_SUIT_SUMMER']
 OPTIONAL MATCH (bad)-[oldc:USES_CHEMICAL]->()
 DELETE oldc
-WITH cloth, soft, ultra, hard, shoe, d2, d3, a1, n1
+WITH cloth, soft, ultra, hard, shoe, d2, d3, a1, n1, b1
 MATCH (i:Item)
 FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_LEATHER_SHOE','I_GLOVE_LEATHER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(a1))
@@ -856,6 +880,13 @@ FOREACH (_ IN CASE WHEN i.id IN ['I_GOLF_WEAR','I_GOLF_HAT','I_SUIT_SUMMER'] THE
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(d2))
 FOREACH (_ IN CASE WHEN i.id = 'I_GOLF_HAT' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft))
+FOREACH (_ IN CASE WHEN i.id = 'I_DENIM' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(hard) MERGE (i)-[:USES_TOOL]->(cloth)
+  MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(d3))
+FOREACH (_ IN CASE WHEN i.id = 'I_COLOR_FADE' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth))
+FOREACH (_ IN CASE WHEN i.id = 'I_WHITE_FADE' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(b1) MERGE (i)-[:USES_CHEMICAL]->(n1))
 FOREACH (_ IN CASE WHEN i.id IN ['I_SUIT','I_AO_DAI','I_HANBOK'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(ultra) MERGE (i)-[:USES_TOOL]->(cloth))
 FOREACH (_ IN CASE WHEN i.id = 'I_FUR_REAL' THEN [1] ELSE [] END |

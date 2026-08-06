@@ -214,6 +214,9 @@ _ITEM_FABRIC_TOKEN = {
     "I_FUR_REAL": "fur",
     "I_FUR_FAUX": "polyester",
     "I_HIKING_SHOE": "polyester",
+    "I_DENIM": "denim",
+    "I_COLOR_FADE": "cotton",
+    "I_WHITE_FADE": "cotton",
 }
 Q_RESCUE = """
 MATCH (s:Stain)
@@ -628,6 +631,23 @@ def _infer_item_from_text(text: str) -> str:
         return "I_GOLF_GLOVE_LEATHER" if golf else "I_GLOVE_LEATHER"
     if leather and not golf:
         return "I_LEATHER_GARMENT"
+
+    # Color fade / restore before generic denim
+    fade = any(
+        k in raw
+        for k in ("색바램", "색 바램", "탈색", "색이 흐려", "색빠짐", "물빠짐", "복원")
+    ) or "phai mau" in t or "mat mau" in t or "phuc hoi mau" in t or "fade" in t or "decolor" in t
+    white_fade = fade and (
+        any(k in raw for k in ("흰", "화이트", "밝은"))
+        or "trang" in t
+        or "white" in t
+    )
+    if white_fade:
+        return "I_WHITE_FADE"
+    if fade:
+        return "I_COLOR_FADE"
+    if any(k in raw for k in ("청바지", "청자켓", "청치마", "데님")) or "denim" in t or "jean" in t or "quan jean" in t:
+        return "I_DENIM"
 
     # Traditional dress
     if "한복" in raw or "hanbok" in t:

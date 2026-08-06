@@ -91,6 +91,20 @@ Các tình huống chuyên sâu tại cửa hàng. Trả lời như kinh nghiệ
 |---|---|---|---|---|
 | 1 | Nhận dạng denim | 0 | Denim: dệt chéo 2/1 hoặc 3/1 (kết cấu chéo). Nhuộm sợi indigo hoặc màu khác. Nặng và cứng. Theo thời gian tạo vân bạc màu đặc trưng. | 👁️ Kết cấu chéo + nặng = denim |
 | 2 | Quy trình giặt | 0 | Giặt lộn trái (bảo vệ màu). Nước lạnh hoặc 30°C. D3 ít. Giặt riêng 2-3 lần đầu. Hạn chế máy sấy (dễ co). Phơi bóng mát (bảo vệ màu). | 📋 Lộn trái + nước lạnh = denim bền lâu |
+| 3 | Phai màu / bạc màu theo thời gian | 0 | Vân bạc do mặc + UV = đặc trưng denim — giải thích khách. Không hứa nhuộm lại 100%. Cấm mẹo ethanol+dầu+máy sấy. Phục hồi màu: xem protocol mất màu vải màu (bút màu / gửi nhuộm). | 📋 Trung thực > hứa phục hồi |
+
+---
+
+## PROTOCOL: Phục hồi phai màu do nắng / thời gian (tóm tắt vận hành)
+**Tên**: Phai màu UV·thời gian / 햇볕·시간 색바램 / Sun & Age Fade
+**Độ khó**: ★★★★☆
+**Hóa chất**: — / B1 (chỉ trắng)
+**Quy tắc vàng**: Vải màu phai = thuốc nhuộm đã yếu/phá — không phục hồi thần kỳ. CẤM ethanol+oil+dryer. Trắng/sáng lệch OBA: cân bằng oxy đều toàn bộ. Màu: bút nhỏ / nhuộm lại / bồi thường hợp lý.
+
+| Bước | Thao tác | Lực tay | Chi tiết | Checkpoint |
+|---|---|---|---|---|
+| 1 | Chụp ảnh + phân loại trắng vs màu | 0 | Trắng/sáng → protocol OBA. Màu → đo diện tích. | 📷 Bắt buộc |
+| 2 | Không dùng mẹo dân gian | 0 | Ethanol + dầu + sấy = tạm thời, dễ cháy/hỏng sợi — từ chối tại tiệm. | ⛔ |
 
 ---
 
