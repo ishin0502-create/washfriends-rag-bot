@@ -31,7 +31,10 @@ from user_session import get_session
 from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret, _app_id
 
 ZALO_API_BASE   = "https://openapi.zalo.me/v3.0"
-ZALO_UPLOAD_URL = f"{ZALO_API_BASE}/oa/upload/image"
+ZALO_UPLOAD_URLS = [
+    ("v2", "https://openapi.zalo.me/v2.0/oa/upload/image"),
+    ("v3", f"{ZALO_API_BASE}/oa/upload/image"),
+]
 
 _processed_events: dict[str, float] = {}
 _DEDUP_TTL = 300
@@ -79,6 +82,7 @@ async def _upload_zalo_image_attempt(
     client: httpx.AsyncClient,
     token: str,
     *,
+    upload_url: str,
     path: Optional[Path] = None,
     image_url: Optional[str] = None,
     auth: str = "header",
@@ -96,7 +100,7 @@ async def _upload_zalo_image_attempt(
             with path.open("rb") as f:
                 files = {"file": (path.name, f, "image/png")}
                 r = await client.post(
-                    ZALO_UPLOAD_URL,
+                    upload_url,
                     headers=headers,
                     params=params,
                     files=files,
@@ -104,7 +108,7 @@ async def _upload_zalo_image_attempt(
                 )
         elif image_url:
             r = await client.post(
-                ZALO_UPLOAD_URL,
+                upload_url,
                 headers=headers,
                 params=params,
                 data={"image_url": image_url},
@@ -130,7 +134,20 @@ async def _upload_zalo_image_attempt(
         "attachment_id": att,
         "raw": data,
         "http_status": r.status_code,
+        "upload_url": upload_url,
     }
+
+
+def _upload_attempt_specs(path: Optional[Path]) -> list[tuple[str, dict]]:
+    specs: list[tuple[str, dict]] = []
+    for api_ver, upload_url in ZALO_UPLOAD_URLS:
+        if path:
+            specs.append((f"{api_ver}/file+header", {"upload_url": upload_url, "path": path, "auth": "header"}))
+            specs.append((f"{api_ver}/file+query", {"upload_url": upload_url, "path": path, "auth": "query"}))
+        pub = public_header_url()
+        specs.append((f"{api_ver}/image_url+header", {"upload_url": upload_url, "image_url": pub, "auth": "header"}))
+        specs.append((f"{api_ver}/image_url+query", {"upload_url": upload_url, "image_url": pub, "auth": "query"}))
+    return specs
 
 
 async def _upload_zalo_header_token(client: httpx.AsyncClient, token: str) -> Optional[str]:
@@ -144,12 +161,7 @@ async def _upload_zalo_header_token(client: httpx.AsyncClient, token: str) -> Op
         print("[ZALO BRAND] upload skipped: assets/wf_brand_header.png missing")
         return None
 
-    attempts: list[tuple[str, dict]] = [
-        ("file+header", {"path": path, "auth": "header"}),
-        ("file+query", {"path": path, "auth": "query"}),
-        ("image_url+header", {"image_url": public_header_url(), "auth": "header"}),
-        ("image_url+query", {"image_url": public_header_url(), "auth": "query"}),
-    ]
+    attempts = _upload_attempt_specs(path)
     for mode, kwargs in attempts:
         result = await _upload_zalo_image_attempt(client, token, **kwargs)
         att = result.get("attachment_id")
@@ -208,7 +220,9 @@ async def _send_zalo_brand_image(user_id: str) -> bool:
         for attempt in range(2):
             headers = {"access_token": token, "Content-Type": "application/json"}
             att = await _upload_zalo_header_token(client, token)
-            attempts: list[tuple[str, dict]] = []
+            attempts: list[tuple[str, dict]] = [
+                ("url", _brand_image_payload(user_id, use_url=True)),
+            ]
             if att:
                 attempts.append(("token+attachment_id", _brand_image_payload(user_id, att=att)))
                 attempts.append(("token_only", {
@@ -229,7 +243,7 @@ async def _send_zalo_brand_image(user_id: str) -> bool:
                         }
                     },
                 }))
-            attempts.append(("url", _brand_image_payload(user_id, use_url=True)))
+            # url already first in attempts
 
             for mode, payload in attempts:
                 try:
@@ -266,7 +280,7 @@ async def diagnose_zalo_brand(*, user_id: Optional[str] = None) -> dict:
         "header_file": str(header_image_path() or ""),
         "header_file_ok": header_image_path() is not None,
         "public_url": public_header_url(),
-        "upload_url": ZALO_UPLOAD_URL,
+        "upload_urls": [u for _, u in ZALO_UPLOAD_URLS],
         "send_url": f"{ZALO_API_BASE}/oa/message/cs",
     }
     token = await get_access_token()
@@ -282,12 +296,8 @@ async def diagnose_zalo_brand(*, user_id: Optional[str] = None) -> dict:
 
         path = header_image_path()
         upload_attempts = []
-        for mode, kwargs in [
-            ("file+header", {"path": path, "auth": "header"}),
-            ("file+query", {"path": path, "auth": "query"}),
-            ("image_url+header", {"image_url": public_header_url(), "auth": "header"}),
-            ("image_url+query", {"image_url": public_header_url(), "auth": "query"}),
-        ]:
+        att = None
+        for mode, kwargs in _upload_attempt_specs(path):
             if not kwargs.get("path") and not kwargs.get("image_url"):
                 continue
             result = await _upload_zalo_image_attempt(client, token, **kwargs)
@@ -302,26 +312,34 @@ async def diagnose_zalo_brand(*, user_id: Optional[str] = None) -> dict:
                 att = result.get("attachment_id")
                 break
         else:
-            att = None
             out["upload"] = {"ok": False, "attachment_id": None, "attempts": upload_attempts}
 
-        if user_id and att:
+        if user_id:
             url = f"{ZALO_API_BASE}/oa/message/cs"
             headers = {"access_token": token, "Content-Type": "application/json"}
-            ok, data = await _post_zalo_image(
-                client,
-                url,
-                headers,
-                _brand_image_payload(user_id, att=att),
-            )
+            send_attempts = []
+            for send_mode, payload in [
+                ("url", _brand_image_payload(user_id, use_url=True)),
+                *(
+                    [("token+attachment_id", _brand_image_payload(user_id, att=att))]
+                    if att
+                    else []
+                ),
+            ]:
+                ok, data = await _post_zalo_image(client, url, headers, payload)
+                send_attempts.append({
+                    "mode": send_mode,
+                    "ok": ok,
+                    "error": data.get("error"),
+                    "message": data.get("message"),
+                })
+                if ok:
+                    break
             out["send_test"] = {
-                "ok": ok,
+                "ok": any(a["ok"] for a in send_attempts),
                 "user_id": user_id[:8] + "…",
-                "error": data.get("error"),
-                "message": data.get("message"),
+                "attempts": send_attempts,
             }
-        elif user_id:
-            out["send_test"] = {"ok": False, "error": "upload failed — cannot send"}
 
     return out
 
