@@ -542,7 +542,7 @@ def _item_as_stain_shaped(item_graph: dict) -> dict:
         },
         "fabric_context": item_graph.get("fabric_context"),
         "chemicals": [] if no_shop_chem else (item_graph.get("chemicals") or []),
-        "tools": [] if item_id == "I_COLOR_FADE" else (item_graph.get("tools") or []),
+        "tools": list(_COLOR_FADE_TOOLS) if item_id == "I_COLOR_FADE" else (item_graph.get("tools") or []),
         "washfriends_supply": [],
         "force_levels": [],
         "fabric_cautions": [],
@@ -550,8 +550,9 @@ def _item_as_stain_shaped(item_graph: dict) -> dict:
         "never_mix_alerts": [],
         "climate_context": [],
         "item_context": ic,
-        "empty_tools_ok": item_id == "I_COLOR_FADE",
+        "empty_tools_ok": False,
         "empty_chems_ok": no_shop_chem,
+        "color_fade_rules": item_id == "I_COLOR_FADE",
     }
 
 
@@ -580,13 +581,18 @@ def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
     g["stain_context"] = sc
     # Prefer item tools/chems for specialty garments
     if item_graph.get("tools") is not None:
-        g["tools"] = [] if ic.get("id") == "I_COLOR_FADE" else (item_graph.get("tools") or [])
+        g["tools"] = (
+            list(_COLOR_FADE_TOOLS)
+            if ic.get("id") == "I_COLOR_FADE"
+            else (item_graph.get("tools") or [])
+        )
     if ic.get("id") in {"I_FUR_REAL", "I_GOLF_GLOVE_LEATHER", "I_COLOR_FADE"}:
         g["chemicals"] = []
         g["washfriends_supply"] = []
         g["empty_chems_ok"] = True
         if ic.get("id") == "I_COLOR_FADE":
-            g["empty_tools_ok"] = True
+            g["color_fade_rules"] = True
+            g["empty_tools_ok"] = False
     elif item_graph.get("chemicals") is not None:
         g["chemicals"] = item_graph.get("chemicals")
         g["washfriends_supply"] = []
@@ -760,6 +766,16 @@ _S1_OWNER = {
     "dilution_vi": "Theo huong dan chai Wash Friends — uu tien lua/len",
     "dilution_ko": "워시프렌즈 중성세제 병 안내 따름 — 실크·울 우선",
 }
+
+# Synthetic tool for color-fade small-spot path (not a Neo4j Tool node)
+_COLOR_FADE_TOOLS = [
+    {
+        "id": "T_FABRIC_MARKER",
+        "name_vi": "But mau vai (chi cho NHO <= dong xu; tam thoi)",
+        "name_ko": "천용 컬러펜(소면적·동전 이하만, 임시)",
+        "use_for_vi": "Vua/lon: khong dung but — chuyen nhuom / boi thuong",
+    }
+]
 
 
 def _apply_delicate_s1_fallback(graph: dict) -> dict:
@@ -1059,8 +1075,13 @@ HÓA CHẤT (bắt buộc):
 - Có thể nhắc tên hàng ngày — tuyệt đối không viết mã S1 / A3 / B1 / E1…
 - Da (leather) / suede: CAM máy giặt, CAM tẩy oxy/javel, CAM nhiệt/nắng gắt.
   Da bóng: ít nước + cồn nhẹ (test) + kem dưỡng. Suede: không nước → chải khô / chuyên nghiệp.
-- Phục hồi mất màu vải MÀU (I_COLOR_FADE): CẤM dùng detergent/S1 như cách "phục hồi màu".
-  Chỉ bút màu (nhỏ) / gửi nhuộm / bồi thường — theo fresh_path.
+- Phục hồi mất màu vải MÀU (I_COLOR_FADE / color_fade_rules):
+  BẮT BUỘC chia diện tích trong (1)(2)(3)(4):
+  - Nhỏ (<= đồng xu): bút màu vải — nói "임시/다시 빠질 수 있음" (Hàn) / "tam thoi" (Việt). Lực: chấm/칠 ngoài→trong, CẤM "밝혀줍니다".
+  - Vừa/lớn: CẤM chỉ bút — chuyển nhuộm / giải thích không khớp 100% / bồi thường.
+  (4) chemicals rỗng = "해당 없음" — CẤM detergent. CẤM mẹo: jean mới giặt chung, cafe/trà, muối 10:1, ngâm nóng tự nhuộm.
+  (5) Bước phục hồi: không giặt máy/tay để "phục hồi màu". Giặt lật trái + lạnh = duy trì sau, nói rõ nếu nhắc.
+  Denim bạc màu do mặc+UV: giải thích đặc trưng, không gọi lỗi giặt nếu đã báo.
 - Pha loãng: CHỈ dùng dilution_ko (Hàn) hoặc dilution_vi (Việt) nếu có.
   Không có dilution_* → "병 라벨·본사 안내 따름" / "theo hướng dẫn trên chai / kho WF" — CẤM bịa tỷ lệ (vd 1:4 cho S1).
   Hàn tự nhiên: "식초 1 : 물 4". Việt: "1 phần giấm + 4 phần nước". CẤM "1부분…4부분".
@@ -1104,7 +1125,11 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "도구는 name_ko만 — T_CLOTH 같은 id, name_vi 출력 금지. "
             "tools[]가 비면: '해당 없음' 또는 fresh_path의 도구(천용 컬러펜 등). 흰 천을 지어내지 말 것. "
             "chemicals[]가 비면: 중성세제/세제로 칸 채우지 말 것. fresh_path대로 "
-            "(색바램=마커·재염색·한계 고지, 매장 세제로 색 복원 금지). "
+            "(색바램=면적 분기: 소=천용 컬러펜 임시·바깥→안 '칠/찍기'(밝혀줍니다 금지); "
+            "중·대=재염색·100% 불일치 고지·보상. 매장 세제로 색 복원 금지. "
+            "새 청바지 같이 빨기·커피/차·소금물 고착·열탕 자가염색 금지). "
+            "수온(5): 복원 단계에서는 세탁·열탕으로 색을 되살리지 말 것. "
+            "뒤집기+찬물 단독은 '유지'일 때만 짧게. "
             "희석은 dilution_ko만: '식초 1 : 물 4' 형식. '1부분' 금지. "
             "'세탁소에서 구입' 금지 — 슈퍼/약국/화공, WF는 본사·창고 공급. "
             "실크·울이고 chemicals[]에 중성세제가 있을 때만 중성세제 사용. "
