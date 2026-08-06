@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-edu-s2-x1-x2",
+            "build": "2026-08-06-edu-s3-rich-thin",
             "checks": checks,
         },
         status_code=200,
@@ -866,6 +866,37 @@ MATCH (s:Stain {id:o.id})
 SET s.why_vi = o.why_vi, s.fresh_path_vi = o.fresh_path_vi, s.dried_path_vi = o.dried_path_vi,
     s.tip = coalesce(o.why_vi, s.tip)
 RETURN count(s) AS updated""")
+        _r(s, "Z_paths_stage3_thin", """
+UNWIND [
+  {id:'S_LATERITE',
+   why_vi:'GIAO DUC: Dat do laterite = sat oxit (Fe2O3) + set — KHONG giong bun thuong. CAM coi uot (lan mau). CAM Javel/B2 (co dinh sat VINH VIEN). THU TU: de KHO → chai bot → xa lanh → acid oxalic X2 (gang tay) tren cotton/linen/poly → xa → trung hoa N1 loang → A3 chelation neu can → B1 neu con mau (khong len/lua). Len/lua: KHONG X2 — A3/nuoc chanh nhe + bao khach.',
+   fresh_path_vi:'(1) Nhan: dat do / laterite (mau do sat), vai. (2) De KHO hoan toan — CAM coi khi uot. (3) Chai kho bot ngoai troi (khau trang neu bui). (4) Xa LANH. (5) Cotton/linen/poly: acid oxalic X2 ~2-3% theo nhan, gang tay, ~30 phut (test goc). (6) Xa ky → N1 loang trung hoa. (7) Con mau: A3 pha roi B1 neu vai cho. (8) Len/lua: chi A3 nhe; bao chuyen pro neu nang. CAM B2. CAM say khi con mau do.',
+   dried_path_vi:'Neu da giat/say som: ty le thap — van thu X2 (vai an toan) + trung hoa. Bao khach sat an sau kho het 100%.'},
+  {id:'S_CURRY',
+   why_vi:'GIAO DUC: Ca ri/nghe = dau + curcumin (mau vang kho). THU TU: nuoc rua chen (dau) TRUOC → baking soda/kiềm nhe → anh sang UV/phoi nang co kiem soat (curcumin phai mau) → bot tay oxy neu trang. CAM chi giat nuoc — dau giu mau. Len/lua: test; tranh oxy/nang manh.',
+   fresh_path_vi:'(1) Nhan: ca ri/nghe, tuoi/kho, vai mau hay trang. (2) Cao bot. (3) Nuoc rua chen cham 5-10 phut (pha dau). (4) Xa → paste baking soda + it nuoc, de 15-30 phut. (5) Phoi nang ngan (kiem soat) neu curcumin con — hoac B1 tren trang/cotton (test). (6) Giat. (7) Anh sang manh TRUOC say. Len/lua: D2 + S1, khong B1.',
+   dried_path_vi:'D2 ngam → N1 paste → B1 trang neu can. Bao khach mau nghe co the vin vien sau say.'},
+  {id:'S_INK_PEN',
+   why_vi:'GIAO DUC: Muc but bi = dye tan trong dung moi. CHI THAM/CHAM mat trai — cha = lan mau. Lot giay tham. Con isopropyl. Het muc moi say (nhiet khoa). Test goc. Len/lua: rat than; co the khong het 100%.',
+   fresh_path_vi:'(1) Nhan: muc but, vai. (2) Test goc voi con 70%. (3) Lot giay tham duoi. (4) Lat mat trai — nho con, THAM thang dung, doi khan sach moi chu ky — KHONG cha. (5) Lap den het muc. (6) Giat lanh. (7) Anh sang manh TRUOC say.',
+   dried_path_vi:'Con blot lap nhieu lan. Bao khach neu muc da say/ui — ty le thap.'},
+  {id:'S_INK_PERMANENT',
+   why_vi:'GIAO DUC: But long = polymer + pigment. A2 acetone hoac A1 — test vai (co the hong in/son). Thong gio. Khong cam ket 100%. CAM cha lan.',
+   fresh_path_vi:'(1) Nhan: but long/permanent. (2) Test goc A2/A1. (3) Lot tham, cham mat trai, blot — khong cha. (4) Thong gio. (5) Giat sau khi het muc toi da. (6) Bao khach con vet co the. CAM say khi con muc.',
+   dried_path_vi:'Lap A2/A1. Neu khong doi: bao chuyen pro / chap nhan vet.'},
+  {id:'S_RUST',
+   why_vi:'GIAO DUC: Ri set = sat oxit. CAM Javel (co dinh sat). Then chot: acid oxalic X2 + gang tay; xa + trung hoa N1. Cotton/linen/poly OK. Len/lua: KHONG X2 — A3/chanh nhe + bao. PPE.',
+   fresh_path_vi:'(1) Nhan: ri set (nau do), vai. (2) Gang tay. (3) Cotton/linen/poly: X2 ~2-3% theo nhan ~15-30 phut (test). (4) Xa ky → N1 loang trung hoa. (5) Con mau: A3 roi B1 neu trang cho phep. (6) Len/lua: A3 nhe thoi. CAM B2. Anh sang TRUOC say.',
+   dried_path_vi:'X2 (vai an toan) → trung hoa. Bao neu sat an sau.'},
+  {id:'S_SWEAT_YELLOW',
+   why_vi:'GIAO DUC: Ve o nach vang = mo hoi + protein + thuong deodorant/aluminum. CAM chlorine (vang hon). THU TU: enzyme (protein) TRUOC → bot tay oxy (vang) SAU. Giam pha neu can khu mui. Ao so mi toan than → xem S_SHIRT_YELLOW.',
+   fresh_path_vi:'(1) Nhan: o nach vang, vai trang/mau. (2) Enzyme protease/lipase pretreat vung nach (kho) 15-30 phut — KHONG len/lua (S1). (3) Ngam B1 theo chai neu trang/cotton (test). (4) Giat. (5) Con mui: A3 1:4. (6) CAM Javel. Anh sang TRUOC say.',
+   dried_path_vi:'Enzyme dem → B1 ngam dai → giat. Bao khach vet cu co the con bong.'}
+] AS o
+MATCH (s:Stain {id:o.id})
+SET s.why_vi = o.why_vi, s.fresh_path_vi = o.fresh_path_vi, s.dried_path_vi = o.dried_path_vi,
+    s.tip = coalesce(o.why_vi, s.tip)
+RETURN count(s) AS updated""")
         _r(s, "Z2_kimchi_ops", """
 MATCH (s:Stain {id:'S_KIMCHI'})
 SET s.precheck_vi = 'Kim chi/nuoc kim chi — xu ly SOM. Phan biet vai trang vs mau. Test goc khuat truoc tay oxy.',
@@ -895,10 +926,16 @@ UNWIND [
   {id:'S_FRUIT_JUICE',name_ko:'주스·과일즙',precheck_vi:'Juice — giam roi oxy'},
   {id:'S_MOTORBIKE_OIL',name_ko:'오토바이 오일',precheck_vi:'Dau nhot — thong gio khi dung moi'},
   {id:'S_LIPSTICK',name_ko:'립스틱·립스틱 자국',precheck_vi:'Son moi — 3 lop: sap→dau(con blot mat trai)→pigment. KHONG cha'},
-  {id:'S_FOUNDATION',name_ko:'파운데이션·쿠션·화장품',precheck_vi:'Kem nen — blot; D2 roi con; len/lua → S1'}
+  {id:'S_FOUNDATION',name_ko:'파운데이션·쿠션·화장품',precheck_vi:'Kem nen — blot; D2 roi con; len/lua → S1'},
+  {id:'S_LATERITE',name_ko:'라테라이트·붉은 흙(적토)',precheck_vi:'Dat do — de KHO; CAM B2; X2 gang tay'},
+  {id:'S_CURRY',name_ko:'카레·강황',precheck_vi:'Ca ri/nghe — D2 dau TRUOC, curcumin sau'},
+  {id:'S_INK_PEN',name_ko:'볼펜·잉크',precheck_vi:'Muc but — blot mat trai A1; CAM cha'},
+  {id:'S_INK_PERMANENT',name_ko:'유성매직·영구마커',precheck_vi:'But long — A2/A1 test; khong cam ket 100%'},
+  {id:'S_RUST',name_ko:'녹·녹물',precheck_vi:'Ri set — X2 gang tay; CAM B2'},
+  {id:'S_SWEAT_YELLOW',name_ko:'겨드랑이 황변',precheck_vi:'O nach vang — enzyme roi B1; CAM Javel'}
 ] AS x
 MATCH (s:Stain {id:x.id})
-SET s.name_ko = x.name_ko, s.precheck_vi = x.precheck_vi
+SET s.name_ko = x.name_ko, s.precheck_vi = coalesce(x.precheck_vi, s.precheck_vi)
 RETURN count(s) AS updated""")
         # Priority 1–2 item care — same field names as stain paths (owner 1)-6) flow)
         _r(s, "I_items_care", """

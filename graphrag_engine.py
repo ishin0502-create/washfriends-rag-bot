@@ -1417,7 +1417,9 @@ def generate_response(user_message: str) -> str:
     # Hard override for high-value franchise phrases (before graph routing)
     # More specific phrases first.
     raw_n = _normalize_text(user_message)
-    if "laterite" in raw_n or "dat do" in raw_n:
+    if "laterite" in raw_n or "dat do" in raw_n or any(
+        k in user_message for k in ("라테라이트", "적토", "붉은 흙", "빨간 흙")
+    ):
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_LATERITE"
         entities["stain_type"] = "dat do laterite"
@@ -1427,6 +1429,28 @@ def generate_response(user_message: str) -> str:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_MOTORBIKE_OIL"
         entities["stain_type"] = "dau nhot xe may"
+    elif any(k in user_message for k in ("카레", "강황")) or "ca ri" in raw_n or "curry" in raw_n or "turmeric" in raw_n or "bot nghe" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_CURRY"
+        entities["stain_type"] = "ca ri nghe"
+    elif any(k in user_message for k in ("유성펜", "유성 매직", "매직펜", "영구마커")) or "permanent marker" in raw_n or "but long" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_INK_PERMANENT"
+        entities["stain_type"] = "but long"
+    elif any(k in user_message for k in ("볼펜", "잉크")) or "muc but" in raw_n or "pen ink" in raw_n or (
+        "ink" in raw_n and "permanent" not in raw_n
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_INK_PEN"
+        entities["stain_type"] = "muc but bi"
+    elif any(k in user_message for k in ("녹물", "녹슨", "녹 얼룩", "녹제거", "녹 빼", "녹빼")) or "ri set" in raw_n or "rust" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_RUST"
+        entities["stain_type"] = "ri set"
+    elif any(k in user_message for k in ("겨드랑이", "암내", "누런 겨드랑이")) or "ve o nach" in raw_n or "armpit" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_SWEAT_YELLOW"
+        entities["stain_type"] = "ve o nach"
     elif any(k in user_message for k in ("풀로", "풀 이염", "전분 이염")) or (
         "tinh bot" in raw_n and ("mau lan" in raw_n or "lo mau" in raw_n)
     ) or ("starch" in raw_n and ("dye" in raw_n or "bleed" in raw_n)):
