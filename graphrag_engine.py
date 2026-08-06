@@ -391,10 +391,8 @@ def _fetch_graph_context(entities: dict) -> dict:
             fabric_input = _ITEM_FABRIC_TOKEN.get(item_id, "")
             if fabric_input:
                 entities["fabric_type"] = fabric_input
-        # "Can I wash this fur/suit?" must not early-exit as price/safety with empty graph
-        if intent in ("price", "safety", "mystery", "browse") and not (
-            entities.get("stain_id") or (entities.get("stain_type") or "").strip()
-        ):
+        # Item-care questions must not early-exit as price/safety/mystery with empty graph
+        if intent in ("price", "safety", "mystery", "browse", "rescue", "hardest", "daily"):
             intent = "treatment"
             context["intent"] = "treatment"
             entities["intent"] = "treatment"
@@ -635,10 +633,13 @@ def _infer_item_from_text(text: str) -> str:
     # Color fade / restore before generic denim
     fade = any(
         k in raw
-        for k in ("색바램", "색 바램", "탈색", "색이 흐려", "색빠짐", "물빠짐", "복원")
+        for k in (
+            "색바램", "색 바램", "탈색", "색이 흐려", "색이 바랬", "색이 바래",
+            "색빠짐", "물빠짐", "복원", "하얗게 닳", "표백 후",
+        )
     ) or "phai mau" in t or "mat mau" in t or "phuc hoi mau" in t or "fade" in t or "decolor" in t
     white_fade = fade and (
-        any(k in raw for k in ("흰", "화이트", "밝은"))
+        any(k in raw for k in ("흰", "화이트", "밝은", "표백"))
         or "trang" in t
         or "white" in t
     )
