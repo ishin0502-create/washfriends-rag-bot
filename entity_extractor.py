@@ -58,16 +58,17 @@ Stain IDs (use exact ID if confident):
 S_COOKING_OIL=cooking oil/dau an/기름/식용유, S_ENGINE_OIL=machine oil, S_GREASE=grease/mo,
 S_MAYO=mayonnaise/마요네즈, S_COLLAR_STAIN=collar/목때/vong co,
 S_BLOOD_FRESH=fresh blood/mau tuoi/핏자국, S_BLOOD_DRY=old blood/mau kho,
-S_EGG=egg/trung, S_MILK=milk/sua, S_VOMIT=vomit/chat non/구토/토물,
+S_EGG=egg/trung, S_MILK=milk/sua/우유(비커피·비분유), S_VOMIT=vomit/chat non/구토/토물,
 S_URINE=urine/nuoc tieu/소변/오줌, S_FECES=feces/phan/대변/분변,
 S_BABY_FORMULA=baby formula/sua cong thuc/분유,
-S_SWEAT_FRESH=sweat/mo hoi, S_SWEAT_YELLOW=armpit yellow,
+S_GRASS=grass/co xanh/잔디/풀물, S_MUD=mud/bun/진흙, S_CHOCOLATE=chocolate/socola/초코,
+S_SWEAT_FRESH=sweat/mo hoi/땀(신선), S_SWEAT_YELLOW=armpit yellow,
 S_BLACK_COFFEE=black coffee/ca phe den, S_MILK_COFFEE=milk coffee/ca phe sua/latte,
 S_TEA=tea/tra, S_RED_WINE=wine, S_SOY_SAUCE=soy sauce/nuoc tuong/간장,
 S_FISH_SAUCE=nuoc mam/느억맘/액젓, S_KETCHUP=ketchup/케첩, S_TOMATO_SAUCE=tomato sauce,
 S_FRUIT_JUICE=juice/주스, S_KIMCHI=kimchi/김치,
-S_INK_PEN=ballpoint ink/muc, S_INK_PERMANENT=permanent marker, S_GRASS=grass/co,
-S_MUD=mud/bun, S_CURRY=curry/nghe, S_MUSTARD=mustard,
+S_INK_PEN=ballpoint ink/muc, S_INK_PERMANENT=permanent marker,
+S_CURRY=curry/nghe,
 S_DYE_TRANSFER=dye transfer/이염/mau lan/lo mau,
 S_STARCH_TRANSFER=starch dye/풀 이염/ho tinh bot,
 S_SHIRT_YELLOW=yellowed white shirt/와이셔츠 황변/누렇게,
@@ -77,7 +78,9 @@ S_MILDEW=mildew/nam moc/곰팡이, S_RUST=rust/ri set,
 S_LIPSTICK=lipstick/립스틱/son moi, S_FOUNDATION=foundation/파운데이션/쿠션/kem nen,
 S_DEODORANT=deodorant/데오/땀억제제, S_PERFUME=perfume/향수/nuoc hoa,
 S_GUM=chewing gum/껌/keo cao su, S_CANDLE_WAX=candle wax/촛농/sap nen,
-S_PAINT_LATEX=latex paint/son nuoc, S_GLUE=glue/keo
+S_BBQ_SAUCE=BBQ sauce/바베큐, S_MUSTARD=mustard/머스터드/겨자,
+S_NAIL_POLISH=nail polish/매니큐어/son mong, S_GLUE=glue/접착제/keo dan,
+S_PAINT_LATEX=latex paint/수성페인트/son nuoc
 
 IMPORTANT: "dat do" / "laterite" / "đất đỏ" = S_LATERITE (red soil), NEVER blood.
 "đỏ" alone does not mean blood if "dat"/"laterite"/"đất" is present.
