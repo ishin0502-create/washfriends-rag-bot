@@ -17,6 +17,7 @@ import json
 import time
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from typing import Optional
 
@@ -74,6 +75,64 @@ def _is_duplicate(event_id: str) -> bool:
     return False
 
 
+async def _upload_zalo_image_attempt(
+    client: httpx.AsyncClient,
+    token: str,
+    *,
+    path: Optional[Path] = None,
+    image_url: Optional[str] = None,
+    auth: str = "header",
+) -> dict:
+    """Single upload attempt; returns raw Zalo JSON + parsed attachment id."""
+    headers: dict = {}
+    params: dict = {}
+    if auth == "header":
+        headers["access_token"] = token
+    else:
+        params["access_token"] = token
+
+    try:
+        if path:
+            with path.open("rb") as f:
+                files = {"file": (path.name, f, "image/png")}
+                r = await client.post(
+                    ZALO_UPLOAD_URL,
+                    headers=headers,
+                    params=params,
+                    files=files,
+                    timeout=20,
+                )
+        elif image_url:
+            r = await client.post(
+                ZALO_UPLOAD_URL,
+                headers=headers,
+                params=params,
+                data={"image_url": image_url},
+                timeout=20,
+            )
+        else:
+            return {"ok": False, "error": "no path or image_url"}
+    except Exception as e:
+        return {"ok": False, "error": f"{type(e).__name__}: {e}"}
+
+    try:
+        data = r.json()
+    except Exception as e:
+        return {"ok": False, "http_status": r.status_code, "error": f"json: {e}", "body": r.text[:500]}
+
+    err = data.get("error")
+    payload = data.get("data") or {}
+    att = payload.get("attachment_id") or payload.get("token")
+    return {
+        "ok": bool(att) and err in (None, 0),
+        "error_code": err,
+        "message": data.get("message"),
+        "attachment_id": att,
+        "raw": data,
+        "http_status": r.status_code,
+    }
+
+
 async def _upload_zalo_header_token(client: httpx.AsyncClient, token: str) -> Optional[str]:
     """Upload brand header once (cached briefly). Fail-open → None."""
     global _zalo_header_token, _zalo_header_token_ts
@@ -84,32 +143,26 @@ async def _upload_zalo_header_token(client: httpx.AsyncClient, token: str) -> Op
     if not path:
         print("[ZALO BRAND] upload skipped: assets/wf_brand_header.png missing")
         return None
-    try:
-        with path.open("rb") as f:
-            files = {"file": ("wf_brand_header.png", f, "image/png")}
-            r = await client.post(
-                ZALO_UPLOAD_URL,
-                headers={"access_token": token},
-                files=files,
-                timeout=20,
-            )
-        data = r.json()
-        err = data.get("error")
-        if err and err != 0:
-            print(
-                f"[ZALO BRAND] upload API error code={err} "
-                f"msg={data.get('message')} url={ZALO_UPLOAD_URL}"
-            )
-            return None
-        att = (data.get("data") or {}).get("attachment_id") or (data.get("data") or {}).get("token")
+
+    attempts: list[tuple[str, dict]] = [
+        ("file+header", {"path": path, "auth": "header"}),
+        ("file+query", {"path": path, "auth": "query"}),
+        ("image_url+header", {"image_url": public_header_url(), "auth": "header"}),
+        ("image_url+query", {"image_url": public_header_url(), "auth": "query"}),
+    ]
+    for mode, kwargs in attempts:
+        result = await _upload_zalo_image_attempt(client, token, **kwargs)
+        att = result.get("attachment_id")
         if att:
             _zalo_header_token = str(att)
             _zalo_header_token_ts = now
-            print(f"[ZALO BRAND] upload ok id={_zalo_header_token[:12]}…")
+            print(f"[ZALO BRAND] upload ok via {mode} id={_zalo_header_token[:12]}…")
             return _zalo_header_token
-        print(f"[ZALO BRAND] upload failed (no attachment_id/token): {data}")
-    except Exception as e:
-        print(f"[ZALO BRAND] upload error: {type(e).__name__}: {e}")
+        err = result.get("error_code")
+        print(
+            f"[ZALO BRAND] upload failed mode={mode} "
+            f"code={err} msg={result.get('message')}"
+        )
     return None
 
 
@@ -226,8 +279,31 @@ async def diagnose_zalo_brand(*, user_id: Optional[str] = None) -> dict:
         global _zalo_header_token, _zalo_header_token_ts
         _zalo_header_token = None
         _zalo_header_token_ts = 0.0
-        att = await _upload_zalo_header_token(client, token)
-        out["upload"] = {"ok": bool(att), "attachment_id": att}
+
+        path = header_image_path()
+        upload_attempts = []
+        for mode, kwargs in [
+            ("file+header", {"path": path, "auth": "header"}),
+            ("file+query", {"path": path, "auth": "query"}),
+            ("image_url+header", {"image_url": public_header_url(), "auth": "header"}),
+            ("image_url+query", {"image_url": public_header_url(), "auth": "query"}),
+        ]:
+            if not kwargs.get("path") and not kwargs.get("image_url"):
+                continue
+            result = await _upload_zalo_image_attempt(client, token, **kwargs)
+            upload_attempts.append({"mode": mode, **result})
+            if result.get("ok"):
+                out["upload"] = {
+                    "ok": True,
+                    "mode": mode,
+                    "attachment_id": result.get("attachment_id"),
+                    "attempts": upload_attempts,
+                }
+                att = result.get("attachment_id")
+                break
+        else:
+            att = None
+            out["upload"] = {"ok": False, "attachment_id": None, "attempts": upload_attempts}
 
         if user_id and att:
             url = f"{ZALO_API_BASE}/oa/message/cs"

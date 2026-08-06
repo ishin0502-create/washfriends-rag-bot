@@ -206,7 +206,7 @@ def is_token_error(error_code) -> bool:
     except (TypeError, ValueError):
         return False
     # Common: -124 expired/invalid token; -216; -201
-    return code in (-124, -216, -201, -22)
+    return code in (-124, -204, -216, -201, -22)
 
 
 async def token_refresh_loop(stop_event: Optional[asyncio.Event] = None) -> None:
