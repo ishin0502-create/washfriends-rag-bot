@@ -18,7 +18,9 @@ from typing import Optional
 _TTL_SEC = 4 * 60 * 60
 _brand: dict[str, dict] = {}
 
-_HEADER_FILE = Path(__file__).resolve().parent / "assets" / "wf_brand_header.png"
+_HEADER_FILE = Path(__file__).resolve().parent / "assets" / "wf_brand_header_v2.png"
+# Bump when regenerating asset so Zalo/FB URL + upload caches miss
+_HEADER_ASSET_VER = "v2wide"
 
 # Short clarifications / answers — no brand header
 _FOLLOWUP_RE = re.compile(
@@ -65,7 +67,11 @@ def public_header_url() -> str:
         base = "https://" + base
     if not base:
         base = "https://washfriends-rag-bot-production.up.railway.app"
-    return base.rstrip("/") + "/static/wf_brand_header.png"
+    # Versioned path + query bust Zalo CDN / prior attachment URL cache
+    return (
+        base.rstrip("/")
+        + f"/static/{_HEADER_FILE.name}?v={_HEADER_ASSET_VER}"
+    )
 
 
 def _key(channel: str, user_id: str) -> str:

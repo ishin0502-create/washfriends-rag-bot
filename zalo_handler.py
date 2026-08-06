@@ -33,6 +33,7 @@ from brand_header import (
     clear_all_brand_headers,
     header_image_path,
     public_header_url,
+    _HEADER_ASSET_VER,
 )
 from user_session import get_session
 from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret, _app_id
@@ -48,7 +49,8 @@ _DEDUP_TTL = 300
 _executor = ThreadPoolExecutor(max_workers=4)
 _zalo_header_token: Optional[str] = None
 _zalo_header_token_ts: float = 0.0
-_ZALO_TOKEN_TTL = 20 * 60
+_zalo_header_token_ver: Optional[str] = None
+_ZALO_TOKEN_TTL = 5 * 60  # short — asset changes must re-upload quickly
 _last_zalo_user_id: Optional[str] = None
 
 
@@ -160,13 +162,17 @@ def _upload_attempt_specs(path: Optional[Path]) -> list[tuple[str, dict]]:
 
 async def _upload_zalo_header_token(client: httpx.AsyncClient, token: str) -> Optional[str]:
     """Upload brand header once (cached briefly). Fail-open → None."""
-    global _zalo_header_token, _zalo_header_token_ts
+    global _zalo_header_token, _zalo_header_token_ts, _zalo_header_token_ver
     now = time.time()
-    if _zalo_header_token and now - _zalo_header_token_ts < _ZALO_TOKEN_TTL:
+    if (
+        _zalo_header_token
+        and _zalo_header_token_ver == _HEADER_ASSET_VER
+        and now - _zalo_header_token_ts < _ZALO_TOKEN_TTL
+    ):
         return _zalo_header_token
     path = header_image_path()
     if not path:
-        print("[ZALO BRAND] upload skipped: assets/wf_brand_header.png missing")
+        print(f"[ZALO BRAND] upload skipped: {_HEADER_ASSET_VER} asset missing")
         return None
 
     attempts = _upload_attempt_specs(path)
@@ -176,7 +182,8 @@ async def _upload_zalo_header_token(client: httpx.AsyncClient, token: str) -> Op
         if att:
             _zalo_header_token = str(att)
             _zalo_header_token_ts = now
-            print(f"[ZALO BRAND] upload ok via {mode} id={_zalo_header_token[:12]}…")
+            _zalo_header_token_ver = _HEADER_ASSET_VER
+            print(f"[ZALO BRAND] upload ok via {mode} ver={_HEADER_ASSET_VER} id={_zalo_header_token[:12]}…")
             return _zalo_header_token
         err = result.get("error_code")
         print(

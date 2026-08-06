@@ -51,6 +51,12 @@ from zalo_token import token_refresh_loop
 async def lifespan(app: FastAPI):
     """Startup / shutdown hooks."""
     print("🚀 Wash Friends Vietnam chatbot backend starting...")
+    try:
+        from brand_header import clear_all_brand_headers
+        n = clear_all_brand_headers()
+        print(f"[BRAND] cleared topic cache on boot ({n})")
+    except Exception as e:
+        print(f"[BRAND] boot clear skipped: {e}")
     stop = asyncio.Event()
     refresh_task = asyncio.create_task(token_refresh_loop(stop))
     try:
@@ -125,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-brand-header-wide",
+            "build": "2026-08-06-brand-header-wide-v2",
             "checks": checks,
         },
         status_code=200,
