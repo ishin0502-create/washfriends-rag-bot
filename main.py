@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-shirt-yellow-fix",
+            "build": "2026-08-06-edu-s1-bleach-safety",
             "checks": checks,
         },
         status_code=200,
@@ -510,9 +510,24 @@ MATCH (f:Fabric) WHERE f.enzyme_safe=false
 MERGE (s)-[:CAUTION_ON]->(f)
 RETURN count(*) AS rels""")
         _r(s, "Q_bleach_warn", """
-MATCH (f:Fabric) WHERE f.can_bleach=false
-MATCH (c:Chemical) WHERE c.code IN ['B1','B2']
-MERGE (f)-[:NEVER_USE]->(c)
+MATCH (f:Fabric) WHERE f.id IN ['F2','F5','F6']
+MATCH (c:Chemical {code:'B1'})
+OPTIONAL MATCH (f)-[r:NEVER_USE]->(c)
+DELETE r
+WITH count(r) AS _del
+MATCH (f2:Fabric) WHERE f2.can_bleach=false
+MATCH (c2:Chemical {code:'B2'})
+MERGE (f2)-[:NEVER_USE]->(c2)
+WITH count(*) AS _b2
+MATCH (f3:Fabric) WHERE f3.id IN ['F3','F4','F7','F8','F9','F10']
+MATCH (c3:Chemical {code:'B1'})
+MERGE (f3)-[:NEVER_USE]->(c3)
+WITH count(*) AS _b1
+MATCH (fo:Fabric) WHERE fo.id IN ['F1','F2','F5','F6']
+SET fo.can_oxygen = true
+WITH count(*) AS _ox1
+MATCH (fn:Fabric) WHERE fn.id IN ['F3','F4','F7','F8','F9','F10']
+SET fn.can_oxygen = false
 RETURN count(*) AS rels""")
         _r(s, "R_never_mix", """
 MATCH (c1:Chemical {code:'B2'}),(c2:Chemical {code:'A5'})

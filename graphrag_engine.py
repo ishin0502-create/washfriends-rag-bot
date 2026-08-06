@@ -108,7 +108,7 @@ RETURN
     group_care_order_vi: g.care_order_vi, group_care_order_ko: g.care_order_ko
   } AS stain_context,
   CASE WHEN f IS NULL THEN null ELSE f {
-    .id, .name, .name_vi, .max_temp, .can_bleach, .enzyme_safe, .acid_safe,
+    .id, .name, .name_vi, .max_temp, .can_bleach, .can_oxygen, .enzyme_safe, .acid_safe,
     .dry_hint_vi, .iron_hint_vi
   } END AS fabric_context,
   COLLECT(DISTINCT chem {
@@ -161,7 +161,7 @@ RETURN
     .motion_vi, .water_temp_vi, .aftercare_vi, .fabric_id
   } AS item_context,
   CASE WHEN f IS NULL THEN null ELSE f {
-    .id, .name, .name_vi, .max_temp, .can_bleach, .enzyme_safe, .acid_safe,
+    .id, .name, .name_vi, .max_temp, .can_bleach, .can_oxygen, .enzyme_safe, .acid_safe,
     .dry_hint_vi, .iron_hint_vi
   } END AS fabric_context,
   COLLECT(DISTINCT chem {
@@ -841,8 +841,22 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
             reasons.append("suede_prefer_dry_pro")
         if is_fur and code in {"A1", "D2", "N1", "S1"}:
             reasons.append("fur_pro_only")
-        if fabric.get("can_bleach") is False and code in {"B1", "B2", "A4"}:
-            reasons.append("fabric_no_bleach")
+        # can_bleach = chlorine (B2) only — do NOT treat as oxygen ban
+        if fabric.get("can_bleach") is False and code == "B2":
+            reasons.append("fabric_no_chlorine")
+        # Oxygen B1 / A4: block on protein delicates + leather family (+ explicit can_oxygen=false)
+        is_rayon = fid == "F7" or "rayon" in fname
+        no_oxygen = (
+            is_silk
+            or is_wool
+            or is_leather
+            or is_suede
+            or is_fur
+            or is_rayon
+            or fabric.get("can_oxygen") is False
+        )
+        if no_oxygen and code in {"B1", "A4"}:
+            reasons.append("fabric_no_oxygen_bleach")
         if fabric.get("acid_safe") is False and code in {"A3", "A5"} and not (is_leather or is_suede):
             reasons.append("fabric_no_acid")
         if fabric.get("enzyme_safe") is False and code in {"E1", "E2", "E3"}:
@@ -1190,8 +1204,9 @@ HÓA CHẤT (bắt buộc):
   Chỉ dùng paste tỷ lệ khi ĐỒ THỊ / fresh_path ghi rõ; còn lại CẤM bịa tỷ lệ trộn.
   Test góc khuất trước khi xử lý cả món. Tuyệt đối không trộn chất trong never_mix_alerts (vd ammonia + javel).
 - B1 = thuốc tẩy oxy (KHÔNG phải "세제 axit"). A3 = giấm / axit nhẹ.
-- Vải lụa/len HOẶC chemical.safe_on_silk/safe_on_wool = false HOẶC fabric enzyme_safe/acid_safe/can_bleach = false:
-  → KHÔNG khuyến nghị hóa chất không an toàn.
+- can_bleach=false → CẤM Javel/chlorine (B2). Polyester/linen/denim vẫn có thể dùng tẩy oxy (B1) nếu B1 còn trong chemicals[] (test góc; denim màu có thể phai nhẹ).
+- Vải lụa/len/rayon/da/suede/fur HOẶC chemical.safe_on_silk/safe_on_wool = false HOẶC fabric enzyme_safe/acid_safe = false HOẶC can_oxygen=false:
+  → KHÔNG khuyến nghị hóa chất không an toàn (kể cả B1/A4 trên lụa/len/da).
   → Chỉ dùng S1 nếu S1 có trong chemicals[]. Không bịa S1 khi chemicals[] rỗng vì lý do khác (vd phục hồi màu).
   → Nếu chỉ còn cảnh báo: nói rõ "không dùng trên lụa/len" thay vì vẫn bảo dùng.
 - Nếu có chemicals_blocked_for_fabric / delicate_chem_rule: tuân thủ tuyệt đối — không lấy bước tẩy/axit/enzyme từ tip nếu đã bị chặn.
@@ -1233,6 +1248,8 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "'세탁소에서 구입' 금지 — 슈퍼/약국/화공, WF는 본사·창고 공급. "
             "실크·울이고 chemicals[]에 중성세제가 있을 때만 중성세제 사용. "
             "B1=산소계 표백제(산성 세제 아님). "
+            "can_bleach=false → 염소(락스)만 금지. 폴리·린넨은 chemicals[]에 산소표백이 있으면 구석 테스트 후 사용 가능. "
+            "실크·울·레이온·가죽에는 산소표백/과산화수소 금지. "
             "why/신선·굳음 내용만 쓰고 필드명 출력 금지. 민간요법·다른 오염법 금지. "
             "(4)약품: chemicals[]의 name_ko를 반드시 이름 그대로 쓸 것 "
             "(소금·효소세제·식초·주방세제·산소계 표백제·워시프렌즈 중성세제 등). "
