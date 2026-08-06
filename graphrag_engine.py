@@ -1761,6 +1761,31 @@ def generate_response(user_message: str) -> str:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_SOY_SAUCE"
         entities["stain_type"] = "nuoc tuong"
+    elif any(k in user_message for k in ("분유",)) or "sua cong thuc" in raw_n or "baby formula" in raw_n or "infant formula" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_BABY_FORMULA"
+        entities["stain_type"] = "sua cong thuc"
+    elif any(
+        k in user_message for k in ("구토", "구토물", "토물", "토사물", "토한")
+    ) or (
+        "토" in user_message
+        and any(k in user_message for k in ("얼룩", "묻", "쏟", "세탁"))
+        and "토마토" not in user_message
+    ) or "vomit" in raw_n or "chat non" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_VOMIT"
+        entities["stain_type"] = "chat non"
+    elif any(k in user_message for k in ("소변", "오줌", "요산")) or "nuoc tieu" in raw_n or "urine" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_URINE"
+        entities["stain_type"] = "nuoc tieu"
+    elif any(k in user_message for k in ("대변", "분변", "똥 묻", "똥얼룩")) or "feces" in raw_n or "faeces" in raw_n or (
+        (" phan" in f" {raw_n}" or raw_n.startswith("phan") or "phan " in raw_n)
+        and "phan mem" not in raw_n
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_FECES"
+        entities["stain_type"] = "phan"
     elif any(k in user_message for k in ("핏자국", "혈액", "피 묻", "피얼룩")) or "mau tuoi" in raw_n or "mau kho" in raw_n or (
         "blood" in raw_n and "bleed" not in raw_n
     ):
