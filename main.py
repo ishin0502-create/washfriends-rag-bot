@@ -22,6 +22,7 @@ Environment variables required:
 import os
 import asyncio
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 # Load .env for local development (no-op in Railway/Render where vars are set directly)
 try:
@@ -33,6 +34,7 @@ except ImportError:
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from graphrag_engine import generate_response, close_driver
@@ -76,6 +78,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Brand header image only (mascot + logo) — no RAG coupling
+_assets_dir = Path(__file__).resolve().parent / "assets"
+if _assets_dir.is_dir():
+    app.mount("/static", StaticFiles(directory=str(_assets_dir)), name="static")
+
 
 # ─── Health ───────────────────────────────────────────────────────────────────
 
@@ -116,7 +123,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-juice-clarify-v1",
+            "build": "2026-08-06-brand-header-v1",
             "checks": checks,
         },
         status_code=200,

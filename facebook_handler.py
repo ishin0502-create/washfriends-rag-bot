@@ -23,6 +23,8 @@ from fastapi import Request, HTTPException, Query
 
 from graphrag_engine import generate_response
 from image_flow import process_channel_image
+from brand_header import should_send_brand_header, public_header_url
+from user_session import get_session
 
 FB_PAGE_TOKEN    = os.environ.get("FB_PAGE_TOKEN", "")
 FB_VERIFY_TOKEN  = os.environ.get("FB_VERIFY_TOKEN", "washfriends_vn_2024")
@@ -66,8 +68,44 @@ def _is_duplicate(mid: str) -> bool:
     return False
 
 
-async def _send_fb_message(recipient_id: str, text: str) -> bool:
-    """Send a text reply via Facebook Send API."""
+async def _send_fb_brand_image(recipient_id: str) -> bool:
+    """Send mascot+logo image via URL. Fail-open."""
+    url = f"{FB_API_BASE}/me/messages"
+    params = {"access_token": FB_PAGE_TOKEN}
+    payload = {
+        "recipient": {"id": recipient_id},
+        "messaging_type": "RESPONSE",
+        "message": {
+            "attachment": {
+                "type": "image",
+                "payload": {
+                    "url": public_header_url(),
+                    "is_reusable": True,
+                },
+            }
+        },
+    }
+    async with httpx.AsyncClient(timeout=15) as client:
+        try:
+            r = await client.post(url, params=params, json=payload)
+            data = r.json()
+            if "error" in data:
+                print(f"[FB BRAND ERROR] {data['error']}")
+                return False
+            print("[FB BRAND] sent")
+            return True
+        except Exception as e:
+            print(f"[FB BRAND HTTP] {e}")
+            return False
+
+
+async def _send_fb_message(recipient_id: str, text: str, *, with_brand: bool = False) -> bool:
+    """Optional brand image, then text. Text always attempted."""
+    if with_brand:
+        try:
+            await _send_fb_brand_image(recipient_id)
+        except Exception as e:
+            print(f"[FB BRAND] skipped: {e}")
     url = f"{FB_API_BASE}/me/messages"
     params = {"access_token": FB_PAGE_TOKEN}
     payload = {
@@ -175,14 +213,23 @@ async def handle_fb_webhook(request: Request) -> dict:
 
 async def _process_and_reply(sender_id: str, text: str) -> None:
     """Generate GraphRAG response from text and send to user."""
+    awaiting = get_session("facebook", sender_id).get("awaiting") == "care_label"
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         reply = await loop.run_in_executor(pool, generate_response, text)
-    await _send_fb_message(sender_id, reply)
+    with_brand = should_send_brand_header(
+        "facebook",
+        sender_id,
+        text,
+        has_image=False,
+        awaiting_care_label=awaiting,
+    )
+    await _send_fb_message(sender_id, reply, with_brand=with_brand)
 
 
 async def _process_image_and_reply(sender_id: str, image_url: str, caption: str = "") -> None:
     """Stain photo → GraphRAG, or low-confidence → ask for care-label photo."""
+    awaiting = get_session("facebook", sender_id).get("awaiting") == "care_label"
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         reply = await loop.run_in_executor(
@@ -193,4 +240,11 @@ async def _process_image_and_reply(sender_id: str, image_url: str, caption: str 
             image_url,
             caption or "",
         )
-    await _send_fb_message(sender_id, reply)
+    with_brand = should_send_brand_header(
+        "facebook",
+        sender_id,
+        caption or "",
+        has_image=True,
+        awaiting_care_label=awaiting,
+    )
+    await _send_fb_message(sender_id, reply, with_brand=with_brand)

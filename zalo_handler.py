@@ -25,13 +25,19 @@ from fastapi import Request, HTTPException
 
 from graphrag_engine import generate_response
 from image_flow import process_channel_image
+from brand_header import should_send_brand_header, header_image_path, public_header_url
+from user_session import get_session
 from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret, _app_id
 
 ZALO_API_BASE   = "https://openapi.zalo.me/v3.0"
+ZALO_UPLOAD_URL = "https://openapi.zalo.me/v2.0/oa/upload/image"
 
 _processed_events: dict[str, float] = {}
 _DEDUP_TTL = 300
 _executor = ThreadPoolExecutor(max_workers=4)
+_zalo_header_token: Optional[str] = None
+_zalo_header_token_ts: float = 0.0
+_ZALO_TOKEN_TTL = 20 * 60
 
 
 def _verify_zalo_signature(body_bytes: bytes, mac_header: str) -> bool:
@@ -68,8 +74,106 @@ def _is_duplicate(event_id: str) -> bool:
     return False
 
 
-async def _send_zalo_reply(user_id: str, text: str) -> bool:
-    """Send a text reply to a Zalo user via OA API (auto-refreshes token on expiry)."""
+async def _upload_zalo_header_token(client: httpx.AsyncClient, token: str) -> Optional[str]:
+    """Upload brand header once (cached briefly). Fail-open → None."""
+    global _zalo_header_token, _zalo_header_token_ts
+    now = time.time()
+    if _zalo_header_token and now - _zalo_header_token_ts < _ZALO_TOKEN_TTL:
+        return _zalo_header_token
+    path = header_image_path()
+    if not path:
+        return None
+    try:
+        with path.open("rb") as f:
+            files = {"file": ("wf_brand_header.png", f, "image/png")}
+            r = await client.post(
+                ZALO_UPLOAD_URL,
+                headers={"access_token": token},
+                files=files,
+                timeout=20,
+            )
+        data = r.json()
+        att = (data.get("data") or {}).get("attachment_id") or (data.get("data") or {}).get("token")
+        if att:
+            _zalo_header_token = str(att)
+            _zalo_header_token_ts = now
+            return _zalo_header_token
+        print(f"[ZALO BRAND] upload failed: {data}")
+    except Exception as e:
+        print(f"[ZALO BRAND] upload error: {e}")
+    return None
+
+
+async def _send_zalo_brand_image(user_id: str) -> bool:
+    """Send mascot+logo image. Never raises; False on failure."""
+    token = await get_access_token()
+    if not token:
+        return False
+    url = f"{ZALO_API_BASE}/oa/message/cs"
+    async with httpx.AsyncClient(timeout=20) as client:
+        for attempt in range(2):
+            headers = {"access_token": token, "Content-Type": "application/json"}
+            att = await _upload_zalo_header_token(client, token)
+            if att:
+                payload = {
+                    "recipient": {"user_id": user_id},
+                    "message": {
+                        "attachment": {
+                            "type": "image",
+                            "payload": {"token": att},
+                        }
+                    },
+                }
+            else:
+                payload = {
+                    "recipient": {"user_id": user_id},
+                    "message": {
+                        "attachment": {
+                            "type": "image",
+                            "payload": {"url": public_header_url()},
+                        }
+                    },
+                }
+            try:
+                r = await client.post(url, headers=headers, json=payload)
+                data = r.json()
+                err = data.get("error")
+                if err and err != 0:
+                    if attempt == 0 and is_token_error(err):
+                        token = await refresh_tokens(force=True)
+                        continue
+                    # URL fallback once
+                    payload = {
+                        "recipient": {"user_id": user_id},
+                        "message": {
+                            "attachment": {
+                                "type": "image",
+                                "payload": {"url": public_header_url()},
+                            }
+                        },
+                    }
+                    r = await client.post(url, headers=headers, json=payload)
+                    data = r.json()
+                    if data.get("error") in (None, 0):
+                        print("[ZALO BRAND] sent via url")
+                        return True
+                    print(f"[ZALO BRAND ERROR] code={data.get('error')} msg={data.get('message')}")
+                    return False
+                print("[ZALO BRAND] sent")
+                return True
+            except Exception as e:
+                print(f"[ZALO BRAND HTTP] {e}")
+                return False
+    return False
+
+
+async def _send_zalo_reply(user_id: str, text: str, *, with_brand: bool = False) -> bool:
+    """Send optional brand image, then text. Text always attempted."""
+    if with_brand:
+        try:
+            await _send_zalo_brand_image(user_id)
+        except Exception as e:
+            print(f"[ZALO BRAND] skipped: {e}")
     token = await get_access_token()
     if not token:
         print("[ZALO SEND ERROR] access token is empty — set ZALO_OA_ACCESS_TOKEN / REFRESH_TOKEN")
@@ -110,11 +214,13 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
     """Heavy AI work — runs after webhook ACK."""
     loop = asyncio.get_event_loop()
     try:
+        awaiting = get_session("zalo", user_id).get("awaiting") == "care_label"
         if event_name == "user_send_image":
             if not image_url:
                 await _send_zalo_reply(
                     user_id,
                     "Anh khong tai duoc. Vui long gui lai anh hoac mo ta vet ban bang chu.",
+                    with_brand=False,
                 )
                 return
 
@@ -131,13 +237,21 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
                 return
             reply_text = await loop.run_in_executor(_executor, generate_response, text)
 
-        await _send_zalo_reply(user_id, reply_text)
+        with_brand = should_send_brand_header(
+            "zalo",
+            user_id,
+            text or "",
+            has_image=bool(image_url),
+            awaiting_care_label=awaiting,
+        )
+        await _send_zalo_reply(user_id, reply_text, with_brand=with_brand)
     except Exception as exc:
         print(f"[ZALO HANDLER ERROR] {type(exc).__name__}: {exc}")
         try:
             await _send_zalo_reply(
                 user_id,
                 "Xin loi, he thong tam thoi gap su co. Vui long thu lai sau it phut.",
+                with_brand=False,
             )
         except Exception:
             pass
