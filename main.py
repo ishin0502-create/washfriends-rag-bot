@@ -31,6 +31,8 @@ try:
 except ImportError:
     pass
 
+from typing import Optional
+
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, JSONResponse
@@ -38,7 +40,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from graphrag_engine import generate_response, close_driver
-from zalo_handler import handle_zalo_webhook, get_zalo_oa_info
+from zalo_handler import handle_zalo_webhook, get_zalo_oa_info, diagnose_zalo_brand
 from facebook_handler import handle_fb_verify, handle_fb_webhook
 from zalo_token import token_refresh_loop
 
@@ -123,7 +125,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-cosmetics-v1",
+            "build": "2026-08-06-zalo-brand-v3",
             "checks": checks,
         },
         status_code=200,
@@ -141,6 +143,17 @@ async def zalo_webhook(request: Request):
 async def zalo_info():
     """Dev tool — verify Zalo OA token is valid."""
     return await get_zalo_oa_info()
+
+
+@app.get("/admin/brand-test")
+async def admin_brand_test(
+    token: str = Query(...),
+    user_id: Optional[str] = Query(None, description="Optional Zalo user_id to send test image"),
+):
+    """Diagnose brand header upload/send (Zalo v3). Token: washfriends2024seed"""
+    if token != "washfriends2024seed":
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    return await diagnose_zalo_brand(user_id=user_id)
 
 
 # ─── Facebook webhook ─────────────────────────────────────────────────────────
