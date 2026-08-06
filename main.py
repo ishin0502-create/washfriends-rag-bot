@@ -116,7 +116,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-label-clarify-v1",
+            "build": "2026-08-06-audit-fix-v1",
             "checks": checks,
         },
         status_code=200,
@@ -355,14 +355,38 @@ MERGE (stain)-[:BELONGS_TO]->(grp)
 RETURN count(*) AS rels""")
         _r(s, "K_chem_protein", """
 MATCH (s:Stain) WHERE s.contains_protein=true
-MATCH (e1:Chemical {code:'E1'}),(e2:Chemical {code:'N2'}),(e3:Chemical {code:'A5'})
-FOREACH (c IN [e1,e2,e3] | MERGE (s)-[:USES_CHEMICAL]->(c))
+MATCH (e1:Chemical {code:'E1'})
+MERGE (s)-[:USES_CHEMICAL]->(e1)
 RETURN count(DISTINCT s) AS stains""")
+        _r(s, "K2_chem_blood_salt_ammonia", """
+// Salt / diluted ammonia — blood only (not every protein stain)
+MATCH (s:Stain) WHERE s.id IN ['S_BLOOD_FRESH','S_BLOOD_DRY']
+MATCH (n2:Chemical {code:'N2'}),(a5:Chemical {code:'A5'})
+FOREACH (c IN [n2,a5] | MERGE (s)-[:USES_CHEMICAL]->(c))
+RETURN count(DISTINCT s) AS stains""")
+        _r(s, "K3_drop_protein_salt_ammonia_elsewhere", """
+MATCH (s:Stain)-[r:USES_CHEMICAL]->(c:Chemical)
+WHERE s.contains_protein = true
+  AND c.code IN ['N2','A5']
+  AND NOT s.id IN ['S_BLOOD_FRESH','S_BLOOD_DRY']
+DELETE r
+RETURN count(*) AS dropped""")
         _r(s, "L_chem_oil", """
 MATCH (s:Stain) WHERE s.contains_oil=true
-MATCH (d1:Chemical {code:'D2'}),(d2:Chemical {code:'N3'}),(d3:Chemical {code:'E3'})
-FOREACH (c IN [d1,d2,d3] | MERGE (s)-[:USES_CHEMICAL]->(c))
+MATCH (d2:Chemical {code:'D2'}),(n3:Chemical {code:'N3'})
+FOREACH (c IN [d2,n3] | MERGE (s)-[:USES_CHEMICAL]->(c))
 RETURN count(DISTINCT s) AS stains""")
+        _r(s, "L2_chem_oil_lipase", """
+// Lipase only where fat/oil enzyme helps — not candle wax
+MATCH (s:Stain) WHERE s.contains_oil=true AND NOT s.id IN ['S_CANDLE_WAX']
+MATCH (e3:Chemical {code:'E3'})
+MERGE (s)-[:USES_CHEMICAL]->(e3)
+RETURN count(DISTINCT s) AS stains""")
+        _r(s, "L3_drop_wax_enzyme", """
+MATCH (s:Stain {id:'S_CANDLE_WAX'})-[r:USES_CHEMICAL]->(c:Chemical)
+WHERE c.code IN ['E3','E1','E2']
+DELETE r
+RETURN count(*) AS dropped""")
         _r(s, "M_chem_tannin", """
 MATCH (s:Stain) WHERE s.contains_tannin=true
 MATCH (a1:Chemical {code:'A3'}),(b1:Chemical {code:'B1'})
@@ -370,8 +394,39 @@ FOREACH (c IN [a1,b1] | MERGE (s)-[:USES_CHEMICAL]->(c))
 RETURN count(DISTINCT s) AS stains""")
         _r(s, "N_chem_dye", """
 MATCH (s:Stain) WHERE s.contains_dye=true
+  AND NOT s.id IN ['S_RUST','S_PAINT_LATEX','S_MUSTARD','S_CURRY','S_GLUE']
 MATCH (a1:Chemical {code:'A1'}),(b1:Chemical {code:'B1'})
 FOREACH (c IN [a1,b1] | MERGE (s)-[:USES_CHEMICAL]->(c))
+RETURN count(DISTINCT s) AS stains""")
+        _r(s, "N2_specialty_stain_chems", """
+// Rewrite specialty stains: drop stale flag links, attach protocol chems
+MATCH (s:Stain) WHERE s.id IN [
+  'S_RUST','S_GUM','S_CANDLE_WAX','S_MOTORBIKE_OIL','S_ENGINE_OIL',
+  'S_GLUE','S_PAINT_LATEX','S_MUSTARD','S_CURRY'
+]
+OPTIONAL MATCH (s)-[old:USES_CHEMICAL]->()
+DELETE old
+WITH DISTINCT s
+MATCH (a1:Chemical {code:'A1'}),(a2:Chemical {code:'A2'}),(a3:Chemical {code:'A3'}),
+      (b1:Chemical {code:'B1'}),(d1:Chemical {code:'D1'}),(d2:Chemical {code:'D2'}),
+      (d3:Chemical {code:'D3'}),(n1:Chemical {code:'N1'}),(n3:Chemical {code:'N3'})
+FOREACH (_ IN CASE WHEN s.id = 'S_RUST' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(a3))
+FOREACH (_ IN CASE WHEN s.id = 'S_GUM' THEN [1] ELSE [] END |
+  SET s = s)
+FOREACH (_ IN CASE WHEN s.id = 'S_CANDLE_WAX' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(n3) MERGE (s)-[:USES_CHEMICAL]->(d2))
+FOREACH (_ IN CASE WHEN s.id IN ['S_MOTORBIKE_OIL','S_ENGINE_OIL'] THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(n3) MERGE (s)-[:USES_CHEMICAL]->(d1)
+  MERGE (s)-[:USES_CHEMICAL]->(a1) MERGE (s)-[:USES_CHEMICAL]->(d3))
+FOREACH (_ IN CASE WHEN s.id = 'S_GLUE' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a1)
+  MERGE (s)-[:USES_CHEMICAL]->(a2))
+FOREACH (_ IN CASE WHEN s.id = 'S_PAINT_LATEX' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a1))
+FOREACH (_ IN CASE WHEN s.id IN ['S_MUSTARD','S_CURRY'] THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(n1) MERGE (s)-[:USES_CHEMICAL]->(b1)
+  MERGE (s)-[:USES_CHEMICAL]->(d2))
 RETURN count(DISTINCT s) AS stains""")
         _r(s, "O_force_levels", """
 MATCH (s:Stain)
@@ -518,7 +573,7 @@ WITH soft, hard, ultra, cloth, spray
 MATCH (s:Stain)
 FOREACH (_ IN CASE WHEN s.contains_oil = true OR s.contains_tannin = true THEN [1] ELSE [] END |
   MERGE (s)-[:USES_TOOL]->(soft) MERGE (s)-[:USES_TOOL]->(cloth))
-FOREACH (_ IN CASE WHEN s.contains_dye = true THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN s.contains_dye = true AND NOT s.id IN ['S_RUST','S_GUM'] THEN [1] ELSE [] END |
   MERGE (s)-[:USES_TOOL]->(cloth) MERGE (s)-[:USES_TOOL]->(soft))
 FOREACH (_ IN CASE WHEN s.contains_protein = true THEN [1] ELSE [] END |
   MERGE (s)-[:USES_TOOL]->(cloth) MERGE (s)-[:USES_TOOL]->(ultra))
@@ -526,6 +581,10 @@ FOREACH (_ IN CASE WHEN s.id IN ['S_MOTORBIKE_OIL','S_ENGINE_OIL','S_MUD','S_LAT
   MERGE (s)-[:USES_TOOL]->(hard))
 FOREACH (_ IN CASE WHEN s.contains_tannin = true OR s.id STARTS WITH 'S_INK' THEN [1] ELSE [] END |
   MERGE (s)-[:USES_TOOL]->(spray))
+FOREACH (_ IN CASE WHEN s.id IN ['S_GUM','S_CANDLE_WAX'] THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_TOOL]->(cloth))
+FOREACH (_ IN CASE WHEN s.id = 'S_RUST' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_TOOL]->(cloth) MERGE (s)-[:USES_TOOL]->(soft))
 RETURN count(DISTINCT s) AS stains""")
         _r(s, "X_fabric_hints", """
 UNWIND [
@@ -825,15 +884,15 @@ UNWIND [
    aftercare_vi:'Phoi bong mat thoang. Tranh nang gay. CAM giat chung trang. Bao khach lan dau ra mau.'},
   {id:'I_COLOR_FADE',name:'Faded colored garment restore',name_vi:'Phuc hoi mat mau / phai mau (vai mau)',name_ko:'유색 옷 색바램·탈색 복원',fabric_id:'F1',
    precheck_vi:'Chup anh + do dien tich phai mau. Phan biet: (a) UV/thoi gian (b) tay hoa chat pha mau (c) loang mau. Thong bao: thuoc nhuom bi pha = kho/khong phuc hoi 100%.',
-   why_vi:'Vai mau mat mau: CAM meo ethanol+dau+may say (khong an toan, tam thoi, de hong). Huong dung: nho → but mau vai (noi ro tam thoi). Vua/lon → gui nhuom lai chuyen / giai thich + boi thuong hop ly. Khong xu ly them bang tay manh.',
-   fresh_path_vi:'(1) Anh + dong y khach. (2) Nho (<= dong xu): but mau vai phu hop → co dinh nhiet — NO RO co the phai khi giat. (3) Vua/lon: chuyen co so nhuom, khong cam ket khop mau 100%. (4) CAM tron con+dau roi say may.',
+   why_vi:'Vai mau mat mau: CAM meo ethanol+dau+may say. CAM dung chat giat/trung tinh nhu "phuc hoi mau". Huong dung: nho → but mau vai (tam thoi). Vua/lon → gui nhuom lai / giai thich + boi thuong. Khong xu ly them bang tay manh.',
+   fresh_path_vi:'(1) Anh + dong y khach. (2) Nho (<= dong xu): but mau vai phu hop → co dinh nhiet — NO RO co the phai khi giat. (3) Vua/lon: chuyen co so nhuom, khong cam ket khop mau 100%. (4) CAM tron con+dau roi say may. (5) Khong dung detergent/S1 de "phuc hoi mau".',
    dried_path_vi:'Da xu ly sai (tay/oxy len mau): dung lai, chup anh, tu van nhuom/boi thuong. Khong lap tay.',
-   motion_vi:'Luc 1 — chi cham but mau neu chon phuong an nho',
+   motion_vi:'Luc 1 — chi cham but mau neu chon phuong an nho; khong cha',
    water_temp_vi:'Khong giat tay mau tren cho phai; theo nhan neu chi cham soc',
-   aftercare_vi:'Ghi ro gioi han phuc hoi. Phoi bong mat sau. Khuyen khach tranh nang de giam phai tiep.'},
+   aftercare_vi:'Ghi ro gioi han phuc hoi. Phoi bong mat sau. Khuyen khach tranh nang. Dung cu: but mau vai / anh ghi chep — KHONG khan tham nhu xu ly vet.'},
   {id:'I_WHITE_FADE',name:'White / light fabric fade balance',name_vi:'Phuc hoi mat mau vai trang/sang (OBA)',name_ko:'흰·밝은 옷 탈색·얼룩 환 복원',fabric_id:'F1',
    precheck_vi:'CHI vai trang/sang. Chup anh. Dom trang sau tay = OBA bi pha. CAM ap dung len vai mau.',
-   why_vi:'Vai trang: can bang bang tay oxy DEU TOAN BO (khong cham tung diem — de lo hon). Paste chi cho cho sot. Phoi nang ngan co the can bang UV — neu nhan/vai cho phep.',
+   why_vi:'Vai trang: can bang bang tay oxy DEU TOAN BO (khong cham tung diem — de lo hon). Paste baking soda + oxy gia chi cho cho sot. Phoi nang ngan co the can bang UV — neu nhan/vai cho phep.',
    fresh_path_vi:'Ngam TOAN BO bot tay oxy pha loang deu ~45 phut (theo huong dan) → xa → neu con dom: paste baking soda + oxy gia nhe 10 phut chi cho sot → giat ~40C neu cotton cho → kiem tra duoi anh sang.',
    dried_path_vi:'Con lech mau: lap ngam deu (khong cham diem). Khong het → bao khach gioi han.',
    motion_vi:'Luc 0-1 — ngam deu, khong cha manh',
@@ -852,43 +911,52 @@ MERGE (i)-[:MADE_OF]->(f)
 RETURN count(i) AS created""")
         _r(s, "I_items_chem_tools", """
 MATCH (cloth:Tool {id:'T_CLOTH'}), (soft:Tool {id:'T_BRUSH_SOFT'}), (ultra:Tool {id:'T_BRUSH_ULTRA'}),
-      (hard:Tool {id:'T_BRUSH_HARD'}), (shoe:Tool {id:'T_BRUSH_SHOE'})
-WITH cloth, soft, ultra, hard, shoe
-MATCH (d2:Chemical {code:'D2'}), (d3:Chemical {code:'D3'}), (a1:Chemical {code:'A1'}), (n1:Chemical {code:'N1'}), (b1:Chemical {code:'B1'})
-WITH cloth, soft, ultra, hard, shoe, d2, d3, a1, n1, b1
-// Drop stale chem links before re-wire (no heavy D3 on golf hat / summer suit / glove)
-MATCH (bad:Item) WHERE bad.id IN ['I_GOLF_GLOVE_LEATHER','I_GOLF_WEAR','I_GOLF_HAT','I_SUIT_SUMMER']
-OPTIONAL MATCH (bad)-[oldc:USES_CHEMICAL]->()
-DELETE oldc
-WITH cloth, soft, ultra, hard, shoe, d2, d3, a1, n1, b1
+      (hard:Tool {id:'T_BRUSH_HARD'}), (shoe:Tool {id:'T_BRUSH_SHOE'}), (spray:Tool {id:'T_SPRAY'})
+WITH cloth, soft, ultra, hard, shoe, spray
+MATCH (d2:Chemical {code:'D2'}), (d3:Chemical {code:'D3'}), (a1:Chemical {code:'A1'}),
+      (a4:Chemical {code:'A4'}), (n1:Chemical {code:'N1'}), (b1:Chemical {code:'B1'}),
+      (s1:Chemical {code:'S1'})
+WITH cloth, soft, ultra, hard, shoe, spray, d2, d3, a1, a4, n1, b1, s1
+// Full rewire Item tools/chems (drop stale wrong links)
 MATCH (i:Item)
-FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_LEATHER_SHOE','I_GLOVE_LEATHER'] THEN [1] ELSE [] END |
+OPTIONAL MATCH (i)-[oldt:USES_TOOL]->()
+DELETE oldt
+WITH cloth, soft, ultra, hard, shoe, spray, d2, d3, a1, a4, n1, b1, s1, i
+OPTIONAL MATCH (i)-[oldc:USES_CHEMICAL]->()
+DELETE oldc
+WITH cloth, soft, ultra, hard, shoe, spray, d2, d3, a1, a4, n1, b1, s1, i
+FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_GLOVE_LEATHER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(a1))
+FOREACH (_ IN CASE WHEN i.id = 'I_LEATHER_SHOE' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(a1) MERGE (i)-[:USES_CHEMICAL]->(d2))
 FOREACH (_ IN CASE WHEN i.id = 'I_GOLF_GLOVE_LEATHER' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth))
 FOREACH (_ IN CASE WHEN i.id IN ['I_SUEDE_GARMENT','I_SUEDE_BAG','I_SUEDE_SHOE'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth))
 FOREACH (_ IN CASE WHEN i.id IN ['I_SNEAKER','I_RUNNING_MESH','I_SNEAKER_WHITE','I_GOLF_SHOE','I_HIKING_SHOE'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(shoe)
-  MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_CHEMICAL]->(n1))
+  MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(n1))
 FOREACH (_ IN CASE WHEN i.id = 'I_SHOE_LACES' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth)
-  MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_CHEMICAL]->(n1))
+  MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(n1))
 FOREACH (_ IN CASE WHEN i.id IN ['I_GORETEX','I_DOWN_JACKET','I_GOLF_GLOVE_SYNTH','I_FUR_FAUX'] THEN [1] ELSE [] END |
-  MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_TOOL]->(cloth))
+  MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_TOOL]->(cloth))
 FOREACH (_ IN CASE WHEN i.id IN ['I_GOLF_WEAR','I_GOLF_HAT','I_SUIT_SUMMER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(d2))
 FOREACH (_ IN CASE WHEN i.id = 'I_GOLF_HAT' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft))
 FOREACH (_ IN CASE WHEN i.id = 'I_DENIM' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(hard) MERGE (i)-[:USES_TOOL]->(cloth)
-  MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(d3))
+  MERGE (i)-[:USES_CHEMICAL]->(d2))
 FOREACH (_ IN CASE WHEN i.id = 'I_COLOR_FADE' THEN [1] ELSE [] END |
-  MERGE (i)-[:USES_TOOL]->(cloth))
+  // No shop detergent / blot cloth — restore = fabric marker or re-dye (see fresh_path)
+  SET i = i)
 FOREACH (_ IN CASE WHEN i.id = 'I_WHITE_FADE' THEN [1] ELSE [] END |
-  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(b1) MERGE (i)-[:USES_CHEMICAL]->(n1))
+  MERGE (i)-[:USES_TOOL]->(spray)
+  MERGE (i)-[:USES_CHEMICAL]->(b1) MERGE (i)-[:USES_CHEMICAL]->(n1) MERGE (i)-[:USES_CHEMICAL]->(a4))
 FOREACH (_ IN CASE WHEN i.id IN ['I_SUIT','I_AO_DAI','I_HANBOK'] THEN [1] ELSE [] END |
-  MERGE (i)-[:USES_TOOL]->(ultra) MERGE (i)-[:USES_TOOL]->(cloth))
+  MERGE (i)-[:USES_TOOL]->(ultra) MERGE (i)-[:USES_TOOL]->(cloth)
+  MERGE (i)-[:USES_CHEMICAL]->(s1))
 FOREACH (_ IN CASE WHEN i.id = 'I_FUR_REAL' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth))
 RETURN count(i) AS items""")

@@ -98,8 +98,6 @@ OPTIONAL MATCH (chem)-[:NEVER_MIX_WITH]->(dangerous:Chemical)
 OPTIONAL MATCH (cr:ClimateRule)
   WHERE cr.id STARTS WITH 'CR'
 OPTIONAL MATCH (s)-[:USES_TOOL]->(tool:Tool)
-OPTIONAL MATCH (wf:Chemical)
-  WHERE wf.wf_supply = true OR wf.code IN ['S1','WF_SOFT','WF_FRAG']
 RETURN
   s {
     .id, .name, .name_vi, .tip, .urgency,
@@ -121,10 +119,7 @@ RETURN
   COLLECT(DISTINCT tool {
     .id, .name_vi, .name_ko, .use_for_vi
   }) AS tools,
-  COLLECT(DISTINCT wf {
-    .code, .name, .name_vi, .name_ko, .role, .shop_name_vi, .buy_where_vi, .buy_where_ko,
-    .alt1_vi, .alt2_vi, .when_use_vi, .wf_supply, .dilution_vi, .dilution_ko
-  }) AS washfriends_supply,
+  [] AS washfriends_supply,
   COLLECT(DISTINCT force {
     .level, .name, .description
   }) AS force_levels,
@@ -158,8 +153,6 @@ MATCH (i:Item {id: $item_id})
 OPTIONAL MATCH (i)-[:MADE_OF]->(f:Fabric)
 OPTIONAL MATCH (i)-[:USES_CHEMICAL]->(chem:Chemical)
 OPTIONAL MATCH (i)-[:USES_TOOL]->(tool:Tool)
-OPTIONAL MATCH (wf:Chemical)
-  WHERE wf.wf_supply = true OR wf.code IN ['S1','WF_SOFT','WF_FRAG']
 OPTIONAL MATCH (f)-[:NEVER_USE]->(blocked:Chemical)
 RETURN
   i {
@@ -179,10 +172,7 @@ RETURN
   COLLECT(DISTINCT tool {
     .id, .name_vi, .name_ko, .use_for_vi
   }) AS tools,
-  COLLECT(DISTINCT wf {
-    .code, .name, .name_vi, .name_ko, .role, .shop_name_vi, .buy_where_vi, .buy_where_ko,
-    .alt1_vi, .alt2_vi, .when_use_vi, .wf_supply, .dilution_vi, .dilution_ko
-  }) AS washfriends_supply,
+  [] AS washfriends_supply,
   COLLECT(DISTINCT CASE WHEN blocked IS NOT NULL THEN {
     fabric: f.name_vi, chemical: blocked.code, chemical_name_vi: blocked.name_vi
   } END) AS never_use_on_fabric
@@ -505,7 +495,9 @@ def _fetch_graph_context(entities: dict) -> dict:
         context["query_type"] = "full_context"
 
     if isinstance(context.get("graph"), dict):
-        context["graph"] = _apply_fabric_chem_safety(context["graph"])
+        context["graph"] = _apply_delicate_s1_fallback(
+            _apply_fabric_chem_safety(context["graph"])
+        )
 
     # Item care (shoes/bags/gore-tex/down/leather) — same 1)-6) fields as stains
     item_id = entities.get("item_id")
@@ -514,7 +506,9 @@ def _fetch_graph_context(entities: dict) -> dict:
         if item_rows:
             context = _merge_item_into_context(context, item_rows[0])
             if isinstance(context.get("graph"), dict):
-                context["graph"] = _apply_fabric_chem_safety(context["graph"])
+                context["graph"] = _apply_delicate_s1_fallback(
+                    _apply_fabric_chem_safety(context["graph"])
+                )
 
     return context
 
@@ -523,8 +517,12 @@ def _item_as_stain_shaped(item_graph: dict) -> dict:
     """Map Item fields onto stain_context so existing owner 1)-6) prompt stays unchanged."""
     ic = item_graph.get("item_context") or {}
     item_id = ic.get("id") or ""
-    # Real fur / leather golf glove: never surface shop detergents (LLM invents from WF supply)
-    no_shop_chem = item_id in {"I_FUR_REAL", "I_GOLF_GLOVE_LEATHER"}
+    # No shop detergents as "restore" fillers; real fur / leather golf glove also pro-only
+    no_shop_chem = item_id in {
+        "I_FUR_REAL",
+        "I_GOLF_GLOVE_LEATHER",
+        "I_COLOR_FADE",
+    }
     return {
         "stain_context": {
             "id": ic.get("id"),
@@ -544,14 +542,16 @@ def _item_as_stain_shaped(item_graph: dict) -> dict:
         },
         "fabric_context": item_graph.get("fabric_context"),
         "chemicals": [] if no_shop_chem else (item_graph.get("chemicals") or []),
-        "tools": item_graph.get("tools") or [],
-        "washfriends_supply": [] if no_shop_chem else (item_graph.get("washfriends_supply") or []),
+        "tools": [] if item_id == "I_COLOR_FADE" else (item_graph.get("tools") or []),
+        "washfriends_supply": [],
         "force_levels": [],
         "fabric_cautions": [],
         "never_use_on_fabric": item_graph.get("never_use_on_fabric") or [],
         "never_mix_alerts": [],
         "climate_context": [],
         "item_context": ic,
+        "empty_tools_ok": item_id == "I_COLOR_FADE",
+        "empty_chems_ok": no_shop_chem,
     }
 
 
@@ -579,13 +579,17 @@ def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
         sc["tip"] = ic.get("why_vi")
     g["stain_context"] = sc
     # Prefer item tools/chems for specialty garments
-    if item_graph.get("tools"):
-        g["tools"] = item_graph.get("tools")
-    if ic.get("id") in {"I_FUR_REAL", "I_GOLF_GLOVE_LEATHER"}:
+    if item_graph.get("tools") is not None:
+        g["tools"] = [] if ic.get("id") == "I_COLOR_FADE" else (item_graph.get("tools") or [])
+    if ic.get("id") in {"I_FUR_REAL", "I_GOLF_GLOVE_LEATHER", "I_COLOR_FADE"}:
         g["chemicals"] = []
         g["washfriends_supply"] = []
+        g["empty_chems_ok"] = True
+        if ic.get("id") == "I_COLOR_FADE":
+            g["empty_tools_ok"] = True
     elif item_graph.get("chemicals") is not None:
         g["chemicals"] = item_graph.get("chemicals")
+        g["washfriends_supply"] = []
     if item_graph.get("never_use_on_fabric"):
         g["never_use_on_fabric"] = item_graph.get("never_use_on_fabric")
     context["graph"] = g
@@ -634,7 +638,8 @@ def _infer_item_from_text(text: str) -> str:
     fade = any(
         k in raw
         for k in (
-            "색바램", "색 바램", "탈색", "색이 흐려", "색이 바랬", "색이 바래",
+            "색바램", "색 바램", "탈색", "색이 흐려", "색상이 흐려", "색상 흐려",
+            "색이 바랬", "색이 바래", "흐려졌",
             "색빠짐", "물빠짐", "복원", "하얗게 닳", "표백 후",
         )
     ) or "phai mau" in t or "mat mau" in t or "phuc hoi mau" in t or "fade" in t or "decolor" in t
@@ -739,6 +744,52 @@ def _infer_fabric_from_text(text: str) -> str:
     return ""
 
 
+_S1_OWNER = {
+    "code": "S1",
+    "name": "Wash Friends Neutral Detergent",
+    "name_vi": "Nuoc giat trung tinh Wash Friends",
+    "name_ko": "워시프렌즈 중성세제",
+    "role": "WF supply pH-neutral for silk wool delicate",
+    "safe_on_wool": True,
+    "safe_on_silk": True,
+    "shop_name_vi": "Nuoc giat trung tinh do Wash Friends cung cap",
+    "buy_where_vi": "Kho hang / cung ung Wash Friends",
+    "buy_where_ko": "워시프렌즈 본사·창고 공급",
+    "wf_supply": True,
+    "when_use_vi": "Bat buoc uu tien khi can chat giat trung tinh / lua / len",
+    "dilution_vi": "Theo huong dan chai Wash Friends — uu tien lua/len",
+    "dilution_ko": "워시프렌즈 중성세제 병 안내 따름 — 실크·울 우선",
+}
+
+
+def _apply_delicate_s1_fallback(graph: dict) -> dict:
+    """If silk/wool left with zero safe chemicals, offer S1 only — never for color-fade restore."""
+    if not isinstance(graph, dict):
+        return graph
+    ic = graph.get("item_context") or {}
+    if ic.get("id") in {"I_COLOR_FADE", "I_FUR_REAL", "I_GOLF_GLOVE_LEATHER"}:
+        return graph
+    sc = graph.get("stain_context") or {}
+    if sc.get("id") == "I_COLOR_FADE":
+        return graph
+
+    fabric = graph.get("fabric_context") or {}
+    fid = str(fabric.get("id") or "").upper()
+    fname = f"{fabric.get('name') or ''} {fabric.get('name_vi') or ''}".lower()
+    is_silk = fid == "F4" or "silk" in fname or "lua" in fname
+    is_wool = fid == "F3" or "wool" in fname or " len" in f" {fname}"
+    if not (is_silk or is_wool):
+        return graph
+
+    chems = [c for c in (graph.get("chemicals") or []) if c]
+    if chems:
+        return graph
+    out = dict(graph)
+    out["chemicals"] = [dict(_S1_OWNER)]
+    out["washfriends_supply"] = []
+    return out
+
+
 def _apply_fabric_chem_safety(graph: dict) -> dict:
     """Drop chemicals unsafe for the matched fabric so the LLM cannot recommend them."""
     fabric = graph.get("fabric_context") or {}
@@ -791,9 +842,10 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
     if blocked:
         out["chemicals_blocked_for_fabric"] = blocked
         out["delicate_chem_rule"] = (
-            "Chi dung chemicals[] con lai. Neu rong: uu tien washfriends_supply neu phu hop + luc nhe. "
+            "Chi dung chemicals[] con lai. Neu rong VA lua/len: co the chi con S1 neu da gan. "
             "Cam khuyen nghi chemicals_blocked_for_fabric. Bo qua tip/dried_path neu chung ke chat bi chan. "
-            "Cam goi y tay oxy / B1 tren da hoac suede."
+            "Cam goi y tay oxy / B1 tren da hoac suede. Cam bia nuoc giat khi chemicals[] rong "
+            "(tru truong hop S1 da co trong chemicals[])."
         )
 
     if delicate and isinstance(out.get("stain_context"), dict):
@@ -980,8 +1032,13 @@ QUY TẮC TRẢ LỜI:
 5. Câu XỬ LÝ VẾT / CHĂM SÓC MÓN ĐỒ — 1)-6), dễ đọc (cùng một format cho stain và item_care):
    (1) Nhận diện + tươi/khô hoặc tình trạng món (nội dung fresh/dried, không in tên field)
    (2) Dụng cụ — chỉ tên người dùng (name_ko / name_vi), CẤM id T_…
+       Nếu tools[] RỖNG: viết "해당 없음" / "khong can dung cu dac biet" HOẶC lấy từ fresh_path
+       (vd bút màu vải, chụp ảnh) — CẤM bịa "흰 천·흡수지" khi không có trong tools[]
    (3) Lực + hướng
    (4) Hóa chất — xem quy tắc HÓA CHẤT bên dưới
+       Nếu chemicals[] RỖNG: CẤM bịa nước giặt trung tính / detergent.
+       Viết rõ theo fresh_path (vd: không phục hồi bằng hóa chất cửa hàng; bút màu / gửi nhuộm)
+       hoặc "해당 약품 없음 — 프로토콜 따름"
    (5) Nhiệt độ nước + max_temp vải
    (6) Sau xử lý / hoàn thiện (BẮT BUỘC đủ ý, ngắn gọn):
        - Kiểm tra vết CÒN LẠI dưới ánh sáng mạnh TRƯỚC khi sấy/ủi; còn → xử lý lại, CẤM sấy khóa vết
@@ -989,7 +1046,7 @@ QUY TẮC TRẢ LỜI:
        - Nếu có fabric dry_hint_vi / iron_hint_vi → nhắc 1 câu sấy/ủi đúng vải (không bịa nhiệt độ)
        - Dùng aftercare_vi nếu có
    Nếu có item_context: đây là chăm sóc món (giày/túi/áo phao/Gore-Tex…) — vẫn dùng 1)-6), không đổi giọng.
-6. WF_SOFT / WF_FRAG chỉ khi đúng when_use_vi
+6. KHÔNG tự chèn WF_SOFT / WF_FRAG. S1 chỉ khi có trong chemicals[] (lụa/len hoặc đã gắn).
 7. CẤM mẹo dân gian, thương hiệu ngoài, viện/web/AI/PDF
 8. Không markdown **, ##, *, _ — Zalo plain text thuần (không in dấu ** quanh tiêu đề)
 9. Không trộn tiếng Anh vụng (cấm: external, internal, soft brush…). Lực/hướng viết đủ ngôn ngữ trả lời (Hàn: 바깥→안 / Việt: ngoài→trong)
@@ -1002,6 +1059,8 @@ HÓA CHẤT (bắt buộc):
 - Có thể nhắc tên hàng ngày — tuyệt đối không viết mã S1 / A3 / B1 / E1…
 - Da (leather) / suede: CAM máy giặt, CAM tẩy oxy/javel, CAM nhiệt/nắng gắt.
   Da bóng: ít nước + cồn nhẹ (test) + kem dưỡng. Suede: không nước → chải khô / chuyên nghiệp.
+- Phục hồi mất màu vải MÀU (I_COLOR_FADE): CẤM dùng detergent/S1 như cách "phục hồi màu".
+  Chỉ bút màu (nhỏ) / gửi nhuộm / bồi thường — theo fresh_path.
 - Pha loãng: CHỈ dùng dilution_ko (Hàn) hoặc dilution_vi (Việt) nếu có.
   Không có dilution_* → "병 라벨·본사 안내 따름" / "theo hướng dẫn trên chai / kho WF" — CẤM bịa tỷ lệ (vd 1:4 cho S1).
   Hàn tự nhiên: "식초 1 : 물 4". Việt: "1 phần giấm + 4 phần nước". CẤM "1부분…4부분".
@@ -1012,7 +1071,8 @@ HÓA CHẤT (bắt buộc):
   Test góc khuất trước khi xử lý cả món. Tuyệt đối không trộn chất trong never_mix_alerts (vd ammonia + javel).
 - B1 = thuốc tẩy oxy (KHÔNG phải "세제 axit"). A3 = giấm / axit nhẹ.
 - Vải lụa/len HOẶC chemical.safe_on_silk/safe_on_wool = false HOẶC fabric enzyme_safe/acid_safe/can_bleach = false:
-  → KHÔNG khuyến nghị hóa chất không an toàn. Ưu tiên nước giặt trung tính Wash Friends + nước lạnh + lực nhẹ.
+  → KHÔNG khuyến nghị hóa chất không an toàn.
+  → Chỉ dùng S1 nếu S1 có trong chemicals[]. Không bịa S1 khi chemicals[] rỗng vì lý do khác (vd phục hồi màu).
   → Nếu chỉ còn cảnh báo: nói rõ "không dùng trên lụa/len" thay vì vẫn bảo dùng.
 - Nếu có chemicals_blocked_for_fabric / delicate_chem_rule: tuân thủ tuyệt đối — không lấy bước tẩy/axit/enzyme từ tip nếu đã bị chặn.
 
@@ -1037,13 +1097,17 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     query_type = graph_context.get("query_type", "unknown")
     if lang == "ko":
         lang_rule = (
-            "청자: 워시프렌즈 점주(동료). 한국어만(베트남어·영어 금지). 마크다운(** ## *) 금지. "
+            "수신 대상은 워시프렌즈 점주(동료). 본문에 '청자'/'청자 여러분' 쓰지 말 것. "
+            "한국어만(베트남어·영어 금지). 마크다운(** ## *) 금지. "
             "힘·방향은 '바깥→안'처럼 한국어만 (external/internal 금지). "
             "약품은 name_ko·일상명만 (A3/B1/S1 코드 말하지 말 것). "
             "도구는 name_ko만 — T_CLOTH 같은 id, name_vi 출력 금지. "
+            "tools[]가 비면: '해당 없음' 또는 fresh_path의 도구(천용 컬러펜 등). 흰 천을 지어내지 말 것. "
+            "chemicals[]가 비면: 중성세제/세제로 칸 채우지 말 것. fresh_path대로 "
+            "(색바램=마커·재염색·한계 고지, 매장 세제로 색 복원 금지). "
             "희석은 dilution_ko만: '식초 1 : 물 4' 형식. '1부분' 금지. "
             "'세탁소에서 구입' 금지 — 슈퍼/약국/화공, WF는 본사·창고 공급. "
-            "실크·울이면 비안전 약품 추천 금지, 워시프렌즈 중성세제 우선. "
+            "실크·울이고 chemicals[]에 중성세제가 있을 때만 중성세제 사용. "
             "B1=산소계 표백제(산성 세제 아님). "
             "why/신선·굳음 내용만 쓰고 필드명 출력 금지. 민간요법·다른 오염법 금지. "
             "1)오염·원단 2)도구(name_ko) 3)힘·방향 4)약품 5)수온 "
@@ -1054,12 +1118,16 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
         )
     else:
         lang_rule = (
-            "Người nghe: chủ cửa hàng Wash Friends (đồng nghiệp). CHỈ tiếng Việt. "
-            "CẤM markdown ** ##. Lực/hướng: 'ngoài→trong' — không xen English. "
+            "Nguoi nhan: chu cua hang Wash Friends (dong nghiep). CHỈ tiếng Việt. "
+            "CẤM markdown ** ##. CẤM in chu '청자'. "
+            "Lực/hướng: 'ngoài→trong' — không xen English. "
             "Hóa chất: shop_name_vi / tên thường — CẤM mã A3/B1/E1/S1. "
+            "tools[] rỗng → 'khong can dung cu dac biet' / theo fresh_path — CẤM bịa khan tham. "
+            "chemicals[] rỗng → CẤM bịa nuoc giat trung tinh; theo fresh_path "
+            "(phai mau mau: but mau / nhuom / khong phuc hoi bang detergent). "
             "Pha loãng: CHỈ dilution_vi; không có → 'theo hướng dẫn trên chai / kho WF' — không bịa tỷ lệ. "
             "CẤM 'mua ở tiệm giặt' — siêu thị/nhà thuốc/cửa hóa chất; hàng WF = kho cung ứng. "
-            "Lụa/len: không khuyến nghị chất bị chặn; ưu tiên nước giặt trung tính Wash Friends. "
+            "Lụa/len: chỉ dùng S1 nếu có trong chemicals[]. "
             "B1 = tẩy oxy (không gọi chất tẩy axit). "
             "Không in tên field. Không mẹo dân gian. "
             "1)-6) nhận diện / dụng cụ / lực / hóa chất / nhiệt độ / "
