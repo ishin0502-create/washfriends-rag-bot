@@ -1998,6 +1998,7 @@ RETURN size(nodes) AS cleared""")
             "rail_c": "I_BED_SHEET/TOWEL/BABY/SWIM + S_SUNSCREEN/TAR/MASCARA/HAIR_DYE + I_ODOR_SMOKE",
             "rail_d": "I_CARE_LABEL + I_DRY_VS_WET + I_INTAKE_SCRIPT + I_WATER_HARDNESS + I_MACHINE_PROFILE + tools D5",
             "stage15": "S_BUTTER + S_SHOE_POLISH RICH + why_ko/fresh_path_ko for gum/bubble (KO polish)",
+            "tool_p0": "Per-stain USES_TOOL matrix (clear flag links; PPE/soak/timer where SOP needs)",
         }
     _drv.close()
     return JSONResponse(log)
