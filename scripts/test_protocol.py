@@ -242,6 +242,97 @@ def test_fabric_safety_still_filters_without_protocol():
     assert out.get("chemicals_blocked_for_fabric")
 
 
+def test_soft_brush_howto_varies_by_stain_and_weight():
+    """Brush howto must NOT be the global Neo4j Cap2 45° seed for every stain."""
+    from protocol import narrate_tools_for_context
+
+    seed = "면·폴리용: 브러시를 45°로 잡고 Cap2, 바깥→안 한 방향으로만. 실크·울에는 쓰지 말고 초연질로 교체."
+    base = [{"id": "T_BRUSH_SOFT", "name_ko": "연질 스포팅 솔", "use_for_ko": seed}]
+
+    wine_med = narrate_tools_for_context(
+        base,
+        stain_id="S_RED_WINE",
+        stain_context={"contains_tannin": True, "contains_dye": True},
+        fabric="cotton",
+        weight="medium",
+    )[0]["use_for_ko"]
+    wine_thin = narrate_tools_for_context(
+        base,
+        stain_id="S_RED_WINE",
+        stain_context={"contains_tannin": True},
+        fabric="cotton",
+        weight="thin",
+    )[0]["use_for_ko"]
+    oil = narrate_tools_for_context(
+        base, stain_id="S_COOKING_OIL", fabric="cotton", weight="medium"
+    )[0]["use_for_ko"]
+    protein = narrate_tools_for_context(
+        base, stain_id="S_BLOOD_FRESH", fabric="cotton", weight="medium"
+    )[0]["use_for_ko"]
+
+    assert wine_med != seed
+    assert "탄닌" in wine_med or "색소" in wine_med
+    assert wine_thin != wine_med
+    assert "블롯" in wine_thin or "Cap1" in wine_thin
+    assert "유성" in oil or "기름" in oil or "주방세제" in oil
+    assert "단백질" in protein or "찬물" in protein
+    assert wine_med != oil != protein
+
+
+def test_curtain_drops_soft_brush_and_mesh_howto():
+    from protocol import apply_protocol_to_graph, narrate_tools_for_context
+
+    tools = [
+        {"id": "T_BRUSH_SOFT", "use_for_ko": "FIXED Cap2 45°"},
+        {"id": "T_CLOTH", "use_for_ko": "FIXED blot"},
+        {"id": "T_MESH_BAG", "use_for_ko": "FIXED mesh thin clothes"},
+    ]
+    g = {
+        "item_context": {"id": "I_CURTAIN_FABRIC", "name_ko": "커튼"},
+        "tools": tools,
+        "chemicals": [{"code": "D2", "name_ko": "주방세제"}],
+        "fabric_context": {"id": "F2", "name": "Polyester"},
+    }
+    out = apply_protocol_to_graph(g, entities={"item_id": "I_CURTAIN_FABRIC"})
+    ids = [t["id"] for t in out["tools"]]
+    assert "T_BRUSH_SOFT" not in ids
+    assert "T_MESH_BAG" in ids
+    mesh = next(t for t in out["tools"] if t["id"] == "T_MESH_BAG")
+    assert "커튼" in mesh["use_for_ko"] or "세탁망" in mesh["use_for_ko"]
+    assert "30" in mesh["use_for_ko"] or "40" in mesh["use_for_ko"]
+    cloth = next(t for t in out["tools"] if t["id"] == "T_CLOTH")
+    assert "FIXED blot" not in cloth["use_for_ko"]
+    assert "홈텍" in cloth["use_for_ko"] or "국소" in cloth["use_for_ko"]
+
+    # Stain on curtain: soft brush kept but local-spot narration
+    spotted = narrate_tools_for_context(
+        [{"id": "T_BRUSH_SOFT", "use_for_ko": "FIXED"}],
+        stain_id="S_RED_WINE",
+        stain_context={"contains_tannin": True},
+        fabric="cotton",
+        weight="medium",
+        item_id="I_CURTAIN_FABRIC",
+    )
+    assert spotted and "국소" in spotted[0]["use_for_ko"]
+
+
+def test_protocol_rewrites_brush_not_seed():
+    g = _wine_graph()
+    g["tools"].append(
+        {
+            "id": "T_BRUSH_SOFT",
+            "name_ko": "연질 스포팅 솔",
+            "use_for_ko": "면·폴리용: 브러시를 45°로 잡고 Cap2, 바깥→안 한 방향으로만.",
+        }
+    )
+    out = apply_protocol_to_graph(
+        g, entities={"fabric_type": "cotton", "fabric_weight": "medium", "stain_id": "S_RED_WINE"}
+    )
+    soft = next(t for t in out["tools"] if t["id"] == "T_BRUSH_SOFT")
+    assert "45°로 잡고 Cap2" not in soft["use_for_ko"] or "탄닌" in soft["use_for_ko"]
+    assert "탄닌" in soft["use_for_ko"] or "색소" in soft["use_for_ko"]
+
+
 if __name__ == "__main__":
     failed = 0
     for fn in [v for k, v in list(globals().items()) if k.startswith("test_")]:

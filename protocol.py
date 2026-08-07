@@ -1457,7 +1457,466 @@ def render_chemicals(proto: Protocol, graph_chems: Optional[list] = None) -> lis
     return out
 
 
-def bind_tools_from_protocol(proto: Protocol, tools: list) -> list:
+# Home textiles: wash/mesh/temp education — not generic spotting-brush copy
+HOME_TEXTILE_ITEM_IDS = frozenset({
+    "I_CURTAIN_FABRIC", "I_CURTAIN_URETHANE",
+    "I_DUVET_GOOSE", "I_DUVET_COTTON",
+    "I_BED_SHEET", "I_TOWEL",
+})
+
+
+def _stain_family(stain_id: str, sc: Optional[dict] = None) -> str:
+    """Coarse chemistry family for tool howto (not a second truth source)."""
+    sid = str(stain_id or "").upper()
+    sc = sc or {}
+    if sid in {"S_MUD", "S_LATERITE"}:
+        return "mud"
+    if sid == "S_MILDEW":
+        return "mildew"
+    if sid in {"S_INK_PEN", "S_INK_PERMANENT", "S_HAIR_DYE", "S_MASCARA", "S_PAINT_LATEX"}:
+        return "ink"
+    if sid in {
+        "S_ENGINE_OIL", "S_MOTORBIKE_OIL", "S_TAR", "S_GREASE", "S_COOKING_OIL",
+        "S_BUTTER", "S_SUNSCREEN", "S_FOUNDATION", "S_LIPSTICK", "S_SHOE_POLISH",
+    }:
+        return "oil"
+    if sid in {"S_KIMCHI", "S_BBQ_SAUCE", "S_MAYO", "S_BUBBLE_TEA", "S_MILK_COFFEE"}:
+        return "oil_tannin"
+    if sid.startswith("S_BLOOD") or sid in {
+        "S_EGG", "S_MILK", "S_BABY_FORMULA", "S_SWEAT_FRESH", "S_SWEAT_YELLOW",
+        "S_VOMIT", "S_URINE", "S_FECES", "S_COLLAR_STAIN",
+    }:
+        return "protein"
+    if sc.get("contains_protein") and (sc.get("contains_tannin") or sc.get("contains_oil")):
+        return "oil_tannin" if sc.get("contains_oil") else "protein"
+    if sc.get("contains_protein"):
+        return "protein"
+    if sc.get("contains_oil") and sc.get("contains_tannin"):
+        return "oil_tannin"
+    if sc.get("contains_oil"):
+        return "oil"
+    if sc.get("contains_tannin") or sc.get("contains_dye"):
+        return "tannin"
+    if sid in {
+        "S_RED_WINE", "S_TEA", "S_BLACK_COFFEE", "S_FRUIT_JUICE", "S_SOFT_DRINK",
+        "S_WHITE_WINE_BEER", "S_CURRY", "S_MUSTARD", "S_KETCHUP", "S_TOMATO_SAUCE",
+        "S_SOY_SAUCE", "S_FISH_SAUCE",
+    }:
+        return "tannin"
+    return "general"
+
+
+def _force_for_tool(proto: Optional[Protocol], tool_id: str, default: str = "Cap1–2") -> str:
+    if not proto:
+        return default
+    forces = []
+    for s in proto.active_steps():
+        if tool_id in (s.tool_ids or []) and s.force:
+            forces.append(s.force)
+    return forces[-1] if forces else default
+
+
+def _fabric_label(fabric: str, weight: str) -> tuple[str, str]:
+    f = (fabric or "").lower().strip() or "원단"
+    w = (weight or "unknown").lower().strip()
+    w_ko = {"thin": "얇은", "medium": "보통 두께", "thick": "두꺼운", "unknown": ""}.get(w, "")
+    w_vi = {"thin": "mỏng", "medium": "dày vừa", "thick": "dày", "unknown": ""}.get(w, "")
+    f_ko = {
+        "cotton": "면", "polyester": "폴리에스터", "silk": "실크", "wool": "울",
+        "linen": "린넨", "denim": "데님",
+    }.get(f, f or "원단")
+    f_vi = {
+        "cotton": "cotton", "polyester": "polyester", "silk": "lụa", "wool": "len",
+        "linen": "linen", "denim": "denim",
+    }.get(f, f or "vải")
+    ko = f"{w_ko + ' ' if w_ko else ''}{f_ko}".strip()
+    vi = f"{f_vi}{(' ' + w_vi) if w_vi else ''}".strip()
+    return ko, vi
+
+
+def _narrate_soft_brush(
+    *,
+    family: str,
+    fabric: str,
+    weight: str,
+    force: str,
+    delicate: bool,
+    item_id: str,
+    local_spot_only: bool,
+) -> tuple[str, str, str]:
+    fab_ko, fab_vi = _fabric_label(fabric, weight)
+    w = (weight or "unknown").lower()
+    cap = force or "Cap1–2"
+    spot = "국소 얼룩만 — " if local_spot_only or item_id in HOME_TEXTILE_ITEM_IDS else ""
+    spot_vi = "chỉ vết cục bộ — " if local_spot_only or item_id in HOME_TEXTILE_ITEM_IDS else ""
+
+    if delicate:
+        return (
+            f"{spot}이 원단({fab_ko}): 연질 솔 금지 → 초연질·흰 천 Cap1 두드림·흡수만.",
+            f"{spot_vi}{fab_vi}: CẤM bàn chải mềm thường → siêu mềm/khăn Cap1 chỉ đập/thấm.",
+            f"{spot}Delicate ({fab_ko}): no soft spotting brush — ultra/cloth Cap1 dab only.",
+        )
+
+    if family == "tannin":
+        if w == "thin":
+            ko = (
+                f"{spot}탄닌·색소 + {fab_ko}: 솔보다 흰 천 블롯 우선. 필요 시만 Cap1로 가볍게 두드리듯, "
+                f"바깥→안 — 왕복 문지르면 색소 번짐."
+            )
+            vi = (
+                f"{spot_vi}Tannin/màu + {fab_vi}: ưu tiên khăn thấm. Nếu cần Cap1 đập nhẹ NGOÀI→TRONG — "
+                f"không chà qua lại (loang màu)."
+            )
+        elif w == "thick":
+            ko = (
+                f"{spot}탄닌·색소 + {fab_ko}: 식초(또는 해당 산) 도포 후 {cap} 바깥→안 한 방향. "
+                f"천이 물들면 즉시 중단·흰 천으로 흡수."
+            )
+            vi = (
+                f"{spot_vi}Tannin + {fab_vi}: sau giấm, {cap} 1 chiều NGOÀI→TRONG. "
+                f"Khăn nhuốm → dừng, thấm khăn mới."
+            )
+        else:
+            ko = (
+                f"{spot}탄닌·색소 + {fab_ko}: 먼저 흰 천으로 흡수 → 남은 자국만 연질솔 {cap} "
+                f"바깥→안 한 방향(45°). 왕복 문지르기 금지."
+            )
+            vi = (
+                f"{spot_vi}Tannin + {fab_vi}: thấm khăn trước → còn lại mới chải {cap} "
+                f"NGOÀI→TRONG 1 chiều (45°). Không chà qua lại."
+            )
+        return ko, vi, ko
+
+    if family == "oil":
+        ko = (
+            f"{spot}유성 + {fab_ko}: 마른 천으로 기름 과잉 흡수 → 주방세제와 함께 {cap} "
+            f"바깥→안. 온수·세게 문지르면 더 퍼짐."
+        )
+        vi = (
+            f"{spot_vi}Dầu + {fab_vi}: thấm dầu thừa bằng khăn khô → D2 + {cap} NGOÀI→TRONG. "
+            f"Không nước nóng/chà mạnh."
+        )
+        return ko, vi, ko
+
+    if family == "oil_tannin":
+        ko = (
+            f"{spot}기름+색소 + {fab_ko}: 고형 제거 후 주방세제와 {cap} 바깥→안 → "
+            f"색소는 식초 단계. 번지면 Cap 낮추고 흰 천."
+        )
+        vi = (
+            f"{spot_vi}Dầu+màu + {fab_vi}: cạo đặc → D2 {cap} NGOÀI→TRONG → giấm cho màu. "
+            f"Loang → giảm lực, dùng khăn."
+        )
+        return ko, vi, ko
+
+    if family == "protein":
+        ko = (
+            f"{spot}단백질 + {fab_ko}: 찬물만. 연질솔은 {cap}로 두드리듯 — "
+            f"온수·강하게 문지르면 갈색 고착. 섬세면 초연질."
+        )
+        vi = (
+            f"{spot_vi}Protein + {fab_vi}: CHỈ lạnh. Chải {cap} kiểu đập — "
+            f"nóng/chà mạnh = cố định. Đồ mỏng: siêu mềm."
+        )
+        return ko, vi, ko
+
+    if family == "mud":
+        ko = (
+            f"{spot}흙·진흙 + {fab_ko}: 마른 흙은 경질로 먼저 털고, 원단면은 연질 {cap} "
+            f"바깥→안. 젖은 채 문지르면 더 박힘."
+        )
+        vi = (
+            f"{spot_vi}Bùn + {fab_vi}: chải khô đất (cứng) trước; mặt vải bàn chải mềm {cap} "
+            f"NGOÀI→TRONG. Ướt mà chà = ngấm sâu."
+        )
+        return ko, vi, ko
+
+    if family == "mildew":
+        ko = (
+            f"{spot}곰팡이 + {fab_ko}: 마스크 후 마른 포자만 Cap1로 살살 털기 — "
+            f"세게 문지르면 포자 확산. 그다음 약품."
+        )
+        vi = (
+            f"{spot_vi}Mốc + {fab_vi}: khẩu trang; phủi bào tử khô Cap1 — "
+            f"không chà mạnh (lan bào tử). Rồi hóa chất."
+        )
+        return ko, vi, ko
+
+    if family == "ink":
+        ko = (
+            f"{spot}잉크·염료 + {fab_ko}: 솔보다 흰 천+약품 블롯 우선. "
+            f"연질솔은 Cap1 두드림만 — 문지르면 번짐."
+        )
+        vi = (
+            f"{spot_vi}Mực + {fab_vi}: ưu tiên khăn+hóa chất thấm. "
+            f"Bàn chải mềm chỉ Cap1 đập — không chà."
+        )
+        return ko, vi, ko
+
+    if w == "thin":
+        ko = f"{spot}{fab_ko}: Cap1만 바깥→안 가볍게. 마찰 큰 솔질 금지 — 흰 천·초연질 우선."
+        vi = f"{spot_vi}{fab_vi}: chỉ Cap1 NGOÀI→TRONG nhẹ. Ưu tiên khăn/siêu mềm."
+    elif w == "thick":
+        ko = f"{spot}{fab_ko}: {cap}(짧은 구간 Cap2–3 가능) 바깥→안 한 방향. 넓게 문지르지 말 것."
+        vi = f"{spot_vi}{fab_vi}: {cap} (đoạn ngắn Cap2–3) 1 chiều NGOÀI→TRONG — không chà diện rộng."
+    else:
+        ko = f"{spot}{fab_ko}: {cap} 바깥→안 한 방향(45°). 실크·울이면 초연질로 교체."
+        vi = f"{spot_vi}{fab_vi}: {cap} NGOÀI→TRONG 1 chiều (45°). Lụa/len → siêu mềm."
+    return ko, vi, ko
+
+
+def _narrate_hard_brush(*, family: str, fabric: str, weight: str, force: str, delicate: bool) -> tuple[str, str, str]:
+    if delicate or (weight or "").lower() == "thin":
+        return (
+            "이 경로: 경질 솔 금지(섬세·얇은 원단 손상).",
+            "CẤM bàn chải cứng trên vải mỏng/tinh tế.",
+            "No hard brush on delicate/thin fabric.",
+        )
+    fab_ko, fab_vi = _fabric_label(fabric, weight)
+    cap = force or "Cap2–3"
+    if family == "mud":
+        ko = f"흙·진흙 + {fab_ko}: 마른 흙·밑창만 {cap} 짧게 털기. 젖은 원단 면·메시에는 쓰지 말 것."
+        vi = f"Bùn + {fab_vi}: chỉ đất khô/đế {cap} ngắn. CẤM mặt vải ướt/mesh."
+    elif family == "oil":
+        ko = f"중유·타르 잔여 + {fab_ko}: PPE 후 {cap} 짧게 — 갑피 메시·섬세면 금지."
+        vi = f"Dầu nặng/nhựa + {fab_vi}: PPE, {cap} ngắn — CẤM mesh/tinh tế."
+    else:
+        ko = f"데님·캔버스·밑창·마른 흙만 {cap} 짧게. {fab_ko} 메시·실크·울·얇은 원단 금지."
+        vi = f"Chỉ denim/canvas/đế/đất khô {cap} ngắn. CẤM mesh/lụa/len/{fab_vi} mỏng."
+    return ko, vi, ko
+
+
+def _narrate_ultra_brush(*, family: str, fabric: str, force: str) -> tuple[str, str, str]:
+    fab_ko, fab_vi = _fabric_label(fabric, "thin" if not fabric else "")
+    cap = force or "Cap1"
+    if family == "protein":
+        ko = f"단백질·섬세({fab_ko or '실크·울'}): {cap} 두드리듯·흡수만 — 문지르기 금지. 스펀지 대체 OK."
+        vi = f"Protein/tinh tế ({fab_vi or 'lụa/len'}): {cap} đập/thấm — KHÔNG chà. Foam OK."
+    elif family == "ink":
+        ko = f"잉크·섬세: {cap}로 약 묻힌 초연질만 살짝 — 문지르면 번짐."
+        vi = f"Mực/tinh tế: {cap} siêu mềm có hóa chất — không chà."
+    else:
+        ko = f"실크·울·얇은 원단: {cap} 두드리듯·흡수만 — 문지르기 금지. 연질 일반 솔 대신 이것."
+        vi = f"Lụa/len/mỏng: {cap} đập/thấm — KHÔNG chà. Thay bàn chải mềm thường."
+    return ko, vi, ko
+
+
+def _narrate_cloth(*, family: str, fabric: str, weight: str, item_id: str) -> tuple[str, str, str]:
+    fab_ko, fab_vi = _fabric_label(fabric, weight)
+    if item_id in HOME_TEXTILE_ITEM_IDS and not family:
+        ko = (
+            f"홈텍({fab_ko or '커튼·침구'}): 국소만 흰 천으로 닦기/받침. "
+            f"전체를 스포팅하듯 문지르지 말 것 — 세탁망·세탁 경로 우선."
+        )
+        vi = (
+            f"Đồ gia dụng ({fab_vi or 'rèm/chăn'}): chỉ lau/lót cục bộ bằng khăn trắng. "
+            f"Không chà cả tấm — ưu tiên túi lưới + giặt."
+        )
+        return ko, vi, ko
+
+    if family == "tannin":
+        ko = (
+            f"탄닌·색소 + {fab_ko}: 바깥→안 찍어 흡수(블롯). 천이 붉/노랗게 물들면 즉시 새 흰 천. "
+            f"원단 아래 흡수지 깔아 뒷면 번짐 방지."
+        )
+        vi = (
+            f"Tannin/màu + {fab_vi}: CHẤM NGOÀI→TRONG. Khăn nhuốm → đổi khăn trắng mới. "
+            f"Lót giấy dưới vải chống loang mặt sau."
+        )
+    elif family == "oil":
+        ko = (
+            f"유성 + {fab_ko}: 먼저 마른 흰 천으로 기름 과잉 흡수(문지르지 말 것) → "
+            f"약품 후 다시 블롯. 물든 천은 폐기·교체."
+        )
+        vi = (
+            f"Dầu + {fab_vi}: thấm dầu thừa bằng khăn khô trước (không chà) → "
+            f"sau hóa chất thấm lại. Đổi khăn khi bẩn."
+        )
+    elif family == "protein":
+        ko = (
+            f"단백질 + {fab_ko}: 찬물에 적신 흰 천으로만 바깥→안 블롯 — "
+            f"문지르면 섬유에 밀어 넣음. 온수 천 금지."
+        )
+        vi = (
+            f"Protein + {fab_vi}: chỉ khăn trắng lạnh CHẤM NGOÀI→TRONG — "
+            f"không chà. CẤM khăn nóng."
+        )
+    elif family == "ink":
+        ko = (
+            f"잉크 + {fab_ko}: 약을 흰 천/솜에 묻혀 안쪽(뒷면)에서 바깥으로 밀어내듯 블롯. "
+            f"천 물들면 즉시 교체 — 솔로 문지르지 말 것."
+        )
+        vi = (
+            f"Mực + {fab_vi}: thấm hóa chất từ mặt TRÁI đẩy ra ngoài. "
+            f"Đổi khăn khi nhuốm — không chà bàn chải."
+        )
+    elif family == "mildew":
+        ko = f"곰팡이: 마른 천으로 포자 털기(마스크) → 약품 천은 별도. 사용한 천은 따로 세탁·폐기."
+        vi = f"Mốc: khăn khô phủi bào tử (khẩu trang) → khăn hóa chất riêng. Giặt/bỏ khăn đã dùng."
+    else:
+        ko = (
+            f"{fab_ko}: 얼룩 위 바깥→안 찍어 흡수, 물들면 새 천. "
+            f"흡수지/천을 원단 아래에 깔아 뒷면·작업대 번짐 방지."
+        )
+        vi = (
+            f"{fab_vi}: CHẤM/THẤM NGOÀI→TRONG, đổi khăn khi nhuốm. "
+            f"Lót giấy dưới vải chống loang."
+        )
+    return ko, vi, ko
+
+
+def _narrate_mesh(*, item_id: str, fabric: str, weight: str) -> tuple[str, str, str]:
+    if item_id == "I_CURTAIN_FABRIC":
+        ko = (
+            "패브릭 커튼: 세탁망(또는 섬세 코스)에 넣고 ~30℃(면 라벨 허용 시 ≤40℃), "
+            "세제 소량·탈수 약하게. 젖은 채로 바로 봉에 걸어 주름·수축 관리. "
+            "연질 솔로 커튼 전체를 문지르지 말 것."
+        )
+        vi = (
+            "Rèm vải: cho vào túi lưới / chương trình tinh tế ~30℃ (cotton nhãn cho ≤40℃), "
+            "ít bột, vắt nhẹ. Treo ngay khi ẩm. Không chà cả tấm bằng bàn chải spotting."
+        )
+        return ko, vi, ko
+    if item_id == "I_CURTAIN_URETHANE":
+        ko = (
+            "우레탄·비닐 커튼: 가능하면 손걸레+중성. 세탁기 쓸 때만 세탁망·≤40℃·유연제 금지·열건조 금지. "
+            "코팅면 세게 솔질 금지."
+        )
+        vi = (
+            "Rèm PU/vinyl: ưu tiên lau tay + trung tính. Máy (nếu nhãn cho): túi lưới ≤40℃, "
+            "CẤM xả vải/sấy nóng. Không chải mạnh lớp phủ."
+        )
+        return ko, vi, ko
+    if item_id in {"I_DUVET_GOOSE", "I_DUVET_COTTON"}:
+        ko = (
+            "이불·다운: 대형기·여유 공간. 다운은 전용/중성·찬물·추가헹굼; "
+            "망/쿠션으로 형태 보호. 솔 스포팅은 커버 국소만."
+        )
+        vi = (
+            "Chăn/down: máy lớn. Down: chất down/trung tính, lạnh, xả thêm; "
+            "bảo vệ form. Spotting chỉ vỏ cục bộ."
+        )
+        return ko, vi, ko
+    if item_id in {"I_BED_SHEET", "I_TOWEL"}:
+        ko = "시트·수건: 세탁망은 선택. 핵심은 수온(면 흰시트~60℃/유색~40℃)·분류·얼룩 국소 전처리."
+        vi = "Ga/khăn: túi lưới tùy chọn. Quan trọng: nhiệt độ + phân loại + pretreat cục bộ."
+        return ko, vi, ko
+    if item_id == "I_SWIMWEAR":
+        ko = "수영복: 반드시 세탁망 + 찬물 섬세 — 탈수·고온 금지."
+        vi = "Đồ bơi: BẮT BUỘC túi lưới + lạnh tinh tế — CẤM vắt/sấy nóng."
+        return ko, vi, ko
+    fab_ko, fab_vi = _fabric_label(fabric, weight)
+    if (weight or "").lower() == "thin" or fabric in {"silk", "wool"}:
+        ko = f"얇은·섬세({fab_ko}): 세탁망에 넣고 섬세 코스 — 마찰·변형 감소."
+        vi = f"Mỏng/tinh tế ({fab_vi}): cho túi lưới + chương trình nhẹ."
+        return ko, vi, ko
+    ko = "얇은 옷·모자·장갑·끈: 세탁망에 넣고 세탁 — 마찰·변형 감소."
+    vi = "Đồ mỏng/mũ/găng/dây: cho túi lưới trước khi giặt máy."
+    return ko, vi, ko
+
+
+def _apply_howto(t: dict, ko: str, vi: str, en: str = "") -> dict:
+    t = dict(t)
+    t["use_for_ko"] = ko
+    t["use_for_vi"] = vi
+    t["use_for_en"] = en or ko
+    return t
+
+
+def narrate_tools_for_context(
+    tools: list,
+    *,
+    stain_id: str = "",
+    stain_context: Optional[dict] = None,
+    fabric: str = "",
+    weight: str = "unknown",
+    item_id: str = "",
+    delicate: bool = False,
+    proto: Optional[Protocol] = None,
+) -> list:
+    """Rewrite ALL tool use_for_* from stain/fabric/weight/item — never leave global seed copy."""
+    if not tools:
+        return tools
+    sc = stain_context or {}
+    family = _stain_family(stain_id or sc.get("id") or "", sc)
+    local_spot = bool(item_id in HOME_TEXTILE_ITEM_IDS and stain_id)
+    # Home-textile care without a stain: drop generic soft spotting brush
+    drop_soft = bool(item_id in HOME_TEXTILE_ITEM_IDS and not stain_id)
+
+    out = []
+    for raw in tools:
+        tid = str(raw.get("id") or "")
+        if drop_soft and tid == "T_BRUSH_SOFT":
+            continue
+        t = dict(raw)
+        if tid == "T_BRUSH_SOFT":
+            ko, vi, en = _narrate_soft_brush(
+                family=family,
+                fabric=fabric,
+                weight=weight,
+                force=_force_for_tool(proto, tid, "Cap1–2"),
+                delicate=delicate,
+                item_id=item_id,
+                local_spot_only=local_spot,
+            )
+            t = _apply_howto(t, ko, vi, en)
+        elif tid == "T_BRUSH_HARD":
+            ko, vi, en = _narrate_hard_brush(
+                family=family,
+                fabric=fabric,
+                weight=weight,
+                force=_force_for_tool(proto, tid, "Cap2–3"),
+                delicate=delicate,
+            )
+            t = _apply_howto(t, ko, vi, en)
+        elif tid == "T_BRUSH_ULTRA":
+            ko, vi, en = _narrate_ultra_brush(
+                family=family,
+                fabric=fabric,
+                force=_force_for_tool(proto, tid, "Cap1"),
+            )
+            t = _apply_howto(t, ko, vi, en)
+        elif tid == "T_CLOTH":
+            ko, vi, en = _narrate_cloth(
+                family=family if stain_id else "",
+                fabric=fabric,
+                weight=weight,
+                item_id=item_id,
+            )
+            t = _apply_howto(t, ko, vi, en)
+        elif tid == "T_MESH_BAG":
+            ko, vi, en = _narrate_mesh(item_id=item_id, fabric=fabric, weight=weight)
+            t = _apply_howto(t, ko, vi, en)
+        elif tid == "T_BRUSH_SHOE":
+            t = _apply_howto(
+                t,
+                "고무·클리트 밑창만: 마른 흙 털고 D2. 갑피 메시·실크에 사용 금지.",
+                "Chỉ đế cao su/gai: phủi đất khô rồi D2. CẤM thân mesh/lụa.",
+                "Rubber/cleat outsole only: dry mud then D2. Never mesh/silk upper.",
+            )
+        elif tid == "T_GLOVE_NITRILE":
+            if family in {"mildew", "ink", "oil"} or stain_id in {
+                "S_RUST", "S_ENGINE_OIL", "S_MOTORBIKE_OIL", "S_TAR", "S_HAIR_DYE",
+            }:
+                t = _apply_howto(
+                    t,
+                    f"이 오염({family or stain_id}): 약품·포자 취급 전 니트릴 장갑 필수. 병 열기 전 착용.",
+                    f"Vết này ({family or stain_id}): BẮT BUỘC găng nitrile trước hóa chất/bào tử.",
+                    f"For this stain: nitrile gloves before chemicals/spores.",
+                )
+        elif tid == "T_MASK":
+            if family == "mildew" or stain_id == "S_MILDEW":
+                t = _apply_howto(
+                    t,
+                    "곰팡이: 야외·환기 + 마스크 필수(포자). 장갑·환기와 함께.",
+                    "Mốc: ngoài trời/thoáng + khẩu trang (bào tử).",
+                    "Mildew: outdoors/ventilate + mask for spores.",
+                )
+        out.append(t)
+    return out
+
+
+def bind_tools_from_protocol(proto: Protocol, tools: list, *, item_id: str = "") -> list:
     if not tools:
         return tools
     sp = proto.spray_step()
@@ -1578,7 +2037,19 @@ def bind_tools_from_protocol(proto: Protocol, tools: list) -> list:
                     f"Cấm ngâm suit/cà vạt/lụa mỏng nếu SOP cấm."
                 )
         bound.append(t)
-    return bound
+
+    # Brush/cloth/mesh etc. — never leave global Neo4j seed template
+    return narrate_tools_for_context(
+        bound,
+        stain_id=proto.stain_id,
+        fabric=proto.fabric,
+        weight=proto.weight or "unknown",
+        item_id=item_id or "",
+        delicate=bool("S1" in codes and "A3" not in codes) or (proto.fabric or "").lower() in {
+            "silk", "wool",
+        },
+        proto=proto,
+    )
 
 
 def build_protocol(graph: dict, entities: Optional[dict] = None) -> Optional[Protocol]:
@@ -1623,14 +2094,61 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
     if not isinstance(graph, dict):
         return graph
     entities = entities or {}
+    item_id = str(
+        (graph.get("item_context") or {}).get("id")
+        or entities.get("item_id")
+        or ""
+    )
+    fabric = str(
+        entities.get("fabric_type")
+        or (graph.get("fabric_context") or {}).get("name")
+        or ""
+    )
+    from match_diagnosis import infer_fabric_weight
+
+    weight = str(
+        entities.get("fabric_weight")
+        or infer_fabric_weight(
+            entities.get("_raw") or "",
+            fabric_type=fabric,
+            item_id=item_id,
+        )
+        or "unknown"
+    )
+
     proto = build_protocol(graph, entities)
     if proto is None:
-        return graph
+        # Still rewrite brush/cloth/mesh so Neo4j global seed copy never reaches the LLM
+        out = dict(graph)
+        flags = _fabric_flags(out, entities)
+        sc = out.get("stain_context") or {}
+        out["tools"] = narrate_tools_for_context(
+            list(out.get("tools") or []),
+            stain_id=str(sc.get("id") or entities.get("stain_id") or ""),
+            stain_context=sc if isinstance(sc, dict) else {},
+            fabric=fabric,
+            weight=weight,
+            item_id=item_id,
+            delicate=bool(flags.get("delicate_protein")),
+            proto=None,
+        )
+        return out
 
     out = dict(graph)
     out["protocol"] = proto.to_dict()
     out["protocol_mode"] = proto.mode
     if proto.mode == "item_primary":
+        flags = _fabric_flags(out, entities)
+        out["tools"] = narrate_tools_for_context(
+            list(out.get("tools") or []),
+            stain_id=str((out.get("stain_context") or {}).get("id") or ""),
+            stain_context=out.get("stain_context") or {},
+            fabric=fabric or proto.fabric,
+            weight=weight,
+            item_id=item_id,
+            delicate=bool(flags.get("delicate_protein")),
+            proto=None,
+        )
         return out
 
     sc = dict(out.get("stain_context") or {})
@@ -1651,7 +2169,9 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
     out["stain_context"] = sc
 
     out["chemicals"] = render_chemicals(proto, out.get("chemicals") or [])
-    out["tools"] = bind_tools_from_protocol(proto, list(out.get("tools") or []))
+    out["tools"] = bind_tools_from_protocol(
+        proto, list(out.get("tools") or []), item_id=item_id
+    )
     # Drop legacy fabric-safety dual-truth leftovers so the LLM cannot prefer them.
     out.pop("chemicals_blocked_for_fabric", None)
     out.pop("delicate_chem_rule", None)

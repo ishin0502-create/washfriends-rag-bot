@@ -829,6 +829,18 @@ def _refine_tools_for_context(graph: dict, entities: Optional[dict] = None) -> d
     by_id = {str(t.get("id") or ""): t for t in tools if t.get("id")}
     drop = set()
 
+    # Curtain/bedding care (no stain): mesh/temp — not generic spotting-brush kit
+    from protocol import HOME_TEXTILE_ITEM_IDS
+
+    stain_id = str(
+        (graph.get("stain_context") or {}).get("id")
+        or entities.get("stain_id")
+        or ""
+    )
+    if item_id in HOME_TEXTILE_ITEM_IDS and not stain_id:
+        drop.add("T_BRUSH_SOFT")
+        drop.add("T_BRUSH_HARD")
+
     if delicate:
         drop |= {"T_BRUSH_HARD", "T_BRUSH_SHOE"}
         if "T_BRUSH_SOFT" in by_id:
@@ -1031,7 +1043,30 @@ def _bind_tool_howto_to_protocol(graph: dict) -> dict:
         bound.append(t)
 
     out = dict(graph)
-    out["tools"] = bound
+    # Contextual brush/cloth/mesh narration (item_primary / non-Protocol stains)
+    from protocol import narrate_tools_for_context, _fabric_flags
+    from match_diagnosis import infer_fabric_weight
+
+    ic = out.get("item_context") or {}
+    item_id = str(ic.get("id") or "")
+    sc = out.get("stain_context") or {}
+    fabric = str((out.get("fabric_context") or {}).get("name") or "")
+    weight = str(
+        out.get("fabric_weight")
+        or infer_fabric_weight("", fabric_type=fabric, item_id=item_id)
+        or "unknown"
+    )
+    flags = _fabric_flags(out, {})
+    out["tools"] = narrate_tools_for_context(
+        bound,
+        stain_id=str(sc.get("id") or ""),
+        stain_context=sc if isinstance(sc, dict) else {},
+        fabric=fabric,
+        weight=weight,
+        item_id=item_id,
+        delicate=bool(flags.get("delicate_protein")),
+        proto=None,
+    )
     out["protocol_minutes_ko"] = min_ko
     out["protocol_minutes_vi"] = min_vi
     out["spray_recipe_ko"] = f"{spray_name_ko} / {dil_ko}" if spray else ""
