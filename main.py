@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-07-wine-ko-route",
+            "build": "2026-08-07-match-fabric-weight",
             "checks": checks,
         },
         status_code=200,
@@ -2045,6 +2045,25 @@ SET s.why_vi = o.why_vi, s.why_ko = o.why_ko,
     s.success_rate_vi = o.success_rate_vi, s.success_rate_ko = o.success_rate_ko,
     s.refuse_when_vi = o.refuse_when_vi, s.refuse_when_ko = o.refuse_when_ko
 RETURN count(s) AS updated""")
+        # Full KO education mirror (why/fresh/dried) — accuracy for franchise KO owners
+        try:
+            from ko_stain_education import seed_rows as _ko_seed_rows
+            _ko_rows = _ko_seed_rows()
+            res_ko = s.run(
+                """
+UNWIND $rows AS o
+MATCH (s:Stain {id:o.id})
+SET s.why_ko = o.why_ko,
+    s.fresh_path_ko = o.fresh_path_ko,
+    s.dried_path_ko = o.dried_path_ko
+RETURN count(s) AS updated
+""",
+                rows=_ko_rows,
+            )
+            d_ko = res_ko.data()
+            log["Z16_ko_stain_education"] = d_ko[0] if d_ko else {"updated": 0, "rows": len(_ko_rows)}
+        except Exception as e:
+            log["Z16_ko_stain_education"] = f"ERR:{str(e)[:120]}"
         _r(s, "S_clear_answer_cache", """
 MATCH (c:AnswerCache)
 WITH collect(c) AS nodes
@@ -2058,7 +2077,8 @@ RETURN size(nodes) AS cleared""")
             "MATCH (s:Stain) WHERE s.id IN "
             "['S_LATERITE','S_MOTORBIKE_OIL','S_MILDEW','S_RUST','S_BUTTER','S_SHOE_POLISH'] "
             "RETURN s.id AS id, s.name_vi AS name_vi, "
-            "CASE WHEN s.why_vi CONTAINS 'GIAO DUC' THEN true ELSE false END AS rich "
+            "CASE WHEN s.why_vi CONTAINS 'GIAO DUC' THEN true ELSE false END AS rich, "
+            "CASE WHEN s.why_ko IS NOT NULL AND s.why_ko <> '' THEN true ELSE false END AS has_why_ko "
             "ORDER BY id"
         )
         log["vn_specialty_stains"] = [dict(row) for row in r4]
@@ -2073,6 +2093,7 @@ RETURN size(nodes) AS cleared""")
             "stage15": "S_BUTTER + S_SHOE_POLISH RICH + why_ko/fresh_path_ko for gum/bubble (KO polish)",
             "tool_p0": "Per-stain USES_TOOL matrix (clear flag links; PPE/soak/timer where SOP needs)",
             "tool_howto": "Tool use_for bound to stain minutes+dilution; spray explains which chem+why label",
+            "match_v52": "match_diagnosis fabric×weight×chemistry + Z16 why_ko for all 58 stains",
         }
     _drv.close()
     return JSONResponse(log)

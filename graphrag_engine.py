@@ -721,13 +721,40 @@ def _infer_garment_color(text: str) -> str:
     return ""
 
 
+def _attach_match_diagnosis(graph: dict, entities: Optional[dict] = None) -> dict:
+    """Force fabric×thickness×chemistry into graph so owners get accurate (1) matching."""
+    if not isinstance(graph, dict):
+        return graph
+    from match_diagnosis import apply_weight_to_tools, build_match_diagnosis, infer_fabric_weight
+
+    entities = entities or {}
+    raw = entities.get("_raw") or ""
+    fabric = graph.get("fabric_context") or {}
+    fabric_type = (
+        entities.get("fabric_type")
+        or fabric.get("name")
+        or fabric.get("name_vi")
+        or ""
+    )
+    ic = graph.get("item_context") or {}
+    item_id = str(ic.get("id") or entities.get("item_id") or "")
+    weight = infer_fabric_weight(raw, fabric_type=str(fabric_type), item_id=item_id)
+    entities["fabric_weight"] = weight
+
+    out = apply_weight_to_tools(dict(graph), weight)
+    out["match_diagnosis"] = build_match_diagnosis(out, entities=entities, raw_text=raw)
+    out["fabric_weight"] = weight
+    return out
+
+
 def _refine_tools_for_context(graph: dict, entities: Optional[dict] = None) -> dict:
     """Match tools to garment/fabric/color: drop soak/hard brushes on silk/tie; keep how-to ids."""
     if not isinstance(graph, dict):
         return graph
     tools = [t for t in (graph.get("tools") or []) if t]
     if not tools:
-        return graph
+        # Still attach diagnosis for chemistry×fabric even without tools
+        return _attach_match_diagnosis(graph, entities)
 
     entities = entities or {}
     ic = graph.get("item_context") or {}
@@ -785,7 +812,7 @@ def _refine_tools_for_context(graph: dict, entities: Optional[dict] = None) -> d
             out["color_note_ko"] = "검정·진한 색: 표백 금지. 잔여 얼룩은 강광으로 확인(눈에 덜 띔)."
             out["color_note_vi"] = "Den/dam: CAM tay. Kiem vet bang anh sang manh."
             out["color_note_en"] = "Black/dark: no bleach. Inspect residue under strong light."
-    return _bind_tool_howto_to_protocol(out)
+    return _attach_match_diagnosis(_bind_tool_howto_to_protocol(out), entities)
 
 
 def _protocol_text_blob(graph: dict) -> str:
@@ -1691,6 +1718,38 @@ def _sanitize_graph_for_owner(graph, lang: str):
         sc2.pop("id", None)
         g["stain_context"] = sc2
 
+    # Match diagnosis — keep only same-language fields (no internal stain_id)
+    md = g.get("match_diagnosis")
+    if isinstance(md, dict):
+        md2 = {
+            "fabric_type": md.get("fabric_type"),
+            "fabric_weight": md.get("fabric_weight"),
+            "garment_color": md.get("garment_color"),
+            "chemistry_layers": md.get("chemistry_layers"),
+        }
+        if lang == "ko":
+            md2.update({
+                "chemistry": md.get("chemistry_ko"),
+                "fabric_rule": md.get("fabric_rule_ko"),
+                "ask_if_needed": md.get("ask_fabric_ko") or None,
+                "accuracy_rule": md.get("accuracy_rule_ko"),
+            })
+        elif lang == "en":
+            md2.update({
+                "chemistry": md.get("chemistry_en"),
+                "fabric_rule": md.get("fabric_rule_en"),
+                "ask_if_needed": md.get("ask_fabric_en") or None,
+                "accuracy_rule": md.get("accuracy_rule_en"),
+            })
+        else:
+            md2.update({
+                "chemistry": md.get("chemistry_vi"),
+                "fabric_rule": md.get("fabric_rule_vi"),
+                "ask_if_needed": md.get("ask_fabric_vi") or None,
+                "accuracy_rule": md.get("accuracy_rule_vi"),
+            })
+        g["match_diagnosis"] = {k: v for k, v in md2.items() if v not in (None, "", [])}
+
     ic = g.get("item_context")
     if isinstance(ic, dict):
         ic2 = dict(ic)
@@ -1877,6 +1936,26 @@ def _enrich_teach_slots(graph: dict) -> dict:
             "success_rate_ko": "전문 의뢰 권장 — 매장 단독 100% 비보장.",
             "success_rate_vi": "Uu tien chuyen — khong cam ket 100% tai tiem.",
         },
+        "I_SUIT_SUMMER": {
+            "force_metaphor_ko": "얇은 린넨·코튼 정장: Cap1–2만 — 통담금·강한 솔 금지",
+            "force_metaphor_vi": "Suit he mong: Cap1–2 — CAM ngam/chai cung",
+            "sense_check_ko": "눈: 얼룩·물짐. 형태: 어깨 변형 없음.",
+            "sense_check_vi": "Mat: vet/vet nuoc. Form: vai khong meo.",
+            "success_rate_ko": "국소만: 중간. 큰 얼룩·주름 민감: 낮음 — 드라이 고지.",
+            "success_rate_vi": "Spotting: trung binh. Vet lon: thap — bao dry-clean.",
+            "refuse_when_ko": "큰 얼룩·형태 붕괴·고객 100% → 가정 세탁 거절, 전문 드라이.",
+            "refuse_when_vi": "Vet lon/form hong/100% → tu choi giat nha, chuyen dry-clean.",
+        },
+        "I_DENIM": {
+            "force_metaphor_ko": "두꺼운 데님: Cap2–3 짧게 가능(경질 솔 tools에 있을 때) — 이염·흰창 주의",
+            "force_metaphor_vi": "Denim day: Cap2–3 ngan neu co chai cung — lo mau",
+            "sense_check_ko": "눈: 얼룩 감소. 흰 천으로 이염 전이 확인.",
+            "sense_check_vi": "Mat: vet giam. Khan trang: khong lo mau.",
+            "success_rate_ko": "면 데님: 양호. 이미 건조·열 고착: 중간.",
+            "success_rate_vi": "Denim cotton: tot. Da say: trung binh.",
+            "refuse_when_ko": "고객 100%·원단 불확실 → 고지. 표백은 흰 데님·허용 시에만.",
+            "refuse_when_vi": "Khach doi 100% → bao. Tay chi denim trang neu cho.",
+        },
     }
 
     gid = group if group in fb else ""
@@ -1937,15 +2016,20 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     if lang == "ko":
         lang_rule = (
             "한국어만. 베트남어·영어 금지. "
-            "단계: (1)오염·원단·색상 (2)도구 — tools[]의 각 항목을 'name_ko: use_for_ko' 한 줄로 "
+            "단계: (1)오염·원단·두께·색상 — match_diagnosis의 chemistry·fabric_type·fabric_weight·"
+            "fabric_rule을 반드시 반영(소수성 오일 vs 단백질 vs 탄닌 등). "
+            "ask_if_needed가 있으면 (1) 끝에 그 한 문장만 되묻기. "
+            "(2)도구 — tools[]의 각 항목을 'name_ko: use_for_ko' 한 줄로 "
             "(사용법 생략·지어내기 금지; 없으면 해당 없음). "
             "타이머·담금통은 use_for_ko에 적힌 정확한 분(예: 15–45분)을 그대로 말할 것. "
             "분무기는 「무슨 약을 어떤 비율로 넣고, 병 겉에 왜 적는지」를 use_for_ko 그대로. "
-            "(3)힘·방향 Cap (4)약품(name_ko·dilution_ko) (5)수온 (6)후관리. "
+            "(3)힘·방향 Cap — 얇은 원단은 Cap1–2만. "
+            "(4)약품(name_ko·dilution_ko) (5)수온 (6)후관리. "
+            "fresh_path_ko의 「어디에·몇 분·어떻게」를 그대로. "
             "[왜 이 순서] → … → [감각 체크] → [성공률·고지] → [거절·보내기]. "
             "why_ko/fresh_path_ko/sense_check_ko·color_note_ko가 있으면 그대로. "
             "없으면 contains_*·chemicals·tools 사실만으로 한국어 작성 — 외국어 원문 복사 금지. "
-            "희석 dilution_ko. 마크다운 금지. 코드/id 금지."
+            "희석 dilution_ko. 마크다운 금지. 코드/id 금지. 그래프에 없는 약·분·도구 지어내기 금지."
         )
         wrapper = f"""점주 질문: {user_message}
 
@@ -1974,14 +2058,18 @@ Answer from this data only. Do not mix languages."""
     else:
         lang_rule = (
             "CHỈ tiếng Việt. CẤM Hàn/Anh. "
-            "Bước: (1) Nhận diện (vet/vai/màu) (2) Dụng cụ — mỗi tools[] dạng 'name_vi: use_for_vi' "
+            "Bước: (1) Nhận diện (vet/vai/độ dày/màu) — bắt buộc dùng match_diagnosis "
+            "(chemistry, fabric_type, fabric_weight, fabric_rule). "
+            "Nếu có ask_if_needed: hỏi đúng 1 câu cuối (1). "
+            "(2) Dụng cụ — mỗi tools[] dạng 'name_vi: use_for_vi' "
             "(bắt buộc cách dùng; CẤM bịa; rỗng→không cần). "
             "Đồng hồ/chau ngâm: nói đúng số phút trong use_for_vi. "
             "Bình xịt: nói đúng thuốc + tỷ lệ + vì sao ghi nhãn theo use_for_vi. "
-            "(3) Lực+hướng Cap (4) Hóa chất (5) Nhiệt độ (6) Sau xử lý. "
+            "(3) Lực+hướng Cap — vải mỏng chỉ Cap1–2. "
+            "(4) Hóa chất (5) Nhiệt độ (6) Sau xử lý — theo fresh_path_vi (đâu/phút/cách). "
             "[Tại sao thứ tự này] → … → [Kiểm tra giác quan] → [Tỷ lệ & báo khách] → [Từ chối / chuyển]. "
             "Dùng why_vi/fresh_path_vi/color_note_vi nếu có. Không copy name_ko/Hangul. "
-            "Pha loãng dilution_vi. Không markdown. Không mã nội bộ."
+            "Pha loãng dilution_vi. Không markdown. Không mã nội bộ. CẤM bịa phút/thuốc."
         )
         wrapper = f"""Câu hỏi từ chủ cửa hàng: {user_message}
 
