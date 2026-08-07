@@ -118,6 +118,15 @@ def test_bind_spray_from_protocol_direct():
     assert "식초" in tools[0]["use_for_ko"]
 
 
+def test_jiulsu_not_wool():
+    """'지울수' must not infer wool (Hangul 울 false positive)."""
+    from graphrag_engine import _infer_fabric_from_text
+    msg = "면소재 옷에 와인이 많이 묻었어요. 어떻게 해야 지울수 있나요?"
+    assert _infer_fabric_from_text(msg) == "cotton"
+    assert _infer_fabric_from_text("울 코트 세탁") == "wool"
+    assert _infer_fabric_from_text("얼룩 지울수 있나요") != "wool"
+
+
 if __name__ == "__main__":
     failed = 0
     for fn in [v for k, v in list(globals().items()) if k.startswith("test_")]:

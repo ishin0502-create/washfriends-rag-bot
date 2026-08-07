@@ -1258,8 +1258,9 @@ def _infer_fabric_from_text(text: str) -> str:
         return "fur"
     if any(k in raw for k in ("비단", "실크")) or "silk" in t or "lua" in t or "ao dai" in t or "aodai" in t or "hanbok" in t or "한복" in raw:
         return "silk"
-    if "울" in raw or "wool" in t or "vai len" in t or re.search(r"(^|[^a-z])len([^a-z]|$)", t):
-        return "wool"
+    # Cotton BEFORE wool: "지울수/지워서" contains Hangul 울 and must not become wool
+    if "면" in raw or "cotton" in t or "vai bong" in t:
+        return "cotton"
     if "폴리" in raw or "polyester" in t or "tong hop" in t:
         return "polyester"
     if "데님" in raw or "청바지" in raw or "denim" in t:
@@ -1268,8 +1269,16 @@ def _infer_fabric_from_text(text: str) -> str:
         return "linen"
     if "레이온" in raw or "rayon" in t:
         return "rayon"
-    if "면" in raw or "cotton" in t or "vai bong" in t:
-        return "cotton"
+    # Wool: never bare "울" substring (false hits: 지울, 나을, 채울…)
+    if (
+        "양모" in raw
+        or "wool" in t
+        or "vai len" in t
+        or re.search(r"(^|[^a-z])len([^a-z]|$)", t)
+        or any(k in raw for k in ("울원단", "울소재", "울혼방", "울니트", "울코트", "울셔츠", "울스커트"))
+        or re.search(r"(^|[^가-힣])울([^가-힣]|$)", raw)
+    ):
+        return "wool"
     return ""
 
 
