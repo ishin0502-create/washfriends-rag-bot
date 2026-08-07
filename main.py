@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-07-w2-ops-rescue",
+            "build": "2026-08-07-w3-clothing-neveruse",
             "checks": checks,
         },
         status_code=200,
@@ -1973,6 +1973,21 @@ FOREACH (_ IN CASE WHEN i.id = 'I_NECKTIE' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_CHEMICAL]->(s1) MERGE (i)-[:USES_CHEMICAL]->(d2))
 FOREACH (_ IN CASE WHEN i.id = 'I_FUR_REAL' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth))
+// W3 clothing items
+FOREACH (_ IN CASE WHEN i.id = 'I_KNIT' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(ultra) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(s1))
+FOREACH (_ IN CASE WHEN i.id = 'I_DRESS' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(mesh)
+  MERGE (i)-[:USES_CHEMICAL]->(s1) MERGE (i)-[:USES_CHEMICAL]->(d3))
+FOREACH (_ IN CASE WHEN i.id = 'I_UNDERWEAR' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(mesh) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(s1))
+FOREACH (_ IN CASE WHEN i.id = 'I_ACTIVEWEAR' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(a3))
+FOREACH (_ IN CASE WHEN i.id = 'I_SCARF' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(ultra) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(s1))
+FOREACH (_ IN CASE WHEN i.id = 'I_UNIFORM' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(mesh)
+  MERGE (i)-[:USES_CHEMICAL]->(d2))
 // PPE glove available as graph tool for chem-heavy workflows
 FOREACH (_ IN CASE WHEN i.id IN ['I_CURTAIN_URETHANE','I_DUVET_GOOSE','I_DUVET_COTTON'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(glove))
@@ -2092,6 +2107,67 @@ RETURN count(i) AS updated
             log["Z17_ops_drills"] = d_ops[0] if d_ops else {"updated": 0}
         except Exception as e:
             log["Z17_ops_drills"] = f"ERR:{str(e)[:120]}"
+        # W3: remaining clothing items (dress/knit/underwear/activewear/scarf/uniform)
+        try:
+            from w3_clothing_items import clothing_seed_rows as _cloth_rows
+            _cloth = _cloth_rows()
+            res_cloth = s.run(
+                """
+UNWIND $rows AS it
+MERGE (i:Item {id:it.id})
+SET i.name = it.name, i.name_vi = it.name_vi, i.name_ko = it.name_ko,
+    i.fabric_id = it.fabric_id,
+    i.precheck_ko = it.precheck_ko, i.why_ko = it.why_ko,
+    i.fresh_path_ko = it.fresh_path_ko, i.dried_path_ko = it.dried_path_ko,
+    i.aftercare_ko = it.aftercare_ko, i.refuse_when_ko = it.refuse_when_ko,
+    i.sense_check_ko = it.sense_check_ko, i.success_rate_ko = it.success_rate_ko,
+    i.precheck_vi = it.precheck_vi, i.why_vi = it.why_vi,
+    i.fresh_path_vi = it.fresh_path_vi, i.dried_path_vi = it.dried_path_vi,
+    i.aftercare_vi = it.aftercare_vi, i.refuse_when_vi = it.refuse_when_vi,
+    i.sense_check_vi = it.sense_check_vi, i.success_rate_vi = it.success_rate_vi
+WITH it, i
+MATCH (f:Fabric {id:it.fabric_id})
+MERGE (i)-[:MADE_OF]->(f)
+RETURN count(i) AS updated
+""",
+                rows=_cloth,
+            )
+            d_cloth = res_cloth.data()
+            log["Z18_clothing_items"] = d_cloth[0] if d_cloth else {"updated": 0, "rows": len(_cloth)}
+            # Tool/chem links for new items (I_items_chem_tools ran earlier — re-attach here)
+            res_tools = s.run(
+                """
+MATCH (cloth:Tool {id:'T_CLOTH'}), (soft:Tool {id:'T_BRUSH_SOFT'}), (ultra:Tool {id:'T_BRUSH_ULTRA'}),
+      (mesh:Tool {id:'T_MESH_BAG'})
+MATCH (d2:Chemical {code:'D2'}),(d3:Chemical {code:'D3'}),
+      (a3:Chemical {code:'A3'}),(s1:Chemical {code:'S1'})
+WITH cloth, soft, ultra, mesh, d2, d3, a3, s1
+MATCH (i:Item) WHERE i.id IN ['I_DRESS','I_KNIT','I_UNDERWEAR','I_ACTIVEWEAR','I_SCARF','I_UNIFORM']
+OPTIONAL MATCH (i)-[oldt:USES_TOOL]->() DELETE oldt
+WITH cloth, soft, ultra, mesh, d2, d3, a3, s1, i
+OPTIONAL MATCH (i)-[oldc:USES_CHEMICAL]->() DELETE oldc
+WITH cloth, soft, ultra, mesh, d2, d3, a3, s1, i
+FOREACH (_ IN CASE WHEN i.id = 'I_KNIT' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(ultra) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(s1))
+FOREACH (_ IN CASE WHEN i.id = 'I_DRESS' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(mesh)
+  MERGE (i)-[:USES_CHEMICAL]->(s1) MERGE (i)-[:USES_CHEMICAL]->(d3))
+FOREACH (_ IN CASE WHEN i.id = 'I_UNDERWEAR' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(mesh) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(s1))
+FOREACH (_ IN CASE WHEN i.id = 'I_ACTIVEWEAR' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(a3))
+FOREACH (_ IN CASE WHEN i.id = 'I_SCARF' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(ultra) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(s1))
+FOREACH (_ IN CASE WHEN i.id = 'I_UNIFORM' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(mesh)
+  MERGE (i)-[:USES_CHEMICAL]->(d2))
+RETURN count(i) AS linked
+"""
+            )
+            d_tools = res_tools.data()
+            log["Z18b_clothing_tools"] = d_tools[0] if d_tools else {"linked": 0}
+        except Exception as e:
+            log["Z18_clothing_items"] = f"ERR:{str(e)[:120]}"
         _r(s, "S_clear_answer_cache", """
 MATCH (c:AnswerCache)
 WITH collect(c) AS nodes
@@ -2123,6 +2199,7 @@ RETURN size(nodes) AS cleared""")
             "tool_howto": "Tool use_for bound to stain minutes+dilution; spray explains which chem+why label",
             "match_v52": "match_diagnosis fabric×weight×chemistry + Z16 why_ko for all 58 stains",
             "w2_v53": "ops drills Z17 + rescue_2nd/aftercare force + E2/B2/A2/WF dilution",
+            "w3_v54": "Z18 clothing items + fabric NEVER_USE card + image stain_id + failure log",
         }
     _drv.close()
     return JSONResponse(log)

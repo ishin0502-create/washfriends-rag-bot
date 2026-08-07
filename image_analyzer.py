@@ -145,6 +145,39 @@ def _to_graphrag_entities(analysis: dict, user_caption: str = "") -> dict:
     caption = (user_caption or "").strip()
     confidence = analysis.get("confidence", "low")
 
+    # Map vision enum → stable graph stain_id (SOP route)
+    _VISION_STAIN_ID = {
+        "coffee": "S_BLACK_COFFEE",
+        "ca phe": "S_BLACK_COFFEE",
+        "blood": "S_BLOOD_FRESH",
+        "mau": "S_BLOOD_FRESH",
+        "oil": "S_COOKING_OIL",
+        "dau": "S_COOKING_OIL",
+        "grease": "S_GREASE",
+        "grass": "S_GRASS",
+        "co xanh": "S_GRASS",
+        "wine": "S_RED_WINE",
+        "ruou": "S_RED_WINE",
+        "ink": "S_INK_PEN",
+        "muc": "S_INK_PEN",
+        "rust": "S_RUST",
+        "ri set": "S_RUST",
+        "makeup": "S_FOUNDATION",
+        "foundation": "S_FOUNDATION",
+        "lipstick": "S_LIPSTICK",
+        "mud": "S_MUD",
+        "bun": "S_MUD",
+    }
+    stain_id = None
+    if stain:
+        key = str(stain).strip().lower()
+        stain_id = _VISION_STAIN_ID.get(key)
+        if not stain_id:
+            for k, sid in _VISION_STAIN_ID.items():
+                if k in key:
+                    stain_id = sid
+                    break
+
     return {
         "stain_type": stain,
         "fabric_type": fabric,
@@ -156,7 +189,7 @@ def _to_graphrag_entities(analysis: dict, user_caption: str = "") -> dict:
         "smell": None,
         "water_spreads": None,
         "group_id": None,
-        "stain_id": None,
+        "stain_id": stain_id,
         "attempt_number": None,
         "lang": analysis.get("lang") or _detect_lang(caption),
         "severity": analysis.get("severity", "medium"),
@@ -166,6 +199,7 @@ def _to_graphrag_entities(analysis: dict, user_caption: str = "") -> dict:
         "image_kind": analysis.get("image_kind") or "stain_photo",
         "_image_analysis": True,
         "_user_caption": caption,
+        "_raw": caption,
     }
 
 

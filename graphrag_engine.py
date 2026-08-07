@@ -211,6 +211,12 @@ _ITEM_FABRIC_TOKEN = {
     "I_NECKTIE": "silk",
     "I_AO_DAI": "silk",
     "I_HANBOK": "silk",
+    "I_DRESS": "cotton",
+    "I_KNIT": "wool",
+    "I_UNDERWEAR": "cotton",
+    "I_ACTIVEWEAR": "polyester",
+    "I_SCARF": "silk",
+    "I_UNIFORM": "polyester",
     "I_GOLF_WEAR": "polyester",
     "I_GOLF_SHOE": "polyester",
     "I_GOLF_HAT": "polyester",
@@ -751,6 +757,7 @@ def _attach_match_diagnosis(graph: dict, entities: Optional[dict] = None) -> dic
     if not isinstance(graph, dict):
         return graph
     from match_diagnosis import apply_weight_to_tools, build_match_diagnosis, infer_fabric_weight
+    from w3_clothing_items import never_use_card_for_fabric
 
     entities = entities or {}
     raw = entities.get("_raw") or ""
@@ -768,6 +775,24 @@ def _attach_match_diagnosis(graph: dict, entities: Optional[dict] = None) -> dic
 
     out = apply_weight_to_tools(dict(graph), weight)
     out["match_diagnosis"] = build_match_diagnosis(out, entities=entities, raw_text=raw)
+    # Owner NEVER_USE card (fabric safety) — additive to diagnosis
+    md = dict(out.get("match_diagnosis") or {})
+    for lang_key, lang in (("never_use_ko", "ko"), ("never_use_vi", "vi"), ("never_use_en", "en")):
+        card = never_use_card_for_fabric(str(fabric_type), lang=lang)
+        if card:
+            md[lang_key] = card
+    # Also from graph never_use_on_fabric rows
+    blocked = out.get("never_use_on_fabric") or []
+    if blocked and isinstance(blocked, list):
+        names = []
+        for b in blocked[:8]:
+            if isinstance(b, dict):
+                names.append(str(b.get("chemical_name_vi") or b.get("chemical") or b.get("name_vi") or ""))
+        names = [n for n in names if n]
+        if names:
+            md["never_use_graph_vi"] = "Vai nay CAM: " + ", ".join(names)
+            md["never_use_graph_ko"] = "이 원단 금지 약품: " + ", ".join(names)
+    out["match_diagnosis"] = md
     out["fabric_weight"] = weight
     return out
 
@@ -1073,6 +1098,21 @@ def _infer_item_from_text(text: str) -> str:
         return "I_WATER_HARDNESS"
     if any(k in raw for k in ("세탁기 코스", "세탁기 설정", "건조기", "탈수 코스")) or "washer" in t or "dryer setting" in t or "chuong trinh may" in t:
         return "I_MACHINE_PROFILE"
+
+    if any(k in raw for k in ("원피스", "드레스", "원 피스")) or "vay lien" in t or "dam " in t or "one-piece" in t or "onepiece" in t or (
+        "dress" in t and "shirt" not in t and "ao so mi" not in t
+    ):
+        return "I_DRESS"
+    if any(k in raw for k in ("니트", "스웨터", "가디건", "뜨개")) or "ao len" in t or "len dan" in t or "knit" in t or "sweater" in t or "cardigan" in t:
+        return "I_KNIT"
+    if any(k in raw for k in ("속옷", "브라", "란제리", "팬티", "브래지어")) or "ao nguc" in t or "do lot" in t or "lingerie" in t or "underwear" in t or "bra " in t:
+        return "I_UNDERWEAR"
+    if any(k in raw for k in ("운동복", "짐웨어", "스포츠웨어", "레깅스", "트레이닝복")) or "do the thao" in t or "gym" in t or "activewear" in t or "sportswear" in t or "legging" in t:
+        return "I_ACTIVEWEAR"
+    if any(k in raw for k in ("스카프", "목도리", "머플러", "숄")) or "khan quang" in t or "scarf" in t or "muffler" in t:
+        return "I_SCARF"
+    if any(k in raw for k in ("유니폼", "교복", "근무복")) or "dong phuc" in t or "uniform" in t or "workwear" in t:
+        return "I_UNIFORM"
 
     # Traditional dress
     if "한복" in raw or "hanbok" in t:
@@ -1760,6 +1800,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
                 "fabric_rule": md.get("fabric_rule_ko"),
                 "ask_if_needed": md.get("ask_fabric_ko") or None,
                 "accuracy_rule": md.get("accuracy_rule_ko"),
+                "never_use": md.get("never_use_ko") or md.get("never_use_graph_ko") or None,
             })
         elif lang == "en":
             md2.update({
@@ -1767,6 +1808,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
                 "fabric_rule": md.get("fabric_rule_en"),
                 "ask_if_needed": md.get("ask_fabric_en") or None,
                 "accuracy_rule": md.get("accuracy_rule_en"),
+                "never_use": md.get("never_use_en") or None,
             })
         else:
             md2.update({
@@ -1774,6 +1816,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
                 "fabric_rule": md.get("fabric_rule_vi"),
                 "ask_if_needed": md.get("ask_fabric_vi") or None,
                 "accuracy_rule": md.get("accuracy_rule_vi"),
+                "never_use": md.get("never_use_vi") or md.get("never_use_graph_vi") or None,
             })
         g["match_diagnosis"] = {k: v for k, v in md2.items() if v not in (None, "", [])}
 
@@ -2169,6 +2212,17 @@ def _call_llm(llm_prompt: str, lang: str = "vi") -> str:
 
 
 def _empty_graph_reply(entities: dict, *, image: bool = False) -> str:
+    try:
+        from failure_log import log_failure
+        log_failure(
+            reason="empty_graph_image" if image else "empty_graph",
+            message=str(entities.get("_raw") or entities.get("_user_caption") or "")[:500],
+            lang=str(entities.get("lang") or ""),
+            entities=entities,
+            extra={"image": image, "stain_type": entities.get("stain_type")},
+        )
+    except Exception:
+        pass
     lang = entities.get("lang", "vi")
     if image:
         if lang == "ko":
