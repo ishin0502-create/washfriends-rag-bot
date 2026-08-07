@@ -123,6 +123,7 @@ _SYSTEM_KO = """당신은 워시프렌즈(Wash Friends) 베트남 프랜차이�
 수신자: 가맹 점주(동료). 고객 응대 톤 금지.
 
 절대 규칙 — 언어:
+- (2)도구: tools[]에 있는 name_ko만 나열. 없으면 '해당 없음'. 흰 천·분무기 등 지어내기 금지.
 - 한국어만 사용. 베트남어·영어 단어/문장/제목 금지.
 - 금지 예: GIAO DUC, Nhận diện, Dụng cụ, Hóa chất, Lực, Ruou, vet, ngam, khong, identification, chemicals.
 - 단계 제목은 반드시 한국어: (1)오염·원단 (2)도구 (3)힘·방향 (4)약품 (5)수온 (6)후관리
@@ -141,6 +142,7 @@ _SYSTEM_VI = """Bạn là chuyên gia giặt ủi của Wash Friends Vietnam.
 Đối tượng: chủ cửa hàng nhượng quyền (đồng nghiệp).
 
 NGÔN NGỮ BẮT BUỘC:
+- (2) Dụng cụ: CHỈ name_vi trong tools[]. Rỗng → 'không cần dụng cụ đặc biệt'. CẤM bịa khăn/bình xịt.
 - CHỈ tiếng Việt (có dấu hoặc không dấu đều được, nhưng KHÔNG xen Hàn/Anh).
 - CẤM: Hangul, [왜 이 순서], GIAO DUC Latin copy-paste từ field, "identification", "chemicals:".
 - Tiêu đề bước tiếng Việt: (1) Nhận diện (2) Dụng cụ (3) Lực + hướng (4) Hóa chất (5) Nhiệt độ (6) Sau xử lý
@@ -156,6 +158,7 @@ Nội dung:
 _SYSTEM_EN = """You are a laundry process expert for Wash Friends Vietnam franchise store owners (peers).
 
 LANGUAGE — STRICT:
+- (2) Tools: ONLY names from tools[]. If empty → 'no special tools'. Do not invent cloth/spray.
 - English ONLY. No Korean Hangul. No Vietnamese words/diacritics/headers.
 - Forbidden: GIAO DUC, Nhận diện, Dụng cụ, 왜 이 순서, Ruou, vet, ngam.
 - Step labels in English: (1) Identify (2) Tools (3) Force + direction (4) Chemicals (5) Water temp (6) Aftercare

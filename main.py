@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-07-lang-strict-ko-vi-en",
+            "build": "2026-08-07-tool-matrix-p0",
             "checks": checks,
         },
         status_code=200,
@@ -725,25 +725,80 @@ MATCH (c:Chemical {code:x.code})
 SET c.name_ko = x.name_ko, c.buy_where_ko = x.buy_where_ko, c.buy_where_vi = x.buy_where_vi
 RETURN count(c) AS updated""")
         _r(s, "W_tool_links", """
-MATCH (soft:Tool {id:'T_BRUSH_SOFT'}), (hard:Tool {id:'T_BRUSH_HARD'}),
-      (ultra:Tool {id:'T_BRUSH_ULTRA'}), (cloth:Tool {id:'T_CLOTH'}), (spray:Tool {id:'T_SPRAY'})
-WITH soft, hard, ultra, cloth, spray
-MATCH (s:Stain)
-FOREACH (_ IN CASE WHEN s.contains_oil = true OR s.contains_tannin = true THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_TOOL]->(soft) MERGE (s)-[:USES_TOOL]->(cloth))
-FOREACH (_ IN CASE WHEN s.contains_dye = true AND NOT s.id IN ['S_RUST','S_GUM'] THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_TOOL]->(cloth) MERGE (s)-[:USES_TOOL]->(soft))
-FOREACH (_ IN CASE WHEN s.contains_protein = true THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_TOOL]->(cloth) MERGE (s)-[:USES_TOOL]->(ultra))
-FOREACH (_ IN CASE WHEN s.id IN ['S_MOTORBIKE_OIL','S_ENGINE_OIL','S_MUD','S_LATERITE'] THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_TOOL]->(hard))
-FOREACH (_ IN CASE WHEN s.contains_tannin = true OR s.id STARTS WITH 'S_INK' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_TOOL]->(spray))
-FOREACH (_ IN CASE WHEN s.id IN ['S_GUM','S_CANDLE_WAX'] THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_TOOL]->(cloth))
-FOREACH (_ IN CASE WHEN s.id = 'S_RUST' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_TOOL]->(cloth) MERGE (s)-[:USES_TOOL]->(soft))
-RETURN count(DISTINCT s) AS stains""")
+// P0: wipe stale flag-based links, then attach tools per stain SOP (path-accurate)
+MATCH (s:Stain)-[r:USES_TOOL]->()
+DELETE r
+WITH count(*) AS _cleared
+UNWIND [
+  // --- Biohazard / PPE ---
+  {id:'S_VOMIT',tools:['T_GLOVE_NITRILE','T_MASK','T_CLOTH','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER']},
+  {id:'S_URINE',tools:['T_GLOVE_NITRILE','T_MASK','T_CLOTH','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER','T_SPRAY']},
+  {id:'S_FECES',tools:['T_GLOVE_NITRILE','T_MASK','T_CLOTH','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER']},
+  {id:'S_MILDEW',tools:['T_GLOVE_NITRILE','T_MASK','T_BRUSH_SOFT','T_CLOTH','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  // --- Protein ---
+  {id:'S_BLOOD_FRESH',tools:['T_CLOTH','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER']},
+  {id:'S_BLOOD_DRY',tools:['T_CLOTH','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER']},
+  {id:'S_EGG',tools:['T_CLOTH','T_BRUSH_ULTRA','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER']},
+  {id:'S_MILK',tools:['T_CLOTH','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER']},
+  {id:'S_BABY_FORMULA',tools:['T_CLOTH','T_BRUSH_ULTRA','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER']},
+  {id:'S_CHOCOLATE',tools:['T_CLOTH','T_BRUSH_SOFT','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER']},
+  {id:'S_COLLAR_STAIN',tools:['T_BRUSH_SOFT','T_CLOTH','T_SOAK_BIN','T_TIMER']},
+  {id:'S_SHIRT_YELLOW',tools:['T_BRUSH_SOFT','T_CLOTH','T_SOAK_BIN','T_TIMER','T_SPRAY']},
+  {id:'S_SWEAT_FRESH',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_SWEAT_YELLOW',tools:['T_BRUSH_SOFT','T_CLOTH','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_GRASS',tools:['T_BRUSH_SOFT','T_CLOTH','T_SOAK_BIN','T_TIMER']},
+  // --- Oil / solvent PPE ---
+  {id:'S_COOKING_OIL',tools:['T_CLOTH','T_BRUSH_SOFT']},
+  {id:'S_GREASE',tools:['T_CLOTH','T_BRUSH_SOFT']},
+  {id:'S_BUTTER',tools:['T_CLOTH','T_BRUSH_SOFT']},
+  {id:'S_MAYO',tools:['T_CLOTH','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER']},
+  {id:'S_SUNSCREEN',tools:['T_CLOTH','T_BRUSH_SOFT']},
+  {id:'S_FOUNDATION',tools:['T_CLOTH','T_BRUSH_SOFT']},
+  {id:'S_LIPSTICK',tools:['T_CLOTH','T_BRUSH_SOFT']},
+  {id:'S_DEODORANT',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY']},
+  {id:'S_ENGINE_OIL',tools:['T_GLOVE_NITRILE','T_MASK','T_BRUSH_HARD','T_BRUSH_SOFT','T_CLOTH']},
+  {id:'S_MOTORBIKE_OIL',tools:['T_GLOVE_NITRILE','T_MASK','T_BRUSH_HARD','T_BRUSH_SOFT','T_CLOTH']},
+  {id:'S_TAR',tools:['T_GLOVE_NITRILE','T_MASK','T_BRUSH_HARD','T_CLOTH','T_BRUSH_SOFT']},
+  {id:'S_SHOE_POLISH',tools:['T_GLOVE_NITRILE','T_CLOTH','T_BRUSH_SOFT']},
+  {id:'S_GUM',tools:['T_CLOTH']},
+  {id:'S_CANDLE_WAX',tools:['T_CLOTH']},
+  // --- Tannin / drinks / VN foods ---
+  {id:'S_RED_WINE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_TEA',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_BLACK_COFFEE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_MILK_COFFEE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_FRUIT_JUICE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_SOFT_DRINK',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_WHITE_WINE_BEER',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_KIMCHI',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_BUBBLE_TEA',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_BBQ_SAUCE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_KETCHUP',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_TOMATO_SAUCE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_SOY_SAUCE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_FISH_SAUCE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_PERFUME',tools:['T_CLOTH','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  // --- Dye / ink / specialty ---
+  {id:'S_CURRY',tools:['T_CLOTH','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER','T_UV_LAMP']},
+  {id:'S_MUSTARD',tools:['T_CLOTH','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER','T_UV_LAMP']},
+  {id:'S_INK_PEN',tools:['T_CLOTH','T_BRUSH_SOFT','T_GLOVE_NITRILE']},
+  {id:'S_INK_PERMANENT',tools:['T_CLOTH','T_BRUSH_SOFT','T_GLOVE_NITRILE']},
+  {id:'S_NAIL_POLISH',tools:['T_CLOTH','T_GLOVE_NITRILE']},
+  {id:'S_GLUE',tools:['T_CLOTH','T_BRUSH_SOFT','T_GLOVE_NITRILE']},
+  {id:'S_PAINT_LATEX',tools:['T_CLOTH','T_BRUSH_SOFT','T_GLOVE_NITRILE']},
+  {id:'S_HAIR_DYE',tools:['T_GLOVE_NITRILE','T_CLOTH','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER']},
+  {id:'S_MASCARA',tools:['T_CLOTH','T_BRUSH_SOFT','T_GLOVE_NITRILE']},
+  {id:'S_DYE_TRANSFER',tools:['T_CLOTH','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_STARCH_TRANSFER',tools:['T_CLOTH','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER']},
+  {id:'S_RUST',tools:['T_GLOVE_NITRILE','T_CLOTH','T_BRUSH_SOFT']},
+  {id:'S_LATERITE',tools:['T_GLOVE_NITRILE','T_BRUSH_HARD','T_BRUSH_SOFT','T_CLOTH']},
+  {id:'S_MUD',tools:['T_BRUSH_HARD','T_BRUSH_SOFT','T_CLOTH']}
+] AS row
+MATCH (s:Stain {id:row.id})
+UNWIND row.tools AS tid
+MATCH (t:Tool {id:tid})
+MERGE (s)-[:USES_TOOL]->(t)
+RETURN count(*) AS links""")
         _r(s, "X_fabric_hints", """
 UNWIND [
   {id:'F1',dry_hint_vi:'Say may OK neu sach; uu tien bong mat + quat',iron_hint_vi:'Ui 180-200C khi con am'},

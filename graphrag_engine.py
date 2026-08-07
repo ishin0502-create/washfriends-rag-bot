@@ -1166,7 +1166,7 @@ _TOOL_NAME_EN = {
     "T_MESH_BAG": "mesh laundry bag",
     "T_SOAK_BIN": "soak bin",
     "T_TIMER": "timer",
-    "T_UV_LIGHT": "UV / strong inspection light",
+    "T_UV_LAMP": "UV / strong inspection light",
     "T_STEAM_IRON": "steam iron",
     "T_MASK": "mask / eye protection",
     "T_FABRIC_MARKER": "fabric color pen (small area only)",
@@ -1522,7 +1522,8 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     if lang == "ko":
         lang_rule = (
             "한국어만. 베트남어·영어 금지. "
-            "단계: (1)오염·원단 (2)도구(name_ko) (3)힘·방향 Cap (4)약품(name_ko) (5)수온 (6)후관리. "
+            "단계: (1)오염·원단 (2)도구(tools[]의 name_ko만·없으면 해당 없음·지어내기 금지) "
+            "(3)힘·방향 Cap (4)약품(name_ko) (5)수온 (6)후관리. "
             "[왜 이 순서] → … → [감각 체크] → [성공률·고지] → [거절·보내기]. "
             "why_ko/fresh_path_ko/sense_check_ko 등이 있으면 그대로 한국어로. "
             "없으면 contains_*·chemicals·tools 사실만으로 한국어 작성 — 외국어 원문 복사 금지. "
@@ -1553,7 +1554,8 @@ Answer from this data only. Do not mix languages."""
     else:
         lang_rule = (
             "CHỈ tiếng Việt. CẤM Hàn/Anh. "
-            "Bước: (1) Nhận diện (2) Dụng cụ(name_vi) (3) Lực+hướng Cap (4) Hóa chất (5) Nhiệt độ (6) Sau xử lý. "
+            "Bước: (1) Nhận diện (2) Dụng cụ(CHỈ tools[].name_vi; rỗng→không cần; CẤM bịa) "
+            "(3) Lực+hướng Cap (4) Hóa chất (5) Nhiệt độ (6) Sau xử lý. "
             "[Tại sao thứ tự này] → … → [Kiểm tra giác quan] → [Tỷ lệ & báo khách] → [Từ chối / chuyển]. "
             "Dùng why_vi/fresh_path_vi nếu có. Không copy name_ko/Hangul. "
             "Pha loãng dilution_vi. Không markdown. Không mã nội bộ."
