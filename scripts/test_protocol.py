@@ -99,6 +99,13 @@ def test_silk_wine_replaces_acid_with_s1_explicitly():
     assert "S1" in codes
     path = out["stain_context"]["fresh_path_ko"]
     assert "중성세제" in path or "실크" in path
+    spray = next(t for t in out["tools"] if t["id"] == "T_SPRAY")
+    assert "식초" not in spray["use_for_ko"] or "식초·효소 분무 금지" in spray["use_for_ko"]
+    assert "중성세제" in spray["use_for_ko"]
+    assert "1 : 물 4" not in spray["use_for_ko"]
+    timer = next(t for t in out["tools"] if t["id"] == "T_TIMER")
+    assert "규정 분" not in timer["use_for_ko"]
+    assert "5" in timer["use_for_ko"]
 
 
 def test_necktie_item_primary_skips_chem_rewrite():

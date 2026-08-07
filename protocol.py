@@ -1395,6 +1395,7 @@ def bind_tools_from_protocol(proto: Protocol, tools: list) -> list:
     if not tools:
         return tools
     sp = proto.spray_step()
+    codes = set(proto.chem_codes())
     # Prefer A3 soak window over B1 15–45 when both exist
     minute_step = None
     for s in proto.active_steps():
@@ -1407,10 +1408,18 @@ def bind_tools_from_protocol(proto: Protocol, tools: list) -> list:
                 minute_step = s
                 break
     if minute_step is None:
+        for s in proto.active_steps():
+            if s.minutes_lo is not None:
+                minute_step = s
+                break
+    if minute_step is None:
         minute_step = sp
 
     lo = minute_step.minutes_lo if minute_step else None
     hi = minute_step.minutes_hi if minute_step else lo
+    if lo is None and "S1" in codes and "A3" not in codes:
+        # Delicate local-care rewrite cleared soak minutes — use short window
+        lo, hi = 5, 10
     if lo is None:
         min_ko, min_vi = "규정 분", "đúng phút quy định"
     elif hi and hi != lo:
@@ -1422,31 +1431,59 @@ def bind_tools_from_protocol(proto: Protocol, tools: list) -> list:
     spray_dil_ko = "병·경로 희석"
     spray_name_vi = "dung dịch pha"
     spray_dil_vi = "theo pha"
-    if sp and sp.chem:
-        meta = CHEM_META.get(sp.chem.upper(), {})
-        spray_name_ko = meta.get("name_ko") or sp.chem
+    spray_chem = (sp.chem.upper() if sp and sp.chem else "")
+    delicate_s1 = "S1" in codes and "A3" not in codes
+    if spray_chem:
+        meta = CHEM_META.get(spray_chem, {})
+        spray_name_ko = meta.get("name_ko") or spray_chem
         spray_dil_ko = meta.get("dilution_ko") or spray_dil_ko
-        spray_name_vi = meta.get("name_vi") or sp.chem
+        spray_name_vi = meta.get("name_vi") or spray_chem
         spray_dil_vi = meta.get("dilution_vi") or spray_dil_vi
+    elif delicate_s1:
+        # Acid/enzyme → S1 rewrite cleared spray=True; do not leave Neo4j vinegar howto
+        meta = CHEM_META["S1"]
+        spray_chem = "S1"
+        spray_name_ko = meta["name_ko"]
+        spray_dil_ko = meta["dilution_ko"]
+        spray_name_vi = meta["name_vi"]
+        spray_dil_vi = meta["dilution_vi"]
 
     bound = []
     for t in tools:
         t = dict(t)
         tid = str(t.get("id") or "")
-        if tid == "T_SPRAY" and sp and sp.chem:
-            t["use_for_ko"] = (
-                f"이 얼룩용: 「{spray_name_ko}」을 「{spray_dil_ko}」로 타서, "
-                f"다른 약이 안 들어 있는 분무기에만 넣는다. 병 겉에 「{spray_name_ko} / {spray_dil_ko}」라고 적는다. "
-                f"얼룩에 1–2번만 뿌리고 흠뻑 적시지 말 것."
-            )
-            t["use_for_vi"] = (
-                f"Cho vết này: pha 「{spray_name_vi}」 theo 「{spray_dil_vi}」 vào bình RIÊNG. "
-                f"Viết lên bình 「{spray_name_vi} / {spray_dil_vi}」. Xịt 1-2 phát — không ngập."
-            )
-            t["use_for_en"] = (
-                f"Mix 「{spray_name_ko}」 at 「{spray_dil_ko}」 in a dedicated bottle. "
-                f"Label the bottle. Mist 1–2 sprays — do not soak."
-            )
+        if tid == "T_SPRAY" and spray_chem:
+            if spray_chem == "S1" and delicate_s1:
+                t["use_for_ko"] = (
+                    f"실크·울 경로: 식초·효소 분무 금지. 「{spray_name_ko}」을 병 안내대로 약하게만 타서 "
+                    f"국소 도포·블롯(분무는 1회 이하). 병 겉에 「{spray_name_ko}」라고 적는다."
+                )
+                t["use_for_vi"] = (
+                    f"Len/lụa: CAM xịt giấm/enzyme. Chỉ 「{spray_name_vi}」 pha nhẹ theo nhãn — "
+                    f"chấm/thấm cục bộ. Viết tên lên bình."
+                )
+                t["use_for_en"] = (
+                    f"Silk/wool: no vinegar/enzyme spray. Use 「{spray_name_ko}」 lightly per bottle — dab/blot only."
+                )
+            else:
+                t["use_for_ko"] = (
+                    f"이 얼룩용: 「{spray_name_ko}」을 「{spray_dil_ko}」로 타서, "
+                    f"다른 약이 안 들어 있는 분무기에만 넣는다. 병 겉에 「{spray_name_ko} / {spray_dil_ko}」라고 적는다. "
+                    f"얼룩에 1–2번만 뿌리고 흠뻑 적시지 말 것."
+                )
+                t["use_for_vi"] = (
+                    f"Cho vết này: pha 「{spray_name_vi}」 theo 「{spray_dil_vi}」 vào bình RIÊNG. "
+                    f"Viết lên bình 「{spray_name_vi} / {spray_dil_vi}」. Xịt 1-2 phát — không ngập."
+                )
+                t["use_for_en"] = (
+                    f"Mix 「{spray_name_ko}」 at 「{spray_dil_ko}」 in a dedicated bottle. "
+                    f"Label the bottle. Mist 1–2 sprays — do not soak."
+                )
+        elif tid == "T_SPRAY":
+            # No spray step — strip any Neo4j vinegar/example howto
+            t["use_for_ko"] = "이 경로: 분무 단계 없음. (4)약품을 국소 도포·블롯만. 식초 예시 문구 무시."
+            t["use_for_vi"] = "Không bước xịt — chỉ chấm/thấm theo (4). Bỏ hướng dẫn giấm mẫu."
+            t["use_for_en"] = "No spray step — dab/blot per (4) chemicals only. Ignore sample vinegar howto."
         elif tid == "T_TIMER":
             t["use_for_ko"] = (
                 f"이 오염·약품 기준 처리 시간은 {min_ko}. 타이머를 {min_ko}에 맞추고, "
@@ -1457,14 +1494,23 @@ def bind_tools_from_protocol(proto: Protocol, tools: list) -> list:
                 f"Không để qua đêm không giám sát."
             )
         elif tid == "T_SOAK_BIN":
-            t["use_for_ko"] = (
-                f"희석액을 통에 만들어 {min_ko}만 담근다. 통에 약 이름을 적는다. "
-                f"정장·넥타이·얇은 실크는 SOP에서 금하면 통담금 하지 말 것."
-            )
-            t["use_for_vi"] = (
-                f"Pha dung dịch, ngâm đúng {min_vi}. Dán tên thuốc. "
-                f"Cấm ngâm suit/cà vạt/lụa mỏng nếu SOP cấm."
-            )
+            if delicate_s1:
+                t["use_for_ko"] = (
+                    "실크·울: 통담금보다 국소·찬물 헹굼 우선. 담그면 중성세제만·짧게, "
+                    f"타이머 {min_ko}. 식초·효소 담금 금지."
+                )
+                t["use_for_vi"] = (
+                    f"Len/lụa: ưu tiên chấm/xả lạnh. Nếu ngâm: chỉ S1 ngắn ({min_vi}). CAM giấm/enzyme."
+                )
+            else:
+                t["use_for_ko"] = (
+                    f"희석액을 통에 만들어 {min_ko}만 담근다. 통에 약 이름을 적는다. "
+                    f"정장·넥타이·얇은 실크는 SOP에서 금하면 통담금 하지 말 것."
+                )
+                t["use_for_vi"] = (
+                    f"Pha dung dịch, ngâm đúng {min_vi}. Dán tên thuốc. "
+                    f"Cấm ngâm suit/cà vạt/lụa mỏng nếu SOP cấm."
+                )
         bound.append(t)
     return bound
 
