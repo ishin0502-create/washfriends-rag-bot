@@ -26,6 +26,7 @@ from fastapi import Request, HTTPException
 
 from graphrag_engine import generate_response
 from image_flow import process_channel_image
+from reply_lang import detect_reply_lang
 from brand_header import (
     should_send_brand_header,
     confirm_brand_header_sent,
@@ -416,18 +417,53 @@ async def _send_zalo_reply(user_id: str, text: str, *, with_brand: bool = False)
     return False
 
 
+def _thinking_ack_text(user_text: str = "") -> str:
+    """Short wait notice in the same language as the user (KO/VI/EN). No LLM."""
+    lang = detect_reply_lang(user_text or "")
+    if lang == "ko":
+        return "확인 중입니다. 잠시만 기다려 주세요."
+    if lang == "en":
+        return "Checking now. Please wait a moment."
+    return "Dang kiem tra. Vui long doi trong giay lat."
+
+
+def _error_reply_text(user_text: str = "") -> str:
+    lang = detect_reply_lang(user_text or "")
+    if lang == "ko":
+        return "죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+    if lang == "en":
+        return "Sorry — a temporary error occurred. Please try again in a moment."
+    return "Xin loi, he thong tam thoi gap su co. Vui long thu lai sau it phut."
+
+
 async def _process_zalo_event(event_name: str, user_id: str, text: str, image_url: Optional[str]) -> None:
     """Heavy AI work — runs after webhook ACK."""
     loop = asyncio.get_event_loop()
+    lang_src = text or ""
     try:
+        # Immediate "thinking" notice (fail-open: never block the real answer)
+        if event_name == "user_send_text" and text:
+            try:
+                await _send_zalo_reply(user_id, _thinking_ack_text(lang_src), with_brand=False)
+            except Exception as ack_err:
+                print(f"[ZALO ACK] failed (continuing): {ack_err}")
+        elif event_name == "user_send_image":
+            try:
+                await _send_zalo_reply(user_id, _thinking_ack_text(lang_src), with_brand=False)
+            except Exception as ack_err:
+                print(f"[ZALO ACK] failed (continuing): {ack_err}")
+
         awaiting = get_session("zalo", user_id).get("awaiting") == "care_label"
         if event_name == "user_send_image":
             if not image_url:
-                await _send_zalo_reply(
-                    user_id,
-                    "Anh khong tai duoc. Vui long gui lai anh hoac mo ta vet ban bang chu.",
-                    with_brand=False,
-                )
+                lang = detect_reply_lang(lang_src)
+                if lang == "ko":
+                    miss = "사진을 받지 못했습니다. 다시 보내 주시거나 얼룩을 글로 설명해 주세요."
+                elif lang == "en":
+                    miss = "Could not download the photo. Please resend it or describe the stain in text."
+                else:
+                    miss = "Anh khong tai duoc. Vui long gui lai anh hoac mo ta vet ban bang chu."
+                await _send_zalo_reply(user_id, miss, with_brand=False)
                 return
 
             reply_text = await loop.run_in_executor(
@@ -456,7 +492,7 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
         try:
             await _send_zalo_reply(
                 user_id,
-                "Xin loi, he thong tam thoi gap su co. Vui long thu lai sau it phut.",
+                _error_reply_text(lang_src),
                 with_brand=False,
             )
         except Exception:
