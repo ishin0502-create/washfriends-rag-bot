@@ -19,7 +19,8 @@ def infer_fabric_weight(text: str, fabric_type: str = "", item_id: str = "") -> 
     thin_ko = ("얇은", "얇아", "얇음", "쉬어", "시폰", "보일", "얇게", "얇은원단", "얇은 옷")
     thick_ko = ("두꺼운", "두껍", "두툼", "두터운", "캔버스", "패딩", "코트", "청바지")
     thin_vi = ("mong", "mong manh", "voan", "sheer")
-    thick_vi = ("day", "dày", "dam", "canvas", "jean")
+    # NOTE: never use bare "dam" — matches Vietnamese đầm (dress) → false thick
+    thick_vi = ("day", "dày", "canvas", "jean", "nặng", "nang")
     thin_en = ("thin", "sheer", "lightweight", "light weight", "chiffon", "voile")
     thick_en = ("thick", "heavy", "heavyweight", "canvas", "denim")
 
@@ -194,7 +195,28 @@ def build_match_diagnosis(
     layers = chemistry_layers(sc)
     garment_color = entities.get("garment_color") or graph.get("garment_color") or ""
 
-    need_ask = (not fabric_type or weight == "unknown") and bool(sc.get("id") or sc.get("name_ko") or sc.get("name_vi"))
+    need_ask = False  # Do not gate SOP on a clarify question (session + weight bands instead)
+    fabric_missing = not fabric_type or str(fabric_type).lower() in ("unknown", "")
+    weight_missing = weight == "unknown"
+
+    bands_ko = (
+        "두께별: 얇음→Cap1·블롯·통담금·경질솔 금지 / "
+        "보통→아래 SOP 기준 / "
+        "두꺼움→Cap2–3·담금·솔 여유. "
+        "실크·울이면 효소·산소·강한 산 대신 중성세제·국소."
+    )
+    bands_vi = (
+        "Theo độ dày: mỏng→Cap1·blot·cấm ngâm cả áo / "
+        "vừa→SOP dưới / "
+        "dày→Cap2–3·ngâm. "
+        "Lụa/len: S1 cục bộ, không enzyme/oxy/acid mạnh."
+    )
+    bands_en = (
+        "By thickness: thin→Cap1 blot, no full soak / "
+        "medium→SOP below / "
+        "thick→Cap2–3 soak room. "
+        "Silk/wool: neutral detergent local only."
+    )
 
     card = {
         "fabric_type": fabric_type or "unknown",
@@ -208,35 +230,39 @@ def build_match_diagnosis(
         "fabric_rule_ko": fabric_weight_rule(weight, fabric_type, "ko"),
         "fabric_rule_vi": fabric_weight_rule(weight, fabric_type, "vi"),
         "fabric_rule_en": fabric_weight_rule(weight, fabric_type, "en"),
+        "weight_bands_ko": bands_ko if (fabric_missing or weight_missing) else "",
+        "weight_bands_vi": bands_vi if (fabric_missing or weight_missing) else "",
+        "weight_bands_en": bands_en if (fabric_missing or weight_missing) else "",
+        # Soft optional note — never replaces a full SOP
         "ask_fabric_ko": (
-            "원단이 면·폴리·실크·울 중 무엇인지, 얇은지 두꺼운지 알려주세요. "
-            "그에 따라 세제·도구·담금 시간이 달라집니다."
-            if need_ask
+            "원단(면/폴리/실크·울)·두께를 알면 더 정확히 맞출 수 있습니다."
+            if (fabric_missing or weight_missing) and bool(sc.get("id"))
             else ""
         ),
         "ask_fabric_vi": (
-            "Cho biết loại vải (cotton/poly/lụa/len) và mỏng hay dày — "
-            "hóa chất/dụng cụ/phút ngâm sẽ khác."
-            if need_ask
+            "Nếu biết loại vải và độ dày sẽ khớp SOP hơn."
+            if (fabric_missing or weight_missing) and bool(sc.get("id"))
             else ""
         ),
         "ask_fabric_en": (
-            "Tell fiber (cotton/poly/silk/wool) and thin vs thick — "
-            "chemicals/tools/soak minutes depend on it."
-            if need_ask
+            "Fiber + thickness refine the SOP further if known."
+            if (fabric_missing or weight_missing) and bool(sc.get("id"))
             else ""
         ),
         "accuracy_rule_ko": (
             "(1)에서 반드시: 오염 성분 + 원단 + 두께(+색). "
+            "원단·두께 미상이면 weight_bands로 얇/보통/두꺼움 차이를 말하고 SOP는 보통(면) 기준으로 완결. "
             "도구 분·희석·사용법은 tools[]/chemicals[]만 — 지어내기 금지."
         ),
         "accuracy_rule_vi": (
-            "Ở (1) bắt buộc: thành phần vết + loại vải + độ dày (+màu). "
-            "Phút/pha loãng/cách dùng chỉ lấy từ tools[]/chemicals[] — CẤM bịa."
+            "Ở (1): thành phần + vải + độ dày (+màu). "
+            "Nếu chưa rõ: nói weight_bands và hoàn tất SOP mức vừa. "
+            "Phút/pha chỉ từ tools[]/chemicals[]."
         ),
         "accuracy_rule_en": (
-            "In (1) must state: stain chemistry + fabric + thickness (+color). "
-            "Minutes/dilution/how-to only from tools[]/chemicals[] — never invent."
+            "In (1): chemistry + fabric + thickness (+color). "
+            "If unknown: state weight_bands and complete medium SOP. "
+            "Minutes/dilution only from tools[]/chemicals[]."
         ),
     }
     return card

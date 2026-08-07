@@ -62,7 +62,15 @@ def test_match_diagnosis_asks_when_fabric_unknown():
     card = build_match_diagnosis(g, entities={}, raw_text="옷에 기름이 묻었어요")
     assert card["fabric_weight"] in ("unknown", "medium", "thin", "thick")
     assert card["ask_fabric_ko"]
+    assert card["weight_bands_ko"]
+    assert "얇" in card["weight_bands_ko"]
     assert "소수성" in card["chemistry_ko"]
+
+
+def test_dam_dress_not_thick():
+    # Vietnamese đầm (dress) must NOT infer thick via bare "dam"
+    assert infer_fabric_weight("ao dam lua", fabric_type="silk") == "thin"
+    assert infer_fabric_weight("vai day canvas", fabric_type="") == "thick"
 
 
 def test_match_diagnosis_no_ask_when_fabric_known():

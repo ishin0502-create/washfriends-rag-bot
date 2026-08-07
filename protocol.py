@@ -136,6 +136,54 @@ CHEM_META: dict[str, dict[str, str]] = {
         "dilution_vi": "Theo nhãn; ấm nhẹ cho mỡ",
         "dilution_en": "Per label; warm for fat",
     },
+    "E2": {
+        "name_ko": "전분 분해 효소(아밀라아제)",
+        "name_vi": "Enzyme amylase",
+        "name_en": "Amylase enzyme",
+        "dilution_ko": "병 안내; 찬물·전분 얼룩",
+        "dilution_vi": "Theo nhãn; lạnh cho tinh bột",
+        "dilution_en": "Per label; cold for starch",
+    },
+    "A4": {
+        "name_ko": "과산화수소 3%(옥시)",
+        "name_vi": "Hydrogen peroxide 3%",
+        "name_en": "Hydrogen peroxide 3%",
+        "dilution_ko": "원액·구석 테스트; 흰 면 위주",
+        "dilution_vi": "Nguyên/test góc; ưu tiên cotton trắng",
+        "dilution_en": "Neat/corner test; prefer white cotton",
+    },
+    "A5": {
+        "name_ko": "암모니아 희석액",
+        "name_vi": "Amoniac pha loãng",
+        "name_en": "Diluted ammonia",
+        "dilution_ko": "약희석; 환기; 락스와 혼합 금지",
+        "dilution_vi": "Pha loãng; thông gió; CAM trộn Javel",
+        "dilution_en": "Dilute; ventilate; never mix with chlorine",
+    },
+    "X1": {
+        "name_ko": "환원 표백제(하이드로설파이트)",
+        "name_vi": "Tẩy khử (hydrosulfite)",
+        "name_en": "Reducing bleach",
+        "dilution_ko": "흰 면·린넨만; 즉석 조제; 장갑",
+        "dilution_vi": "CHI cotton/linen trắng; pha mới; găng",
+        "dilution_en": "White cotton/linen only; fresh mix; gloves",
+    },
+    "WF_SOFT": {
+        "name_ko": "워시프렌즈 섬유유연제",
+        "name_vi": "Nước xả Wash Friends",
+        "name_en": "Wash Friends softener",
+        "dilution_ko": "병 안내; 얼룩 처리 후 마무리만",
+        "dilution_vi": "Theo nhãn; chỉ sau xử lý vết",
+        "dilution_en": "Per bottle; finish only after stain work",
+    },
+    "WF_FRAG": {
+        "name_ko": "워시프렌즈 독일 향수 스프레이",
+        "name_vi": "Xịt hương Đức Wash Friends",
+        "name_en": "Wash Friends fragrance spray",
+        "dilution_ko": "건조·다림질 후 약분무",
+        "dilution_vi": "Xịt nhẹ sau khô/ủi",
+        "dilution_en": "Light mist after dry/iron",
+    },
 }
 
 
@@ -1217,10 +1265,13 @@ def _fabric_flags(graph: dict, entities: Optional[dict] = None) -> dict[str, Any
             "is_suede": False,
             "is_fur": False,
             "is_rayon": False,
+            "is_acetate": False,
+            "is_nylon": False,
             "delicate_protein": False,
             "no_oxygen": False,
             "no_acid": False,
             "no_enzyme": False,
+            "no_acetone": False,
             "fname": ft,
             "fid": {"cotton": "F1", "polyester": "F2", "linen": "F5", "denim": "F6"}.get(ft, ""),
         }
@@ -1233,6 +1284,8 @@ def _fabric_flags(graph: dict, entities: Optional[dict] = None) -> dict[str, Any
     is_suede = fid == "F9" or "suede" in fname or "nubuck" in fname or ft == "suede"
     is_fur = fid == "F10" or "fur" in fname or ft == "fur"
     is_rayon = fid == "F7" or "rayon" in fname or ft == "rayon"
+    is_acetate = "acetate" in fname or "아세테이트" in ft or ft == "acetate"
+    is_nylon = "nylon" in fname or "나일론" in ft or ft == "nylon"
     return {
         "is_silk": is_silk,
         "is_wool": is_wool,
@@ -1240,11 +1293,14 @@ def _fabric_flags(graph: dict, entities: Optional[dict] = None) -> dict[str, Any
         "is_suede": is_suede,
         "is_fur": is_fur,
         "is_rayon": is_rayon,
+        "is_acetate": is_acetate,
+        "is_nylon": is_nylon,
         "delicate_protein": is_silk or is_wool,
         "no_oxygen": is_silk or is_wool or is_leather or is_suede or is_fur or is_rayon
         or fabric.get("can_oxygen") is False,
         "no_acid": fabric.get("acid_safe") is False or is_silk or is_wool,
         "no_enzyme": fabric.get("enzyme_safe") is False or is_silk or is_wool,
+        "no_acetone": is_acetate or is_rayon,
         "fname": fname,
         "fid": fid,
     }
@@ -1264,6 +1320,8 @@ def _chem_blocked(code: str, flags: dict, garment_color: str) -> tuple[bool, str
         return True, "유색·검정: 염소·환원표백 금지", "Màu/đen: cấm Javel"
     if garment_color == "black" and c in {"B1", "A4"}:
         return True, "검정: 표백 금지", "Đen: cấm tẩy"
+    if flags.get("no_acetone") and c == "A2":
+        return True, "아세테이트·레이온: 아세톤 금지", "Acetate/rayon: cấm acetone"
     if (flags.get("is_leather") or flags.get("is_suede") or flags.get("is_fur")) and c in {
         "B1", "B2", "A3", "A4", "E1", "E2", "D3", "X1", "X2",
     }:

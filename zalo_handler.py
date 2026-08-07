@@ -477,7 +477,10 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
         else:
             if not text:
                 return
-            reply_text = await loop.run_in_executor(_executor, generate_response, text)
+            reply_text = await loop.run_in_executor(
+                _executor,
+                lambda: generate_response(text, channel="zalo", user_id=user_id),
+            )
 
         with_brand = should_send_brand_header(
             "zalo",

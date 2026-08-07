@@ -1,7 +1,7 @@
 """
 user_session.py
-Short-lived per-user conversation state for Zalo / Facebook image flows.
-In-memory (single Railway replica). TTL clears stale pending label waits.
+Short-lived per-user conversation state for Zalo / Facebook.
+In-memory (single Railway replica). TTL clears stale pending waits.
 """
 
 from __future__ import annotations
@@ -26,6 +26,8 @@ def _prune() -> None:
 
 def get_session(channel: str, user_id: str) -> dict[str, Any]:
     _prune()
+    if not channel or not user_id:
+        return {}
     return dict(_store.get(_key(channel, user_id)) or {})
 
 
@@ -61,5 +63,34 @@ def pop_pending_label(channel: str, user_id: str) -> Optional[dict[str, Any]]:
     return dict(data)
 
 
+def set_pending_treatment(
+    channel: str,
+    user_id: str,
+    *,
+    stain_id: str,
+    stain_type: str = "",
+    lang: str = "ko",
+    raw_question: str = "",
+) -> None:
+    """Remember last stain so fabric/weight-only follow-ups can continue SOP."""
+    if not channel or not user_id or not stain_id:
+        return
+    _prune()
+    prev = dict(_store.get(_key(channel, user_id)) or {})
+    # Do not clobber an active care-label wait
+    if prev.get("awaiting") == "care_label":
+        return
+    _store[_key(channel, user_id)] = {
+        "ts": time.time(),
+        "awaiting": "treatment_clarify",
+        "stain_id": stain_id,
+        "stain_type": stain_type or "",
+        "lang": lang or "ko",
+        "raw_question": raw_question or "",
+    }
+
+
 def clear_session(channel: str, user_id: str) -> None:
+    if not channel or not user_id:
+        return
     _store.pop(_key(channel, user_id), None)

@@ -1271,6 +1271,10 @@ def _infer_fabric_from_text(text: str) -> str:
         return "linen"
     if "레이온" in raw or "rayon" in t:
         return "rayon"
+    if "아세테이트" in raw or "acetate" in t or "triacetate" in t:
+        return "acetate"
+    if "나일론" in raw or "nylon" in t:
+        return "nylon"
     # Wool: never bare "울" substring (false hits: 지울, 나을, 채울…)
     if (
         "양모" in raw
@@ -1898,6 +1902,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
                 "chemistry": md.get("chemistry_ko"),
                 "fabric_rule": md.get("fabric_rule_ko"),
                 "ask_if_needed": md.get("ask_fabric_ko") or None,
+                "weight_bands": md.get("weight_bands_ko") or None,
                 "accuracy_rule": md.get("accuracy_rule_ko"),
                 "never_use": md.get("never_use_ko") or md.get("never_use_graph_ko") or None,
             })
@@ -1906,6 +1911,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
                 "chemistry": md.get("chemistry_en"),
                 "fabric_rule": md.get("fabric_rule_en"),
                 "ask_if_needed": md.get("ask_fabric_en") or None,
+                "weight_bands": md.get("weight_bands_en") or None,
                 "accuracy_rule": md.get("accuracy_rule_en"),
                 "never_use": md.get("never_use_en") or None,
             })
@@ -1914,6 +1920,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
                 "chemistry": md.get("chemistry_vi"),
                 "fabric_rule": md.get("fabric_rule_vi"),
                 "ask_if_needed": md.get("ask_fabric_vi") or None,
+                "weight_bands": md.get("weight_bands_vi") or None,
                 "accuracy_rule": md.get("accuracy_rule_vi"),
                 "never_use": md.get("never_use_vi") or md.get("never_use_graph_vi") or None,
             })
@@ -2233,7 +2240,9 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "한국어만. 베트남어·영어 금지. "
             "단계: (1)오염·원단·두께·색상 — match_diagnosis의 chemistry·fabric_type·fabric_weight·"
             "fabric_rule을 반드시 반영(소수성 오일 vs 단백질 vs 탄닌 등). "
-            "ask_if_needed가 있으면 (1) 끝에 그 한 문장만 되묻기. "
+            "원단·두께 미상이면 weight_bands_ko로 얇/보통/두꺼움 차이를 (1)에 넣고 "
+            "SOP는 보통 두께 기준으로 (2)–(6)까지 완결할 것. "
+            "ask_if_needed는 선택 안내일 뿐 — 질문만 하고 SOP를 비우지 말 것. "
             "(2)도구 — tools[]의 각 항목을 'name_ko: use_for_ko' 한 줄로 "
             "(사용법 생략·지어내기 금지; 없으면 해당 없음). "
             "타이머·담금통은 use_for_ko에 적힌 정확한 분(예: 15–45분)을 그대로 말할 것. "
@@ -2279,7 +2288,8 @@ Answer from this data only. Do not mix languages."""
             "CHỈ tiếng Việt. CẤM Hàn/Anh. "
             "Bước: (1) Nhận diện (vet/vai/độ dày/màu) — bắt buộc dùng match_diagnosis "
             "(chemistry, fabric_type, fabric_weight, fabric_rule). "
-            "Nếu có ask_if_needed: hỏi đúng 1 câu cuối (1). "
+            "Nếu chưa rõ vải/độ dày: nêu weight_bands_vi và hoàn tất SOP mức vừa — "
+            "không chỉ hỏi rồi dừng. ask_if_needed chỉ là gợi ý tùy chọn. "
             "(2) Dụng cụ — mỗi tools[] dạng 'name_vi: use_for_vi' "
             "(bắt buộc cách dùng; CẤM bịa; rỗng→không cần). "
             "Đồng hồ/chau ngâm: nói đúng số phút trong use_for_vi. "
@@ -2443,11 +2453,81 @@ def generate_response_from_entities(
     )
 
 
-def generate_response(user_message: str) -> str:
-    """Main entry point: reply in the same language as the user (vi or ko)."""
+def generate_response(user_message: str, channel: str = "", user_id: str = "") -> str:
+    """Main entry point: reply in the same language as the user (vi or ko).
+
+    Optional channel/user_id: fabric/weight-only follow-ups reuse last stain via session.
+    """
+    from user_session import clear_session, get_session, set_pending_treatment
+
+    pending = get_session(channel, user_id) if channel and user_id else {}
+    merge_pending = (
+        pending.get("awaiting") == "treatment_clarify"
+        and bool(pending.get("stain_id"))
+        and _looks_like_fabric_weight_followup(user_message)
+    )
+    # Prepend prior question so stain keyword routers still fire (볼펜 등)
+    effective = user_message
+    if merge_pending:
+        prior = (pending.get("raw_question") or "").strip()
+        effective = f"{prior}\n고객 추가정보: {user_message}".strip() if prior else user_message
+    elif channel and user_id and pending.get("awaiting") == "treatment_clarify" and _message_has_new_stain_topic(user_message):
+        clear_session(channel, user_id)
+
+    answer = _generate_response_core(effective, cache_question=user_message if not merge_pending else effective)
+
+    # Remember stain for next fabric/weight clarify turn
+    if channel and user_id and answer and "찾을 수 없" not in answer:
+        try:
+            last_ent = getattr(_generate_response_core, "last_entities", {}) or {}
+            sid = str(last_ent.get("stain_id") or pending.get("stain_id") or "")
+            if sid:
+                set_pending_treatment(
+                    channel,
+                    user_id,
+                    stain_id=sid,
+                    stain_type=str(last_ent.get("stain_type") or pending.get("stain_type") or ""),
+                    lang=detect_reply_lang(user_message),
+                    raw_question=(pending.get("raw_question") if merge_pending else user_message) or user_message,
+                )
+        except Exception as e:
+            print(f"[SESSION] pending treatment skip: {e}")
+    return answer
+
+
+def _looks_like_fabric_weight_followup(msg: str) -> bool:
+    raw = (msg or "").strip()
+    if not raw or len(raw) > 100:
+        return False
+    if _message_has_new_stain_topic(raw):
+        return False
+    hints = (
+        "면", "폴리", "실크", "울", "린넨", "데님", "레이온", "아세테이트", "나일론",
+        "얇", "두껍", "두툼", "보통", "두께", "코튼",
+        "cotton", "poly", "silk", "wool", "linen", "denim", "thin", "thick", "medium",
+        "mong", "day", "dày",
+    )
+    t = _normalize_text(raw)
+    return any(k in raw for k in hints) or any(k in t for k in hints if str(k).isascii())
+
+
+def _message_has_new_stain_topic(msg: str) -> bool:
+    raw = msg or ""
+    keys = (
+        "피", "혈액", "커피", "차", "와인", "기름", "오일", "잉크", "볼펜", "매니큐어",
+        "땀", "곰팡이", "녹", "진흙", "잔디", "주스", "쥬스", "소스", "케첩", "카레",
+        "립스틱", "김치", "라떼", "blood", "coffee", "wine", "oil", "ink", "kimchi", "latte",
+    )
+    t = _normalize_text(raw)
+    return any(k in raw for k in keys) or any(k in t for k in ("blood", "coffee", "wine", "oil", "ink", "kimchi", "latte", "ca phe", "muc"))
+
+
+def _generate_response_core(user_message: str, cache_question: str | None = None) -> str:
+    """Core GraphRAG answer (single-turn text)."""
     lang = detect_reply_lang(user_message)
+    cq = cache_question or user_message
     # Fast path — lang in context so KO/VI caches never mix
-    cached = cache_lookup(user_message, build_context_key({"lang": lang}))
+    cached = cache_lookup(cq, build_context_key({"lang": lang}))
     if cached:
         return cached
 
@@ -2895,10 +2975,15 @@ def generate_response(user_message: str) -> str:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_BLACK_COFFEE"
         entities["stain_type"] = "ca phe den"
+    if not entities.get("fabric_type"):
+        ft = _infer_fabric_from_text(user_message)
+        if ft:
+            entities["fabric_type"] = ft
+    _generate_response_core.last_entities = dict(entities)  # type: ignore[attr-defined]
     graph_context = _fetch_graph_context(entities)
     graph_data = graph_context.get("graph")
 
     if not graph_data or graph_data == {} or graph_data == []:
         return _empty_graph_reply(entities)
 
-    return _answer_with_optional_cache(user_message, entities, graph_context)
+    return _answer_with_optional_cache(cq, entities, graph_context)

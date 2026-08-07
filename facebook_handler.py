@@ -226,7 +226,10 @@ async def _process_and_reply(sender_id: str, text: str) -> None:
     awaiting = get_session("facebook", sender_id).get("awaiting") == "care_label"
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
-        reply = await loop.run_in_executor(pool, generate_response, text)
+        reply = await loop.run_in_executor(
+            pool,
+            lambda: generate_response(text, channel="facebook", user_id=sender_id),
+        )
     with_brand = should_send_brand_header(
         "facebook",
         sender_id,
