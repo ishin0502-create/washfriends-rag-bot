@@ -888,15 +888,15 @@ def _bind_tool_howto_to_protocol(graph: dict) -> dict:
         tid = str(t.get("id") or "")
         if tid == "T_SPRAY":
             t["name_ko"] = "분무기(약마다 따로·겉에 이름·비율 쓰기)"
-            t["name_vi"] = "Binh xit (moi hoa chat 1 binh + ghi ten/ty le)"
+            t["name_vi"] = "Bình xịt (mỗi hóa chất 1 bình + ghi tên/tỷ lệ)"
             t["use_for_ko"] = (
                 f"이 얼룩용: (4)약품의「{spray_name_ko}」을 「{dil_ko}」로 타서, "
                 f"다른 약이 안 들어 있는 분무기에만 넣는다. 병 겉에 「{spray_name_ko} / {dil_ko}」라고 펜으로 적는다"
                 f"(섞이면 위험하거나 효과가 없어짐). 얼룩에 1–2번만 뿌리고 흠뻑 적시지 말 것."
             )
             t["use_for_vi"] = (
-                f"Cho vet nay: pha 「{spray_name_vi}」 theo 「{dil_vi}」 vao binh RIENG (khong tron thuoc khac). "
-                f"Viet len binh 「{spray_name_vi} / {dil_vi}」. Xit 1-2 phat — khong ngap."
+                f"Cho vết này: pha 「{spray_name_vi}」 theo 「{dil_vi}」 vào bình RIÊNG (không trộn thuốc khác). "
+                f"Viết lên bình 「{spray_name_vi} / {dil_vi}」. Xịt 1-2 phát — không ngập."
             )
             t["use_for_en"] = (
                 f"For this stain: mix 「{spray_name_en}」 at 「{dil_en}」 in a dedicated bottle (no other chemical). "
@@ -908,8 +908,8 @@ def _bind_tool_howto_to_protocol(graph: dict) -> dict:
                 f"울리면 즉시 찬물로 헹군다. 감시 없이 밤새 담그지 말 것."
             )
             t["use_for_vi"] = (
-                f"Thoi gian xu ly cho vet nay: {min_vi}. Bam hen gio {min_vi}; het gio → xa nuoc lanh ngay. "
-                f"Khong de qua dem khi khong giam sat."
+                f"Thời gian xử lý cho vết này: {min_vi}. Bấm hẹn giờ {min_vi}; hết giờ → xả nước lạnh ngay. "
+                f"Không để qua đêm khi không giám sát."
             )
             t["use_for_en"] = (
                 f"Treatment time for this stain: {min_en}. Set a timer for {min_en}; when it rings, rinse cold immediately. "
@@ -921,8 +921,8 @@ def _bind_tool_howto_to_protocol(graph: dict) -> dict:
                 f"정장·넥타이·얇은 실크는 통담금 금지(해당 시)."
             )
             t["use_for_vi"] = (
-                f"Pha dung dich (4) vao chau, ngam dung {min_vi}. Dan nhan hoa chat. "
-                f"CAM ngam suit/caravat/lua mong neu SOP cam."
+                f"Pha dung dịch (4) vào chậu, ngâm đúng {min_vi}. Dán nhãn hóa chất. "
+                f"CẤM ngâm suit/cà vạt/lụa mỏng nếu SOP cấm."
             )
             t["use_for_en"] = (
                 f"Mix the (4) chemicals in a bin and soak only {min_en}. Label the chemical. "
@@ -1439,17 +1439,17 @@ def _chem_everyday_map(lang: str = "vi") -> dict[str, str]:
         "B2": "nuoc Javel / tay trang",
         "A1": "con sat khuan / con y te 70-90%",
         "A2": "acetone / dung moi son mong",
-        "A3": "giam trang 5%",
-        "A4": "oxy gia 3%",
-        "A5": "ammonia pha loang",
+        "A3": "giấm trắng 5%",
+        "A4": "oxy già 3%",
+        "A5": "ammonia pha loãng",
         "N1": "baking soda",
-        "N2": "muoi an",
-        "N3": "bot ngo / phan rom",
-        "S1": "nuoc giat trung tinh Wash Friends",
-        "WF_SOFT": "nuoc xa Wash Friends",
-        "WF_FRAG": "xit huong Wash Friends",
-        "X1": "bot tay khu (sodium hydrosulfite) — chi cotton/linen TRANG",
-        "X2": "acid oxalic — ri set / dat do (gang tay)",
+        "N2": "muối ăn",
+        "N3": "bột ngô / phấn rôm",
+        "S1": "nước giặt trung tính Wash Friends",
+        "WF_SOFT": "nước xả Wash Friends",
+        "WF_FRAG": "xit hương Wash Friends",
+        "X1": "bột tẩy khử (sodium hydrosulfite) — chỉ cotton/linen TRẮNG",
+        "X2": "acid oxalic — rỉ sét / đất đỏ (găng tay)",
     }
 
 

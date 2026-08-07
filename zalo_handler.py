@@ -424,7 +424,7 @@ def _thinking_ack_text(user_text: str = "") -> str:
         return "확인 중입니다. 잠시만 기다려 주세요."
     if lang == "en":
         return "Checking now. Please wait a moment."
-    return "Dang kiem tra. Vui long doi trong giay lat."
+    return "Đang kiểm tra. Vui lòng chờ trong giây lát."
 
 
 def _error_reply_text(user_text: str = "") -> str:
@@ -433,7 +433,7 @@ def _error_reply_text(user_text: str = "") -> str:
         return "죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
     if lang == "en":
         return "Sorry — a temporary error occurred. Please try again in a moment."
-    return "Xin loi, he thong tam thoi gap su co. Vui long thu lai sau it phut."
+    return "Xin lỗi, hệ thống tạm thời gặp sự cố. Vui lòng thử lại sau ít phút."
 
 
 async def _process_zalo_event(event_name: str, user_id: str, text: str, image_url: Optional[str]) -> None:
