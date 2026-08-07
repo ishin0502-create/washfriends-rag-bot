@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-07-edu-s12-rail-d-ops",
+            "build": "2026-08-07-edu-s13-water-machine-tools",
             "checks": checks,
         },
         status_code=200,
@@ -278,7 +278,8 @@ UNWIND [
   {id:'CR3',region:'Vietnam-Rainy',rule:'Mud season May-Nov: let mud DRY before brushing'},
   {id:'CR4',region:'Vietnam-All',rule:'High humidity 75-95% - protein stains ferment quickly treat within 2h'},
   {id:'CR5',region:'Vietnam-Central-South',rule:'Laterite red soil: dry first brush then vinegar then oxygen bleach - iron oxide stubborn'},
-  {id:'CR6',region:'Vietnam-Urban',rule:'Motorbike oil common: absorbent powder twice then solvent degreaser with ventilation'}
+  {id:'CR6',region:'Vietnam-Urban',rule:'Motorbike oil common: absorbent powder twice then solvent degreaser with ventilation'},
+  {id:'CR7',region:'Vietnam-HardWater',rule:'Many VN cities hard water (Ca/Mg): more detergent, extra rinse, vinegar rinse optional — scale on machines'}
 ] AS c MERGE (n:ClimateRule {id:c.id}) SET n += c RETURN count(n) AS created""")
         _r(s, "D_fabrics", """
 UNWIND [
@@ -587,7 +588,12 @@ UNWIND [
   {id:'T_SPRAY',name_vi:'Binh xit rieng (dan nhan)',name_ko:'분무기(라벨 필수)',use_for_vi:'Pha loang A3/D2/B1 — khong tron binh; PPE khi xit hoa chat'},
   {id:'T_BRUSH_SHOE',name_vi:'Ban chai de giay (long cung)',name_ko:'운동화 밑창용 경질 솔',use_for_vi:'De cao su — KHONG dung tren mesh/lua'},
   {id:'T_GLOVE_NITRILE',name_vi:'Gang tay nitrile (PPE)',name_ko:'니트릴 장갑(PPE)',use_for_vi:'BAT BUOC voi X2/B2/A1/A2/dung moi — khong dung gang mong voi acid/tay'},
-  {id:'T_MESH_BAG',name_vi:'Tui luoi giat',name_ko:'세탁망',use_for_vi:'Do mong, mu mem (neu cho phep), gang, day giay — giam ma sat may'}
+  {id:'T_MESH_BAG',name_vi:'Tui luoi giat',name_ko:'세탁망',use_for_vi:'Do mong, mu mem (neu cho phep), gang, day giay — giam ma sat may'},
+  {id:'T_SOAK_BIN',name_vi:'Chau ngam / thung ngam',name_ko:'담금통·침지 용기',use_for_vi:'Ngam enzyme/A3/B1 — dan nhan hoa chat, khong tron binh'},
+  {id:'T_TIMER',name_vi:'Dong ho hen gio',name_ko:'타이머',use_for_vi:'Ngam 15-60 phut — khong de qua dem khi khong giam sat'},
+  {id:'T_UV_LAMP',name_vi:'Den UV 365nm (kiem vet)',name_ko:'UV 램프(잔여 얼룩 검사용)',use_for_vi:'Phat hien protein/OBA du — tat den phong, 15-20cm'},
+  {id:'T_STEAM_IRON',name_vi:'Ban ui hoi',name_ko:'스팀 다리미',use_for_vi:'Ui theo cham nhan; CAM ui khi con vet (khoa mau)'},
+  {id:'T_MASK',name_vi:'Khau trang / mask',name_ko:'마스크(PPE)',use_for_vi:'Mui nang, moc, dung moi — ket hop gang + thong gio'}
 ] AS t MERGE (n:Tool {id:t.id}) SET n += t RETURN count(n) AS created""")
         _r(s, "U_stain_ops_protein", """
 MATCH (s:Stain) WHERE s.contains_protein = true
@@ -1724,6 +1730,22 @@ UNWIND [
    motion_vi:'Luc 0 — giao tiep + anh',
    water_temp_vi:'N/A',
    aftercare_vi:'Luu anh + phieu. Zalo: tra loi <2h neu co anh vet.'},
+  {id:'I_WATER_HARDNESS',name:'Hard water / VN tap water correction',name_vi:'Nuoc cung / dieu chinh nuoc may VN',name_ko:'경수·베트남 수돗물 보정',fabric_id:'F1',
+   precheck_vi:'Dau hieu: bot it, vai cung, vang trang, can may. Hoi khu vuc (HN/HCM nhieu noi cung).',
+   why_vi:'GIAO DUC: Nuoc cung (Ca/Mg) = bot giat kem hieu luc + can may + vai cang. Bu: (1) tang bot vua / dung chat cho nuoc cung (2) THEM xa (3) A3 1:4 xa cuoi tuy chon (4) ve sinh may dinh ky. Khong doi bang them xa vai (mat tham khan).',
+   fresh_path_vi:'(1) Nhan dau hieu cung. (2) Bot dung lieu +1 bac. (3) Extra rinse. (4) Tuy chon A3 xa nhe. (5) Trang vang: B1 deu (khong Javel protein). (6) Ve sinh long may 60-90C dinh ky.',
+   dried_path_vi:'Vai cung: xa lai + A3. Can voi: citric/A3 ve sinh may.',
+   motion_vi:'Luc 0 — dieu chinh chuong trinh',
+   water_temp_vi:'Theo vai; ve sinh may cao nhiet neu nhan cho',
+   aftercare_vi:'Ghi khu vuc nuoc. Khong thay softener cho rinse thua.'},
+  {id:'I_MACHINE_PROFILE',name:'Washer dryer program profiles',name_vi:'Cai may giat / may say theo vai',name_ko:'세탁기·건조기 코스 설정',fabric_id:'F1',
+   precheck_vi:'Doc nhan truoc. Vet sach TRUOC say (nhiet khoa vet). Khong chac say → dung.',
+   why_vi:'GIAO DUC: Giat: Cotton thuong; Tinh te=len/lua/mong; 60C+=khan/ga/be; The thao=mui. Bot IT + dung lieu. Say: Cao=khan; Vua=cotton; Thap=poly; CAM say len/lua/spandex/ao dai/da. VN: phoi bong mat + quat thuong du (<4h).',
+   fresh_path_vi:'(1) Chon chuong trinh theo vai. (2) Bot dung lieu (nuoc cung: xem I_WATER_HARDNESS). (3) Extra rinse neu can. (4) Kiem vet TRUOC say. (5) Say theo nhan hoac phoi. (6) Khong biet → tinh te.',
+   dried_path_vi:'Nhau: steam thap. Con bot: xa lai.',
+   motion_vi:'Luc 0 — chon chuong trinh',
+   water_temp_vi:'Theo chuong trinh + nhan',
+   aftercare_vi:'Lay do ngay sau giat/say. Ve sinh phin may.'},
   {id:'I_WHITE_FADE',name:'White / light fabric fade balance',name_vi:'Phuc hoi mat mau vai trang/sang (OBA)',name_ko:'흰·밝은 옷 탈색·얼룩 환 복원',fabric_id:'F1',
    precheck_vi:'CHI vai trang/sang. Chup anh. Dom trang sau tay = OBA bi pha. CAM ap dung len vai mau.',
    why_vi:'Vai trang: can bang bang tay oxy DEU TOAN BO (khong cham tung diem — de lo hon). Paste baking soda + oxy gia chi cho cho sot. Phoi nang ngan co the can bang UV — neu nhan/vai cho phep.',
@@ -1794,8 +1816,10 @@ FOREACH (_ IN CASE WHEN i.id = 'I_SWIMWEAR' THEN [1] ELSE [] END |
 FOREACH (_ IN CASE WHEN i.id = 'I_ODOR_SMOKE' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(spray) MERGE (i)-[:USES_CHEMICAL]->(a3)
   MERGE (i)-[:USES_CHEMICAL]->(n1) MERGE (i)-[:USES_CHEMICAL]->(d2))
-FOREACH (_ IN CASE WHEN i.id IN ['I_CARE_LABEL','I_DRY_VS_WET','I_INTAKE_SCRIPT'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_CARE_LABEL','I_DRY_VS_WET','I_INTAKE_SCRIPT','I_WATER_HARDNESS','I_MACHINE_PROFILE'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth))
+FOREACH (_ IN CASE WHEN i.id = 'I_WATER_HARDNESS' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_CHEMICAL]->(a3) MERGE (i)-[:USES_CHEMICAL]->(d3))
 FOREACH (_ IN CASE WHEN i.id = 'I_CURTAIN_URETHANE' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(glove)
   MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(a3) MERGE (i)-[:USES_CHEMICAL]->(s1))
@@ -1839,7 +1863,7 @@ RETURN size(nodes) AS cleared""")
             "tools_ppe": "kb/laundry_kb_v3_tools_equipment.md",
             "bubble_tea": "kb/laundry_kb_v3_stains_tannin.md",
             "rail_c": "I_BED_SHEET/TOWEL/BABY/SWIM + S_SUNSCREEN/TAR/MASCARA/HAIR_DYE + I_ODOR_SMOKE",
-            "rail_d": "I_CARE_LABEL + I_DRY_VS_WET + I_INTAKE_SCRIPT (D1-D3)",
+            "rail_d": "I_CARE_LABEL + I_DRY_VS_WET + I_INTAKE_SCRIPT + I_WATER_HARDNESS + I_MACHINE_PROFILE + tools D5",
         }
     _drv.close()
     return JSONResponse(log)
