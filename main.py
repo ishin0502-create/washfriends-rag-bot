@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-06-edu-s11-rail-c-home",
+            "build": "2026-08-07-edu-s12-rail-d-ops",
             "checks": checks,
         },
         status_code=200,
@@ -1700,6 +1700,30 @@ UNWIND [
    motion_vi:'Luc 0 ngam; N1 Cap1',
    water_temp_vi:'Theo vai; uu tien nhiet cao an toan',
    aftercare_vi:'Kiem mui khi UOT. CAM che bang xa vai/nuoc hoa.'},
+  {id:'I_CARE_LABEL',name:'Care label symbols decoder',name_vi:'Doc ky hieu giat (nhan)',name_ko:'케어라벨·세탁표시 기호 해석',fabric_id:'F1',
+   precheck_vi:'Tim nhan trong ao. Anh nhan neu mo. Neu X tren bat ky ky hieu → TUAN THU (khong doan).',
+   why_vi:'GIAO DUC: Nhan = hop dong voi vai. (1) Chau nuoc=giat: so=max C; tay=chi tay; X=CAM nuoc. Gach chan=nhe/rat nhe. (2) Tam giac=tay: rong=B1/B2 OK; gach cheo=chi B1; X=CAM tay. (3) Vuong=say: cham=nhiet; X vong=CAM may say. (4) Ban ui=cham nhiet; X=CAM ui. (5) Vong tron=dry-clean: P/F/W; X=CAM dry-clean.',
+   fresh_path_vi:'(1) Doc 5 nhom ky hieu. (2) Ghi max nhiet + bleach + say + ui + dry. (3) Neu X nuoc → dry-clean/chuyen (xem I_DRY_VS_WET). (4) Mau thuong chi B1. (5) Bao khach neu nhan mo/rach.',
+   dried_path_vi:'Nhan mat: hoi chat lieu + test goc; uu tien an toan thap (lanh, khong bleach).',
+   motion_vi:'Luc 0 — doc/ghi, khong doan',
+   water_temp_vi:'Theo so tren chau; luon bat dau thap hon max',
+   aftercare_vi:'Giu nhan. Khong cat nhan (mat huong dan).'},
+  {id:'I_DRY_VS_WET',name:'Dry-clean vs wet-clean decision',name_vi:'Dry-clean vs giat uot — quyet dinh',name_ko:'드라이클리닝 vs 물세탁 판단',fabric_id:'F1',
+   precheck_vi:'Doc nhan vong tron / X chau. Phan loai: suit canvas, hanbok/ao dai silk, down, leather, fur.',
+   why_vi:'GIAO DUC: Uu tien Nhan. X chau / P-F dry → chuyen dry-clean. Wet OK: cotton/poly nhan cho, towel, sheet. TU CHOI/chuyen: fur that, leather ungu, silk nhuan mau dat, suit canvas phuc tap, xuong long PERC (down uu tien wet mild). Nghi ngo → bao thap + chuyen.',
+   fresh_path_vi:'(1) Doc nhan. (2) Neu X nuoc → dry-clean. (3) Suit/hanbok/ao dai silk dat → uu tien dry / tu choi may. (4) Down: wet mild LON may, CAM PERC. (5) Leather/suede: spot/chuyen. (6) Cotton thuong: wet theo nhan.',
+   dried_path_vi:'Da giat sai (may len silk): dung, bao khach, khong xu ly them manh.',
+   motion_vi:'Luc 0 — quyet dinh truoc khi ngam',
+   water_temp_vi:'Chi khi wet duoc phep',
+   aftercare_vi:'Ghi ly do chuyen/tu choi tren phieu.'},
+  {id:'I_INTAKE_SCRIPT',name:'Store intake / check-in scripts',name_vi:'Script tiep nhan / check-in',name_ko:'접수·체크인 스크립트',fabric_id:'F1',
+   precheck_vi:'May anh san sang. Phieu 2 ban. Tag do rui ro (lua/len/vintage).',
+   why_vi:'GIAO DUC: Anh + chu ky = bao ve phap ly. Bat buoc: (1) chao (2) dem+ghi vet/hong san (3) CHUP tong+close-up (4) bao gia+thoi gian (5) phieu ky. Vet kho: thong bao truoc + dong y van ban. Khong anh khi nhan = de thua kien.',
+   fresh_path_vi:'(1) Chao. (2) Dem mon, ghi vet. (3) Anh tong + close-up. (4) Bao gia/thoi gian tu tin. (5) Phieu 2 ban ky. (6) Neu vet kho: script "co the khong sach 100% — anh/chi dong y thu?". (7) Tag rui ro.',
+   dried_path_vi:'Khieu nai: so anh luc nhan → xin loi neu loi / chi anh neu hong san.',
+   motion_vi:'Luc 0 — giao tiep + anh',
+   water_temp_vi:'N/A',
+   aftercare_vi:'Luu anh + phieu. Zalo: tra loi <2h neu co anh vet.'},
   {id:'I_WHITE_FADE',name:'White / light fabric fade balance',name_vi:'Phuc hoi mat mau vai trang/sang (OBA)',name_ko:'흰·밝은 옷 탈색·얼룩 환 복원',fabric_id:'F1',
    precheck_vi:'CHI vai trang/sang. Chup anh. Dom trang sau tay = OBA bi pha. CAM ap dung len vai mau.',
    why_vi:'Vai trang: can bang bang tay oxy DEU TOAN BO (khong cham tung diem — de lo hon). Paste baking soda + oxy gia chi cho cho sot. Phoi nang ngan co the can bang UV — neu nhan/vai cho phep.',
@@ -1770,6 +1794,8 @@ FOREACH (_ IN CASE WHEN i.id = 'I_SWIMWEAR' THEN [1] ELSE [] END |
 FOREACH (_ IN CASE WHEN i.id = 'I_ODOR_SMOKE' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(spray) MERGE (i)-[:USES_CHEMICAL]->(a3)
   MERGE (i)-[:USES_CHEMICAL]->(n1) MERGE (i)-[:USES_CHEMICAL]->(d2))
+FOREACH (_ IN CASE WHEN i.id IN ['I_CARE_LABEL','I_DRY_VS_WET','I_INTAKE_SCRIPT'] THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth))
 FOREACH (_ IN CASE WHEN i.id = 'I_CURTAIN_URETHANE' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(glove)
   MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(a3) MERGE (i)-[:USES_CHEMICAL]->(s1))
@@ -1813,6 +1839,7 @@ RETURN size(nodes) AS cleared""")
             "tools_ppe": "kb/laundry_kb_v3_tools_equipment.md",
             "bubble_tea": "kb/laundry_kb_v3_stains_tannin.md",
             "rail_c": "I_BED_SHEET/TOWEL/BABY/SWIM + S_SUNSCREEN/TAR/MASCARA/HAIR_DYE + I_ODOR_SMOKE",
+            "rail_d": "I_CARE_LABEL + I_DRY_VS_WET + I_INTAKE_SCRIPT (D1-D3)",
         }
     _drv.close()
     return JSONResponse(log)

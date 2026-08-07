@@ -222,6 +222,9 @@ _ITEM_FABRIC_TOKEN = {
     "I_BABY_WEAR": "cotton",
     "I_SWIMWEAR": "polyester",
     "I_ODOR_SMOKE": "cotton",
+    "I_CARE_LABEL": "cotton",
+    "I_DRY_VS_WET": "cotton",
+    "I_INTAKE_SCRIPT": "cotton",
 }
 Q_RESCUE = """
 MATCH (s:Stain)
@@ -750,6 +753,12 @@ def _infer_item_from_text(text: str) -> str:
         return "I_SWIMWEAR"
     if any(k in raw for k in ("담배냄새", "담배 냄새", "연기냄새", "연기 냄새")) or "mui thuoc" in t or "cigarette" in t or "smoke odor" in t:
         return "I_ODOR_SMOKE"
+    if any(k in raw for k in ("케어라벨", "세탁표시", "세탁 기호", "케어 라벨", "세탁기호")) or "care label" in t or "ky hieu giat" in t or "washing symbol" in t:
+        return "I_CARE_LABEL"
+    if any(k in raw for k in ("드라이클리닝", "드라이 클리닝", "물세탁인가", "드라이인가")) or "dry clean" in t or "dry-clean" in t or "dry vs wet" in t or "giat kho" in t:
+        return "I_DRY_VS_WET"
+    if any(k in raw for k in ("접수", "체크인", "인수인계", "사진 동의", "견적 스크립트")) or "check-in" in t or "check in" in t or "tiep nhan" in t or "intake script" in t:
+        return "I_INTAKE_SCRIPT"
 
     # Hats (non-golf)
     if any(k in raw for k in ("야구모자", "볼캡", "모자", "캡")) or "baseball cap" in t or (
@@ -1762,6 +1771,21 @@ def generate_response(user_message: str) -> str:
     elif any(k in user_message for k in ("담배냄새", "담배 냄새", "연기냄새")) or "mui thuoc" in raw_n or "cigarette" in raw_n or "smoke odor" in raw_n:
         entities["intent"] = "treatment"
         entities["item_id"] = "I_ODOR_SMOKE"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("케어라벨", "세탁표시", "세탁 기호", "세탁기호", "케어 라벨")) or "care label" in raw_n or "washing symbol" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_CARE_LABEL"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("드라이클리닝", "드라이 클리닝", "물세탁인가", "드라이인가", "드라이로 보내")) or "dry clean" in raw_n or "dry-clean" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_DRY_VS_WET"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("접수", "체크인", "사진 동의", "견적 말하는법", "접수 스크립트")) or "check-in" in raw_n or "intake" in raw_n or "tiep nhan" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_INTAKE_SCRIPT"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
     elif any(k in user_message for k in ("선크림", "자외선차단", "자외선 차단")) or "kem chong nang" in raw_n or "sunscreen" in raw_n:
