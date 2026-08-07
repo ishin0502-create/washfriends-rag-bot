@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-07-match-fabric-weight",
+            "build": "2026-08-07-w2-ops-rescue",
             "checks": checks,
         },
         status_code=200,
@@ -720,7 +720,12 @@ UNWIND [
   {code:'N1',dilution_vi:'Paste: baking soda + it nuoc; hoac 1-2 muong / 1 lit khi ngam',dilution_ko:'페이스트: 베이킹소다+물 약간; 또는 담글 때 1리터에 1–2큰술'},
   {code:'N3',dilution_vi:'Phu day len vet dau 10-30 phut roi chai bot',dilution_ko:'기름 얼룩에 두껍게 덮어 10–30분 후 털어내기'},
   {code:'D1',dilution_vi:'Cham it, thong gio; khong do ngap — theo nhan san pham',dilution_ko:'환기 필수, 소량 찍기 — 제품 라벨 따름'},
-  {code:'E3',dilution_vi:'Theo nhan enzyme; thuong ngam am nhe 15-30 phut sau khi tay dau',dilution_ko:'라벨 따름; 보통 탈지 후 미지근 15–30분 담금'}
+  {code:'E3',dilution_vi:'Theo nhan enzyme; thuong ngam am nhe 15-30 phut sau khi tay dau',dilution_ko:'라벨 따름; 보통 탈지 후 미지근 15–30분 담금'},
+  {code:'E2',dilution_vi:'Theo nhan enzyme tinh bot; thuong ngam lanh/am 15-60 phut (amylase)',dilution_ko:'전분 효소 라벨 따름; 보통 찬물·미온 15–60분 담금(아밀라아제)'},
+  {code:'B2',dilution_vi:'CHI cotton TRANG: pha loang theo nhan Javel — KHONG mau/len/lua; KHONG tron A5/A3',dilution_ko:'흰 면만: 락스(자벨) 병 라벨 희석 — 유색·실크·울 금지; 암모니아·식초와 혼합 금지'},
+  {code:'A2',dilution_vi:'Cham cuc it Cap1 + giay tham mat trai; CAM acetate/rayon; thong gio',dilution_ko:'안쪽 Cap1 극소량+흡수지; 아세테이트/레이온 금지; 환기'},
+  {code:'WF_SOFT',dilution_vi:'Theo chai Softener Wash Friends — chi buoc xa/hoan thien, khong xu ly vet',dilution_ko:'워시프렌즈 유연제 병 안내 — 헹굼·마감만, 얼룩 처리에 쓰지 말 것'},
+  {code:'WF_FRAG',dilution_vi:'Xit nhe 1-2 phat theo chai — khong ngap; sau khi do kho/sach',dilution_ko:'병 안내대로 1–2회만 약하게 — 흠뻑 금지; 건조·청결 후'}
 ] AS d
 MATCH (c:Chemical {code:d.code})
 SET c.dilution_vi = d.dilution_vi, c.dilution_ko = d.dilution_ko
@@ -2064,6 +2069,29 @@ RETURN count(s) AS updated
             log["Z16_ko_stain_education"] = d_ko[0] if d_ko else {"updated": 0, "rows": len(_ko_rows)}
         except Exception as e:
             log["Z16_ko_stain_education"] = f"ERR:{str(e)[:120]}"
+        # W2: ops drills (care/intake/water/machine) + dilution already in V_chem
+        try:
+            from w2_ops_rescue import ops_seed_rows as _ops_rows
+            _ops = _ops_rows()
+            res_ops = s.run(
+                """
+UNWIND $rows AS o
+MATCH (i:Item {id:o.id})
+SET i.why_ko = o.why_ko, i.why_vi = coalesce(o.why_vi, i.why_vi),
+    i.fresh_path_ko = o.fresh_path_ko, i.fresh_path_vi = coalesce(o.fresh_path_vi, i.fresh_path_vi),
+    i.dried_path_ko = o.dried_path_ko,
+    i.aftercare_ko = o.aftercare_ko, i.aftercare_vi = coalesce(o.aftercare_vi, i.aftercare_vi),
+    i.sense_check_ko = o.sense_check_ko, i.sense_check_vi = o.sense_check_vi,
+    i.success_rate_ko = o.success_rate_ko, i.success_rate_vi = o.success_rate_vi,
+    i.refuse_when_ko = o.refuse_when_ko, i.refuse_when_vi = o.refuse_when_vi
+RETURN count(i) AS updated
+""",
+                rows=_ops,
+            )
+            d_ops = res_ops.data()
+            log["Z17_ops_drills"] = d_ops[0] if d_ops else {"updated": 0}
+        except Exception as e:
+            log["Z17_ops_drills"] = f"ERR:{str(e)[:120]}"
         _r(s, "S_clear_answer_cache", """
 MATCH (c:AnswerCache)
 WITH collect(c) AS nodes
@@ -2094,6 +2122,7 @@ RETURN size(nodes) AS cleared""")
             "tool_p0": "Per-stain USES_TOOL matrix (clear flag links; PPE/soak/timer where SOP needs)",
             "tool_howto": "Tool use_for bound to stain minutes+dilution; spray explains which chem+why label",
             "match_v52": "match_diagnosis fabric×weight×chemistry + Z16 why_ko for all 58 stains",
+            "w2_v53": "ops drills Z17 + rescue_2nd/aftercare force + E2/B2/A2/WF dilution",
         }
     _drv.close()
     return JSONResponse(log)

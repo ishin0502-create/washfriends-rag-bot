@@ -244,16 +244,30 @@ MATCH (s:Stain)
 WHERE s.id = $stain_id
    OR toLower(coalesce(s.name_vi, '')) CONTAINS toLower($stain_input)
    OR toLower(coalesce(s.name, '')) CONTAINS toLower($stain_input)
+   OR toLower(coalesce(s.name_ko, '')) CONTAINS toLower($stain_input)
 WITH s LIMIT 1
 OPTIONAL MATCH (s)-[:USES_CHEMICAL]->(chem:Chemical)
-RETURN s.name_vi AS stain_vi, s.tip AS tip, s.urgency AS urgency,
+RETURN s {
+  .id, .name, .name_vi, .name_ko, .tip, .urgency, .group_id,
+  .contains_protein, .contains_oil, .contains_tannin, .contains_dye,
+  .why_ko, .why_vi, .fresh_path_ko, .fresh_path_vi,
+  .dried_path_ko, .dried_path_vi, .aftercare_ko, .aftercare_vi,
+  .sense_check_ko, .sense_check_vi, .refuse_when_ko, .refuse_when_vi
+} AS stain_context,
   COLLECT(DISTINCT chem {
-    .code, .name_vi, .role, .shop_name_vi, .buy_where_vi, .alt1_vi, .alt2_vi, .alt3_vi, .wf_supply
+    .code, .name_vi, .name_ko, .role, .shop_name_vi, .buy_where_vi,
+    .buy_where_ko, .alt1_vi, .alt2_vi, .alt3_vi, .wf_supply,
+    .dilution_vi, .dilution_ko, .when_use_vi
   }) AS chemicals,
   CASE $attempt_number
-    WHEN 1 THEN 'Thu lai: ngam enzyme/giấm them 20-30 phut, khong dung nhiet cao.'
-    WHEN 2 THEN 'Phuong an C: chuyen sang oxy bleach (B1) neu vai cho phep, hoac thong bao khach.'
-    ELSE 'Vet co the vin vien — thong bao khach va de xuat boi thuong neu can.'
+    WHEN 1 THEN '2차 준비: dried_path / rescue_2nd 따르고, 성공률 하락을 먼저 고지.'
+    WHEN 2 THEN '3차: 원단 허용 시에만 산소계 검토, 아니면 전문·배상 논의. 100% 금지.'
+    ELSE '잔여 가능 — 고객 고지. 무리한 강처리·혼합 금지.'
+  END AS recommended_rescue_ko,
+  CASE $attempt_number
+    WHEN 1 THEN 'Lan 2: theo dried_path/rescue_2nd; bao ty le thap truoc.'
+    WHEN 2 THEN 'Lan 3: B1 chi neu vai cho; khong thi chuyen. CAM 100%.'
+    ELSE 'Co the vin vien — bao khach. CAM xu ly manh/pha cocktail.'
   END AS recommended_rescue
 """
 
@@ -497,7 +511,18 @@ def _fetch_graph_context(entities: dict) -> dict:
             "stain_input": stain_input,
             "attempt_number": entities.get("attempt_number") or 1,
         })
-        context["graph"] = rows[0] if rows else {}
+        row = rows[0] if rows else {}
+        if row and isinstance(row.get("stain_context"), dict):
+            g = {
+                "stain_context": row["stain_context"],
+                "chemicals": row.get("chemicals") or [],
+                "recommended_rescue": row.get("recommended_rescue"),
+                "recommended_rescue_ko": row.get("recommended_rescue_ko"),
+            }
+            g = _enrich_rescue_aftercare(_enrich_teach_slots(g))
+            context["graph"] = g
+        else:
+            context["graph"] = row
         context["query_type"] = "rescue"
         return context
 
@@ -1637,6 +1662,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
         "force_metaphor_vi", "sense_check_vi", "success_rate_vi",
         "refuse_when_vi", "group_care_order_vi", "name_vi",
         "item_name_vi",
+        "rescue_2nd_vi", "rescue_disclose_vi",
     )
     KO_FIELDS = (
         "why_ko", "fresh_path_ko", "dried_path_ko",
@@ -1644,6 +1670,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
         "refuse_when_ko", "group_care_order_ko", "name_ko",
         "precheck_ko", "motion_ko", "water_temp_ko", "aftercare_ko",
         "item_name_ko",
+        "rescue_2nd_ko", "rescue_disclose_ko",
     )
 
     sc = g.get("stain_context")
@@ -2003,6 +2030,52 @@ def _enrich_teach_slots(graph: dict) -> dict:
 
     g["stain_context"] = sc
     g["teach_group"] = gid
+    return _enrich_rescue_aftercare(g)
+
+
+def _enrich_rescue_aftercare(graph: dict) -> dict:
+    """Force strong-light aftercare + 2nd-pass rescue card (W2 education)."""
+    if not isinstance(graph, dict):
+        return graph
+    from w2_ops_rescue import (
+        AFTERCARE_FORCE_EN,
+        AFTERCARE_FORCE_KO,
+        AFTERCARE_FORCE_VI,
+        rescue_card_for_stain,
+    )
+
+    g = dict(graph)
+    sc = dict(g.get("stain_context") or {})
+    if not sc:
+        # Item-only ops cards still get aftercare force on item_context
+        ic = dict(g.get("item_context") or {})
+        if ic:
+            for key, force in (
+                ("aftercare_ko", AFTERCARE_FORCE_KO),
+                ("aftercare_vi", AFTERCARE_FORCE_VI),
+            ):
+                cur = str(ic.get(key) or "")
+                if force.split(".")[0][:12] not in cur:
+                    ic[key] = (cur + " " + force).strip() if cur else force
+            g["item_context"] = ic
+        return g
+
+    for key, force in (
+        ("aftercare_ko", AFTERCARE_FORCE_KO),
+        ("aftercare_vi", AFTERCARE_FORCE_VI),
+        ("aftercare_en", AFTERCARE_FORCE_EN),
+    ):
+        cur = str(sc.get(key) or "")
+        marker = "강광" if key.endswith("_ko") else ("anh sang manh" if key.endswith("_vi") else "Strong-light")
+        if marker.lower() not in cur.lower():
+            sc[key] = (cur + " " + force).strip() if cur else force
+
+    rescue = rescue_card_for_stain(sc)
+    for k, v in rescue.items():
+        if not sc.get(k):
+            sc[k] = v
+
+    g["stain_context"] = sc
     return g
 
 
@@ -2026,6 +2099,8 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "(3)힘·방향 Cap — 얇은 원단은 Cap1–2만. "
             "(4)약품(name_ko·dilution_ko) (5)수온 (6)후관리. "
             "fresh_path_ko의 「어디에·몇 분·어떻게」를 그대로. "
+            "aftercare_ko의 강광·열고착 경고와 rescue_2nd_ko/rescue_disclose_ko가 있으면 "
+            "후관리·실패 시 2차에 포함. "
             "[왜 이 순서] → … → [감각 체크] → [성공률·고지] → [거절·보내기]. "
             "why_ko/fresh_path_ko/sense_check_ko·color_note_ko가 있으면 그대로. "
             "없으면 contains_*·chemicals·tools 사실만으로 한국어 작성 — 외국어 원문 복사 금지. "

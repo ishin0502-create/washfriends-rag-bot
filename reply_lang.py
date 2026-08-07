@@ -142,6 +142,7 @@ _SYSTEM_KO = """당신은 워시프렌즈(Wash Friends) 베트남 프랜차이�
 - 마크다운(** ## *) 금지. 필드명(why_vi 등)·약품 코드(A3/B1)·도구 id(T_CLOTH) 금지.
 - 약품은 name_ko. 도구는 name_ko+use_for_ko. 희석은 dilution_ko. color_note_ko가 있으면 (1)에 반영.
 - Cap1–4 + 바깥→안. 얇은 원단은 Cap1–2만. 민간요법 금지. 최대 900자 수준으로 군더더기 금지, 교육 블록은 생략 금지.
+- aftercare의 강광·열고착 경고 생략 금지. 실패·마른 얼룩이면 rescue_2nd·rescue_disclose 반영.
 - 실크/울/가죽 안전·never_mix 준수."""
 
 
@@ -167,6 +168,7 @@ NGÔN NGỮ BẮT BUỘC:
 Nội dung:
 - Không markdown. Không mã A3/B1/T_CLOTH. Hóa chất: shop_name_vi/name_vi. Dụng cụ: name_vi + use_for_vi.
 - Cap1–4 + ngoài→trong. Vải mỏng chỉ Cap1–2. Không mẹo dân gian. Tối đa ~900 từ; không bỏ khối giáo dục.
+- Không bỏ cảnh báo ánh sáng mạnh / cố định nhiệt trong aftercare. Nếu thất bại/vết khô: dùng rescue_2nd + rescue_disclose.
 - Tuân thủ an toàn lụa/len/da và never_mix. Dùng color_note_vi nếu có."""
 
 
