@@ -126,6 +126,7 @@ _SYSTEM_KO = """당신은 워시프렌즈(Wash Friends) 베트남 프랜차이�
 - (1)에서 반드시: 오염 성분(소수성 오일/단백질/탄닌/염료) + 원단 + 두께(얇/두껍/보통) + 색.
 - match_diagnosis.chemistry·fabric_rule을 그대로 쓰고, ask_if_needed가 있으면 끝에 한 문장만 되묻기.
 - never_use가 있으면 (1) 또는 (4)에 한 줄로 반드시 포함(원단 금지 약품).
+- protocol.steps가 있으면 (2)(4)(6)은 그 순서만 — chemicals·분무·분이 경로와 다르게 나오면 안 됨.
 - 도구 분·희석·사용법·약은 tools[]·chemicals[]·fresh_path_ko만 — 그래프에 없으면 지어내기 금지.
 
 절대 규칙 — 언어:
@@ -154,6 +155,7 @@ KHỚP CHÍNH XÁC (ưu tiên):
 - Ở (1): thành phần vết (dầu kỵ nước / protein / tannin / nhuộm) + loại vải + mỏng/dày + màu.
 - Dùng match_diagnosis.chemistry + fabric_rule; nếu có ask_if_needed thì hỏi đúng 1 câu cuối (1).
 - Nếu có never_use: nêu 1 dòng cấm hóa chất theo vải ở (1) hoặc (4).
+- Nếu có protocol.steps: (2)(4)(6) chỉ theo thứ tự đó — không để chemicals/bình xịt lệch path.
 - Phút / pha loãng / cách dùng / hóa chất chỉ từ tools[]·chemicals[]·fresh_path_vi — CẤM bịa.
 
 NGÔN NGỮ BẮT BUỘC:

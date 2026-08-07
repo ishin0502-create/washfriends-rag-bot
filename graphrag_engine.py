@@ -670,6 +670,8 @@ def _item_as_stain_shaped(item_graph: dict) -> dict:
 
 
 def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
+    from protocol import overlay_mode_for_item
+
     g = context.get("graph")
     has_stain = isinstance(g, dict) and g.get("stain_context") is not None
     if not has_stain:
@@ -679,16 +681,27 @@ def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
     g = dict(g)
     ic = item_graph.get("item_context") or {}
     g["item_context"] = ic
-    # Dress-shirt routine care must NOT overwrite real stain SOPs (collar/yellow/etc.)
-    if ic.get("id") == "I_DRESS_SHIRT":
-        if not g.get("fabric_context") and item_graph.get("fabric_context"):
-            g["fabric_context"] = item_graph["fabric_context"]
-        context["graph"] = g
-        return context
     if not g.get("fabric_context") and item_graph.get("fabric_context"):
         g["fabric_context"] = item_graph["fabric_context"]
-    # Overlay item care SOP onto stain fields so 1)-6) follows the garment, not a generic stain
+
+    # Stain-primary (default): keep stain SOP; only attach garment identity + never_use
+    # Item-primary (necktie/suit/fur/...): garment care overwrites paths/tools/chems
+    mode = overlay_mode_for_item(str(ic.get("id") or ""))
     sc = dict(g.get("stain_context") or {})
+    if ic.get("name_ko"):
+        sc["item_name_ko"] = ic.get("name_ko")
+    if ic.get("name_vi"):
+        sc["item_name_vi"] = ic.get("name_vi")
+    g["stain_context"] = sc
+    g["overlay_mode"] = mode
+
+    if mode == "stain_primary" or ic.get("id") == "I_DRESS_SHIRT":
+        if item_graph.get("never_use_on_fabric"):
+            g["never_use_on_fabric"] = item_graph.get("never_use_on_fabric")
+        context["graph"] = g
+        return context
+
+    # --- item_primary: specialty garment wins ---
     for key in (
         "precheck_vi", "why_vi", "fresh_path_vi", "dried_path_vi",
         "motion_vi", "water_temp_vi", "aftercare_vi",
@@ -702,13 +715,7 @@ def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
         sc["tip"] = ic.get("why_ko")
     elif ic.get("why_vi"):
         sc["tip"] = ic.get("why_vi")
-    # Keep stain name/id for recognition; item name_ko for garment identity
-    if ic.get("name_ko"):
-        sc["item_name_ko"] = ic.get("name_ko")
-    if ic.get("name_vi"):
-        sc["item_name_vi"] = ic.get("name_vi")
     g["stain_context"] = sc
-    # Prefer item tools/chems for specialty garments (necktie/suit/silk etc.)
     if item_graph.get("tools") is not None:
         g["tools"] = (
             list(_COLOR_FADE_TOOLS)
@@ -803,8 +810,9 @@ def _refine_tools_for_context(graph: dict, entities: Optional[dict] = None) -> d
         return graph
     tools = [t for t in (graph.get("tools") or []) if t]
     if not tools:
-        # Still attach diagnosis for chemistry×fabric even without tools
-        return _attach_match_diagnosis(graph, entities)
+        from protocol import apply_protocol_to_graph
+        g = apply_protocol_to_graph(dict(graph), entities)
+        return _attach_match_diagnosis(g, entities)
 
     entities = entities or {}
     ic = graph.get("item_context") or {}
@@ -862,7 +870,14 @@ def _refine_tools_for_context(graph: dict, entities: Optional[dict] = None) -> d
             out["color_note_ko"] = "검정·진한 색: 표백 금지. 잔여 얼룩은 강광으로 확인(눈에 덜 띔)."
             out["color_note_vi"] = "Den/dam: CAM tay. Kiem vet bang anh sang manh."
             out["color_note_en"] = "Black/dark: no bleach. Inspect residue under strong light."
-    return _attach_match_diagnosis(_bind_tool_howto_to_protocol(out), entities)
+    # Protocol single-truth: sync path + chemicals + spray/timer from ordered steps.
+    # Legacy binder only when no protocol template for this stain.
+    from protocol import apply_protocol_to_graph
+
+    out = apply_protocol_to_graph(out, entities)
+    if not out.get("protocol") or out.get("protocol_mode") == "item_primary":
+        out = _bind_tool_howto_to_protocol(out)
+    return _attach_match_diagnosis(out, entities)
 
 
 def _protocol_text_blob(graph: dict) -> str:
@@ -1289,7 +1304,11 @@ _COLOR_FADE_TOOLS = [
 
 
 def _apply_delicate_s1_fallback(graph: dict) -> dict:
-    """If silk/wool left with zero safe chemicals, offer S1 only — never for color-fade restore."""
+    """If silk/wool left with zero safe chemicals, offer S1 only — never for color-fade restore.
+
+    Skipped when a Protocol template exists for the stain: Protocol rewrites steps
+    (including explicit S1 on delicates) and must not be pre-poisoned by S1-only list.
+    """
     if not isinstance(graph, dict):
         return graph
     ic = graph.get("item_context") or {}
@@ -1298,6 +1317,13 @@ def _apply_delicate_s1_fallback(graph: dict) -> dict:
     sc = graph.get("stain_context") or {}
     if sc.get("id") == "I_COLOR_FADE":
         return graph
+
+    try:
+        from protocol import has_protocol
+        if has_protocol(str(sc.get("id") or "")):
+            return graph
+    except Exception:
+        pass
 
     fabric = graph.get("fabric_context") or {}
     fid = str(fabric.get("id") or "").upper()
@@ -1785,6 +1811,45 @@ def _sanitize_graph_for_owner(graph, lang: str):
         sc2.pop("id", None)
         g["stain_context"] = sc2
 
+    # Protocol: keep ordered steps for LLM, expand chem codes to names, drop raw codes
+    proto = g.get("protocol")
+    if isinstance(proto, dict):
+        from protocol import CHEM_META
+        steps_out = []
+        for s in proto.get("steps") or []:
+            if not isinstance(s, dict) or s.get("blocked"):
+                continue
+            code = (s.get("chem") or "").upper()
+            meta = CHEM_META.get(code, {})
+            step = {
+                "action": s.get(f"action_{lang}") or s.get("action_ko") or s.get("action_vi"),
+                "force": s.get("force"),
+                "optional": s.get("optional") or None,
+            }
+            if s.get("minutes_lo") is not None:
+                lo, hi = s.get("minutes_lo"), s.get("minutes_hi")
+                step["minutes"] = f"{lo}–{hi}" if hi and hi != lo else str(lo)
+            if code:
+                if lang == "ko":
+                    step["chemical"] = meta.get("name_ko") or code
+                    step["dilution"] = meta.get("dilution_ko")
+                elif lang == "vi":
+                    step["chemical"] = meta.get("name_vi") or code
+                    step["dilution"] = meta.get("dilution_vi")
+                else:
+                    step["chemical"] = meta.get("name_en") or code
+                    step["dilution"] = meta.get("dilution_en")
+            steps_out.append({k: v for k, v in step.items() if v})
+        g["protocol"] = {
+            "mode": proto.get("mode"),
+            "steps": steps_out,
+            "chem_order_names": [
+                (CHEM_META.get(c, {}).get(f"name_{lang}" if lang != "en" else "name_en")
+                 or CHEM_META.get(c, {}).get("name_ko") or c)
+                for c in (proto.get("chem_order") or [])
+            ],
+        }
+
     # Match diagnosis — keep only same-language fields (no internal stain_id)
     md = g.get("match_diagnosis")
     if isinstance(md, dict):
@@ -2141,7 +2206,9 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "분무기는 「무슨 약을 어떤 비율로 넣고, 병 겉에 왜 적는지」를 use_for_ko 그대로. "
             "(3)힘·방향 Cap — 얇은 원단은 Cap1–2만. "
             "(4)약품(name_ko·dilution_ko) (5)수온 (6)후관리. "
-            "fresh_path_ko의 「어디에·몇 분·어떻게」를 그대로. "
+            "protocol.steps가 있으면 그것이 유일한 실행 순서 — "
+            "fresh_path_ko·chemicals[]·분무기 use_for는 그 렌더이므로 서로 모순되게 쓰지 말 것. "
+            "protocol이 없으면 fresh_path_ko의 「어디에·몇 분·어떻게」를 그대로. "
             "aftercare_ko의 강광·열고착 경고와 rescue_2nd_ko/rescue_disclose_ko가 있으면 "
             "후관리·실패 시 2차에 포함. "
             "[왜 이 순서] → … → [감각 체크] → [성공률·고지] → [거절·보내기]. "
