@@ -142,6 +142,26 @@ def test_protocol_v2_coverage():
     assert codes.index("E1") < codes.index("A3")
 
 
+def test_protocol_v3_covers_all_ko_edu():
+    import re
+    from pathlib import Path
+    from protocol import PROTOCOL_BUILDERS
+    text = Path(__file__).resolve().parents[1].joinpath("ko_stain_education.py").read_text(encoding="utf-8")
+    ids = set(re.findall(r'"(S_[A-Z0-9_]+)"', text))
+    missing = sorted(ids - set(PROTOCOL_BUILDERS))
+    assert not missing, f"missing protocols: {missing}"
+    assert len(PROTOCOL_BUILDERS) >= 58
+
+
+def test_mayo_oil_before_enzyme():
+    p = build_protocol(
+        {"stain_context": {"id": "S_MAYO"}, "fabric_context": {"id": "F1", "name": "Cotton"}, "tools": [], "chemicals": []},
+        entities={"fabric_type": "cotton"},
+    )
+    codes = p.chem_codes()
+    assert codes.index("D2") < codes.index("E1")
+
+
 def test_entity_cotton_beats_graph_wool():
     g = _wine_graph(fabric_name="Wool", fabric_id="F3")
     g["fabric_context"]["acid_safe"] = False
