@@ -104,6 +104,7 @@ RETURN
     .contains_protein, .contains_tannin, .contains_oil, .contains_dye,
     .water_spreads, .precheck_vi, .motion_vi, .water_temp_vi, .aftercare_vi,
     .why_vi, .fresh_path_vi, .dried_path_vi,
+    .why_ko, .fresh_path_ko, .dried_path_ko,
     .force_metaphor_vi, .force_metaphor_ko,
     .sense_check_vi, .sense_check_ko,
     .success_rate_vi, .success_rate_ko,
@@ -1237,6 +1238,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
         sc2 = dict(sc)
         for field in (
             "tip", "why_vi", "fresh_path_vi", "dried_path_vi",
+            "why_ko", "fresh_path_ko", "dried_path_ko",
             "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
             "group_care_order_vi", "group_care_order_ko",
             "force_metaphor_vi", "force_metaphor_ko",
@@ -1246,6 +1248,29 @@ def _sanitize_graph_for_owner(graph, lang: str):
         ):
             if sc2.get(field):
                 sc2[field] = _expand_chem_codes_in_text(str(sc2[field]), lang=lang)
+        # Language gate: drop opposite-language narratives so LLM cannot echo them
+        if lang == "ko":
+            if sc2.get("why_ko"):
+                sc2["tip"] = sc2["why_ko"]
+            for k in (
+                "why_vi", "fresh_path_vi", "dried_path_vi",
+                "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
+                "force_metaphor_vi", "sense_check_vi", "success_rate_vi",
+                "refuse_when_vi", "group_care_order_vi",
+            ):
+                # Keep why_vi only if no why_ko (LLM must translate); drop paths/teach VI always when KO slots exist
+                if k == "why_vi" and not sc2.get("why_ko"):
+                    continue
+                if k in ("fresh_path_vi", "dried_path_vi") and not sc2.get(k.replace("_vi", "_ko")):
+                    continue
+                sc2.pop(k, None)
+        elif lang == "vi":
+            for k in (
+                "why_ko", "fresh_path_ko", "dried_path_ko",
+                "force_metaphor_ko", "sense_check_ko", "success_rate_ko",
+                "refuse_when_ko", "group_care_order_ko",
+            ):
+                sc2.pop(k, None)
         g["stain_context"] = sc2
 
     ic = g.get("item_context")
@@ -1281,7 +1306,7 @@ QUY TẮC TRẢ LỜI:
 2. CHỈ dùng DỮ LIỆU TỪ ĐỒ THỊ của ĐÚNG vết này — không bịa, không mẹo dân gian, không lẫn vết khác.
    Thiếu field → bỏ qua hoặc hỏi 1 câu. CẤM in tên field kỹ thuật (why_vi, fresh_path_vi, code, id…).
 3. Cảnh báo an toàn ĐẦU câu — chữ thường/hoa ngắn, CẤM markdown ** ## * _
-4. Mở đầu BẮT BUỘC khối [왜 이 순서] / [Tại sao thứ tự này] (2–5 câu) từ why_vi / tip — nguyên tắc hóa học ĐÚNG vết này (GIAO DUC). Không bỏ khối này khi có why/tip.
+4. Mở đầu BẮT BUỘC khối [왜 이 순서] / [Tại sao thứ tự này] (2–5 câu) từ why_ko (Hàn) hoặc why_vi / tip — nguyên tắc hóa học ĐÚNG vết này (GIAO DUC). Có why_ko thì dùng why_ko, CẤM copy why_vi sang câu Hàn. Không bỏ khối này khi có why/tip.
 5. Sau đó khối XỬ LÝ — 1)-6) (stain và item_care cùng format):
    (1) Nhận diện: BẮT BUỘC nêu ĐÚNG loại vết từ stain_context (name_ko/name_vi) + tươi/khô + màu vải nếu user nói
        (vd: "과일 주스, 젖은 상태, 흰 면"). CẤM câu mơ hồ kiểu "균일하게 분포/분류입니다" khi không có trong đồ thị.
@@ -1482,12 +1507,14 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "'를 1리터'처럼 약품명 빠진 문장 금지. 민간요법(치약 등) 금지. "
             "혼합 비율은 그래프에 있을 때만; 없으면 순차 처리+헹굼. "
             "필수 교육 형식(빠지면 안 됨, 마크다운 금지): "
-            "[왜 이 순서] why/tip 2–5문장 → "
+            "[왜 이 순서] why_ko가 있으면 why_ko만(why_vi 복사·베트남어·영어 원문 금지); "
+            "없으면 why/tip을 한국어로 번역 → "
             "(1)오염·원단 (2)도구(name_ko) (3)힘·방향+Cap비유 (4)약품 (5)수온 "
             "(6)후관리: 강한 빛에서 잔존 확인→남으면 재처리(건조 금지), 그늘·통풍 건조 → "
             "[감각 체크] 눈/손/코 → [성공률·고지] 100% 보장 금지·열고착 고지 → "
             "[거절·보내기] 손상·실크/울/가죽·설비 부족 시. "
-            "sense_check_*/success_rate_*/refuse_when_*/force_metaphor_* 있으면 그대로 반영. "
+            "fresh_path_ko/dried_path_ko/sense_check_ko/success_rate_ko/refuse_when_ko/"
+            "force_metaphor_ko가 있으면 그대로 한국어로 반영. "
             "약 혼합: A/B/C 칵테일 비율(2:1:1 등) 지어내기 금지. 성분별 순차 처리+중간 헹굼. "
             "구석 테스트 후 전체. never_mix는 절대 준수."
         )
@@ -1914,6 +1941,14 @@ def generate_response(user_message: str) -> str:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_ENGINE_OIL"
         entities["stain_type"] = "dau dong co"
+    elif any(k in user_message for k in ("구두약", "슈폴리시", "슈 폴리시")) or "shoe polish" in raw_n or "xi giay" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_SHOE_POLISH"
+        entities["stain_type"] = "xi giay"
+    elif "버터" in user_message or "butter" in raw_n or "vet bo" in raw_n or "mo bo" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_BUTTER"
+        entities["stain_type"] = "bo"
     elif any(k in user_message for k in ("식용유", "식용 오일")) or "dau an" in raw_n or "cooking oil" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_COOKING_OIL"

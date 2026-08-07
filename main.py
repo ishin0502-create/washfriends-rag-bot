@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-07-edu-s13-water-machine-tools",
+            "build": "2026-08-07-edu-s15-final-rich-ko",
             "checks": checks,
         },
         status_code=200,
@@ -470,8 +470,8 @@ MATCH (s:Stain) WHERE s.id IN [
   'S_GLUE','S_PAINT_LATEX','S_MUSTARD','S_CURRY','S_KIMCHI',
   'S_DYE_TRANSFER','S_STARCH_TRANSFER','S_SHIRT_YELLOW','S_MILDEW',
   'S_KETCHUP','S_TOMATO_SAUCE','S_MAYO','S_COLLAR_STAIN',
-  'S_SOY_SAUCE','S_FISH_SAUCE','S_COOKING_OIL','S_GREASE',
-  'S_LIPSTICK','S_FOUNDATION','S_BUBBLE_TEA'
+  'S_SOY_SAUCE','S_FISH_SAUCE','S_COOKING_OIL','S_GREASE','S_BUTTER',
+  'S_SHOE_POLISH','S_LIPSTICK','S_FOUNDATION','S_BUBBLE_TEA'
 ]
 OPTIONAL MATCH (s)-[old:USES_CHEMICAL]->()
 DELETE old
@@ -528,9 +528,12 @@ FOREACH (_ IN CASE WHEN s.id = 'S_MAYO' THEN [1] ELSE [] END |
 FOREACH (_ IN CASE WHEN s.id IN ['S_SOY_SAUCE','S_FISH_SAUCE'] THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(e1) MERGE (s)-[:USES_CHEMICAL]->(a3)
   MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id IN ['S_COOKING_OIL','S_GREASE'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN s.id IN ['S_COOKING_OIL','S_GREASE','S_BUTTER'] THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(n3) MERGE (s)-[:USES_CHEMICAL]->(d2)
   MERGE (s)-[:USES_CHEMICAL]->(e3))
+FOREACH (_ IN CASE WHEN s.id = 'S_SHOE_POLISH' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(d1) MERGE (s)-[:USES_CHEMICAL]->(d2)
+  MERGE (s)-[:USES_CHEMICAL]->(a1) MERGE (s)-[:USES_CHEMICAL]->(b1))
 FOREACH (_ IN CASE WHEN s.id = 'S_LIPSTICK' THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a1)
   MERGE (s)-[:USES_CHEMICAL]->(b1))
@@ -1841,6 +1844,79 @@ FOREACH (_ IN CASE WHEN i.id = 'I_FUR_REAL' THEN [1] ELSE [] END |
 FOREACH (_ IN CASE WHEN i.id IN ['I_CURTAIN_URETHANE','I_DUVET_GOOSE','I_DUVET_COTTON'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(glove))
 RETURN count(i) AS items""")
+        _r(s, "Z15_paths_final_rich_ko", """
+UNWIND [
+  {id:'S_BUTTER',
+   why_vi:'GIAO DUC: Bo = mo dong vat (solid fat) — giong dau an nhung cung o nhiet phong. THU TU: N3 (bot ngo/tinh bot) hut 10-15 phut → chai nhe → D2 massage Cap2 → giat am. CAM say khi con nhon (khoa mo). Khong nuoc nong truoc khi hut (lan mo).',
+   why_ko:'[왜 이 순서] 버터 = 동물성 고체 지방. 식용유와 같으나 실온에서 더 단단함. 순서: 옥수수전분·전분(N3)으로 10–15분 흡착 → 가볍게 털기 → 주방세제(D2) Cap2 → 미온 세탁. 기름 남은 채 건조 금지(열고착). 흡착 전 온수 금지(번짐).',
+   fresh_path_vi:'(1) Cao bot bo thua Cap1. (2) Phu N3 day 10-15 phut; chai/phui. (3) D2 2-3 giot Cap2 ngoai→trong. (4) Xa. (5) Giat ~30-40C neu vai cho. (6) Anh sang TRUOC say.',
+   fresh_path_ko:'(1) 여분 버터 Cap1 제거. (2) N3(전분) 두껍게 10–15분 → 털기. (3) D2 2–3방울 Cap2 바깥→안. (4) 헹굼. (5) 원단 허용 시 30–40C 세탁. (6) 건조 전 강광 확인.',
+   dried_path_vi:'N3+D2 lap. Mo khoa: bao trung binh; khong cam ket 100%.',
+   dried_path_ko:'N3+D2 반복. 고착 지방: 중간 성공률 고지 — 100% 비보장.',
+   force_metaphor_vi:'Cap1 N3 hut → Cap2 D2 — khong cha lan mo nong',
+   force_metaphor_ko:'Cap1 전분 흡착 → Cap2 주방세제 — 따뜻한 버터 문질러 번지지 말 것',
+   sense_check_vi:'Tay: het nhon. Mat: het loang mo. Mui: het bo.',
+   sense_check_ko:'손: 미끄럼 없음. 눈: 기름때 감소. 코: 버터 냄새 감소.',
+   success_rate_vi:'Tuoi + N3: cao. Da say: trung binh.',
+   success_rate_ko:'신선+전분: 높음. 건조 후: 중간.',
+   refuse_when_vi:'Lua/len + nhiet cao. Da/suede → chuyen.',
+   refuse_when_ko:'실크·울+고온 금지. 가죽·스웨이드 → 전문.'},
+  {id:'S_SHOE_POLISH',
+   why_vi:'GIAO DUC: Xi giay = sap/dau + PIGMENT mau (den/nau) — kho vi mau. THONG GIO khi dung moi. THU TU: cao bot → D1 (dung moi) blot mat trai + giay tham → D2 → A1 neu mau con (test) → B1 trang neu can. CAM cha lan pigment. Acetate/rayon: CAM A2.',
+   why_ko:'[왜 이 순서] 구두약 = 왁스·오일 + 색소(검정/갈색) — 색소 때문에 어렵다. 용제 사용 시 환기. 순서: 여분 제거 → 용제(D1) 안쪽 블롯+흡수지 → 주방세제(D2) → 남은 색소면 알코올(A1·테스트) → 흰옷은 산소표백(B1). 문질러 색소 확산 금지. 아세테이트/레이온+아세톤 금지.',
+   fresh_path_vi:'(1) PPE + thong gio. (2) Cao bot Cap1-2. (3) D1 xit/cham mat TRAI Cap1, giay tham duoi — lap. (4) D2 Cap2 xa. (5) Mau con: A1 test goc Cap1 blot. (6) Trang: B1. (7) Giat; anh sang TRUOC say.',
+   fresh_path_ko:'(1) PPE+환기. (2) Cap1–2 여분 제거. (3) D1을 안쪽 Cap1로 찍고 흡수지 — 반복. (4) D2 Cap2·헹굼. (5) 색소 남으면 A1 구석 테스트 후 Cap1 블롯. (6) 흰옷 B1. (7) 세탁; 건조 전 강광.',
+   dried_path_vi:'D1 lap nhieu. Bao mau pigment kho 100%. Vai mong → test.',
+   dried_path_ko:'D1 다회 반복. 색소 100% 비보장 고지. 얇은 원단 테스트.',
+   force_metaphor_vi:'Cap1 blot mat trai — cha = lan mau xi',
+   force_metaphor_ko:'Cap1: 안쪽 블롯 — 문지르면 구두약 색소 확산',
+   sense_check_vi:'Tay: het sap/nhon. Mat: mau giam tung blot.',
+   sense_check_ko:'손: 왁스·미끄럼 없음. 눈: 블롯마다 색소 감소.',
+   success_rate_vi:'Tuoi: trung binh. Den dam da kho: thap — bao truoc.',
+   success_rate_ko:'신선: 중간. 진한 검정·오래된: 낮음 — 사전 고지.',
+   refuse_when_vi:'Acetate+A2. Khong thong gio + D1. Khong cam ket trang 100%.',
+   refuse_when_ko:'아세테이트+아세톤 금지. 환기 없이 용제 금지. 100% 복원 비보장.'},
+  {id:'S_GUM',
+   why_vi:'GIAO DUC: Keo cao su = polymer dan — DONG LANH la chia khoa. Am = dinh lai. THU TU: tui nilon + tu dong 30-60 phut → be/cao ngay khi gion → A2 it neu can dau (CAM acetate/rayon) → D2 giat. Khong ui nong len keo.',
+   why_ko:'[왜 이 순서] 껌 = 끈적 폴리머 — 핵심은 냉동. 따뜻하면 다시 붙음. 순서: 비닐+냉동실 30–60분 → 바삭할 때 바로 깨서 제거 → 잔여 기름은 아세톤(A2) 극소량(아세테이트/레이온 금지) → 주방세제(D2) 세탁. 껌 위 다림질 금지.',
+   fresh_path_vi:'(1) Cho vao tui, dong 30-60 phut den CUNG. (2) Lay ra, be/cao Cap2 NHANH. (3) Con can: dong lai neu can. (4) Can dau: A2 rat it Cap1 (test; CAM acetate). (5) D2 + giat am. (6) Kiem tra TRUOC say.',
+   fresh_path_ko:'(1) 비닐에 넣어 냉동 30–60분, 단단해질 때까지. (2) 꺼내자마자 Cap2로 깨서 제거. (3) 남으면 다시 냉동. (4) 유분 잔여: A2 극소량 Cap1(테스트; 아세테이트 금지). (5) D2+미온 세탁. (6) 건조 전 확인.',
+   dried_path_vi:'Dong lai + be. Neu da ui nong: kho hon — bao truoc.',
+   dried_path_ko:'다시 냉동 후 깨기. 이미 다림질했으면 더 어려움 — 사전 고지.',
+   force_metaphor_vi:'Cap2 be khi gion — am = dinh lai',
+   force_metaphor_ko:'Cap2: 얼려 바삭할 때 깨기 — 따뜻하면 다시 붙음',
+   sense_check_vi:'Tay: het dan/gion. Mat: het manh keo.',
+   sense_check_ko:'손: 끈적임 없음. 눈: 껌 조각 없음.',
+   success_rate_vi:'Dong dung cach: cao. Da ui/am: trung binh.',
+   success_rate_ko:'냉동 정석: 높음. 이미 다림질·따뜻: 중간.',
+   refuse_when_vi:'Acetate/rayon + A2 → dung. Vai mong de rach khi cao → bao.',
+   refuse_when_ko:'아세테이트/레이온+아세톤 금지. 얇은 원단 긁힘 위험 고지.'},
+  {id:'S_BUBBLE_TEA',
+   why_vi:'GIAO DUC: Tra sua tran chau = 4 lop: tannin tra + protein sua + tinh bot san (tran chau) + duong. THU TU: cao tran chau → xa LANH → enzyme (protein+tinh bot) → D2 (mo sua) → A3 (tannin) → B1 neu trang. CAM nuoc nong dau (khoa protein+mau). Bo enzyme = kem hieu qua.',
+   why_ko:'[왜 이 순서] 버블티·밀크티 = 4층: 차 탄닌 + 우유 단백질 + 타피오카 전분 + 설탕. 순서: 타피오카 제거 → 찬물 헹굼 → 효소(단백질·전분) → 주방세제(D2·유지방) → 식초(A3·탄닌) → 흰옷은 산소표백(B1). 처음부터 온수 금지(단백질·색소 고착). 효소 생략 시 효과 급감.',
+   fresh_path_vi:'(1) Cao/bo tran chau. (2) Xa LANH ngay. (3) Enzyme E1/E2 ngam lanh 15-30 phut. (4) D2 1-2 giot cham. (5) A3 1:4 ~15 phut. (6) Giat; con mau trang → B1. CAM say khi con vet.',
+   fresh_path_ko:'(1) 타피오카·펄 제거. (2) 즉시 찬물 헹굼. (3) 효소 E1/E2 찬물 침지 15–30분. (4) D2 1–2방울. (5) A3 1:4 약 15분. (6) 세탁; 흰옷 잔색 → B1. 얼룩 남은 채 건조 금지.',
+   dried_path_vi:'Ngam enzyme dai → D2 → A3 → B1 trang. Duong kho de vang — B1 phong.',
+   dried_path_ko:'효소 장침지 → D2 → A3 → 흰옷 B1. 마른 설탕은 황변 위험 — B1 예방.',
+   force_metaphor_vi:'Cap1–2: tham ngoai→trong — khong cha lan tannin',
+   force_metaphor_ko:'Cap1–2: 바깥→안 흡수 — 문지르면 탄닌·설탕 번짐',
+   sense_check_vi:'Tay: het dinh/ngot. Mat: mau nhat. Mui: het tra sua.',
+   sense_check_ko:'손: 끈적·단맛 없음. 눈: 색소 감소. 코: 밀크티 냄새 감소.',
+   success_rate_vi:'Xu ly SOM + enzyme: cao. Da say: trung binh.',
+   success_rate_ko:'즉시+효소: 높음. 건조 후: 중간.',
+   refuse_when_vi:'Len/lua + B1. Khach doi 100% sau say → bao.',
+   refuse_when_ko:'실크·울+산소표백 주의. 건조 후 100% 요구 → 보장 거절.'}
+] AS o
+MATCH (s:Stain {id:o.id})
+SET s.why_vi = o.why_vi, s.why_ko = o.why_ko,
+    s.fresh_path_vi = o.fresh_path_vi, s.fresh_path_ko = o.fresh_path_ko,
+    s.dried_path_vi = o.dried_path_vi, s.dried_path_ko = o.dried_path_ko,
+    s.tip = coalesce(o.why_vi, s.tip),
+    s.force_metaphor_vi = o.force_metaphor_vi, s.force_metaphor_ko = o.force_metaphor_ko,
+    s.sense_check_vi = o.sense_check_vi, s.sense_check_ko = o.sense_check_ko,
+    s.success_rate_vi = o.success_rate_vi, s.success_rate_ko = o.success_rate_ko,
+    s.refuse_when_vi = o.refuse_when_vi, s.refuse_when_ko = o.refuse_when_ko
+RETURN count(s) AS updated""")
         _r(s, "S_clear_answer_cache", """
 MATCH (c:AnswerCache)
 WITH collect(c) AS nodes
@@ -1852,8 +1928,10 @@ RETURN size(nodes) AS cleared""")
         log["relationships"] = {row["t"]: row["c"] for row in r3}
         r4 = s.run(
             "MATCH (s:Stain) WHERE s.id IN "
-            "['S_LATERITE','S_MOTORBIKE_OIL','S_MILDEW','S_RUST'] "
-            "RETURN s.id AS id, s.name_vi AS name_vi ORDER BY id"
+            "['S_LATERITE','S_MOTORBIKE_OIL','S_MILDEW','S_RUST','S_BUTTER','S_SHOE_POLISH'] "
+            "RETURN s.id AS id, s.name_vi AS name_vi, "
+            "CASE WHEN s.why_vi CONTAINS 'GIAO DUC' THEN true ELSE false END AS rich "
+            "ORDER BY id"
         )
         log["vn_specialty_stains"] = [dict(row) for row in r4]
         log["kb_docs"] = {
@@ -1864,6 +1942,7 @@ RETURN size(nodes) AS cleared""")
             "bubble_tea": "kb/laundry_kb_v3_stains_tannin.md",
             "rail_c": "I_BED_SHEET/TOWEL/BABY/SWIM + S_SUNSCREEN/TAR/MASCARA/HAIR_DYE + I_ODOR_SMOKE",
             "rail_d": "I_CARE_LABEL + I_DRY_VS_WET + I_INTAKE_SCRIPT + I_WATER_HARDNESS + I_MACHINE_PROFILE + tools D5",
+            "stage15": "S_BUTTER + S_SHOE_POLISH RICH + why_ko/fresh_path_ko for gum/bubble (KO polish)",
         }
     _drv.close()
     return JSONResponse(log)

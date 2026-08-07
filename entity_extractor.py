@@ -78,6 +78,7 @@ S_MILDEW=mildew/nam moc/곰팡이, S_RUST=rust/ri set,
 S_LIPSTICK=lipstick/립스틱/son moi, S_FOUNDATION=foundation/파운데이션/쿠션/kem nen,
 S_DEODORANT=deodorant/데오/땀억제제, S_PERFUME=perfume/향수/nuoc hoa,
 S_GUM=chewing gum/껌/keo cao su, S_CANDLE_WAX=candle wax/촛농/sap nen,
+S_BUTTER=butter/버터/bo, S_SHOE_POLISH=shoe polish/구두약/xi giay,
 S_BBQ_SAUCE=BBQ sauce/바베큐, S_MUSTARD=mustard/머스터드/겨자,
 S_NAIL_POLISH=nail polish/매니큐어/son mong, S_GLUE=glue/접착제/keo dan,
 S_PAINT_LATEX=latex paint/수성페인트/son nuoc,
@@ -96,6 +97,7 @@ Generic 화장품/makeup without type → prefer S_LIPSTICK if lip color; else S
 와이셔츠 누렇/황변/변색 = S_SHIRT_YELLOW (not only armpit sweat).
 와이셔츠 세탁 방법(얼룩·황변 미지정) = item I_DRESS_SHIRT (일반 세탁·관리), NOT S_SHIRT_YELLOW.
 버블티/밀크티/타피오카 = S_BUBBLE_TEA.
+버터 = S_BUTTER. 구두약 = S_SHOE_POLISH (not shoe item alone).
 우레탄·비닐·샤워 커튼 = I_CURTAIN_URETHANE. 일반 커튼 세탁 = I_CURTAIN_FABRIC.
 구스/거위/다운 이불 = I_DUVET_GOOSE. 솜이불/폴리이불 = I_DUVET_COTTON.
 침대 시트 = I_BED_SHEET. 수건/타월 = I_TOWEL. 아기옷 = I_BABY_WEAR. 수영복 = I_SWIMWEAR.
