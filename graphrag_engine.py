@@ -171,7 +171,8 @@ RETURN
     .precheck_vi, .why_vi, .fresh_path_vi, .dried_path_vi,
     .motion_vi, .water_temp_vi, .aftercare_vi, .fabric_id,
     .precheck_ko, .why_ko, .fresh_path_ko, .dried_path_ko,
-    .motion_ko, .water_temp_ko, .aftercare_ko
+    .motion_ko, .water_temp_ko, .aftercare_ko,
+    .sense_check_ko, .success_rate_ko, .refuse_when_ko
   } AS item_context,
   CASE WHEN f IS NULL THEN null ELSE f {
     .id, .name, .name_vi, .max_temp, .can_bleach, .can_oxygen, .enzyme_safe, .acid_safe,
@@ -656,6 +657,7 @@ def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
         "motion_vi", "water_temp_vi", "aftercare_vi",
         "precheck_ko", "why_ko", "fresh_path_ko", "dried_path_ko",
         "motion_ko", "water_temp_ko", "aftercare_ko",
+        "sense_check_ko", "success_rate_ko", "refuse_when_ko",
     ):
         if ic.get(key):
             sc[key] = ic[key]
@@ -1592,25 +1594,27 @@ def _sanitize_graph_for_owner(graph, lang: str):
 
 
 def _enrich_teach_slots(graph: dict) -> dict:
-    """Fill Protocol Card teach slots from stain fields or group fallbacks (additive)."""
+    """Fill Protocol Card teach slots from stain fields or group fallbacks (additive).
+
+    Specialty garments (necktie/suit/…) must NEVER inherit unrelated G5 refuse text
+    (leather mold / duvet equipment) — that confuses owners on a ketchup-on-tie question.
+    """
     if not isinstance(graph, dict):
         return graph
     g = dict(graph)
     sc = dict(g.get("stain_context") or {})
     if not sc:
         return g
+    ic = g.get("item_context") or {}
+    item_id = str(ic.get("id") or sc.get("id") or "")
+
     group = ""
     grp = sc.get("group_id") or sc.get("group")
     if isinstance(grp, dict):
         group = str(grp.get("id") or "")
     elif isinstance(grp, str):
         group = grp
-    # Infer group from stain id prefix lists if missing
-    sid = str(sc.get("id") or "")
-    if not group:
-        if sid.startswith("S_"):
-            # light heuristic from known protein/oil markers in tip flags — skip
-            pass
+
     fb = {
         "G1": {
             "force_metaphor_vi": "Cap1–2: tham nhe nhu lau mat kinh — protein de khoa neu cha manh/nuoc nong",
@@ -1656,31 +1660,97 @@ def _enrich_teach_slots(graph: dict) -> dict:
             "force_metaphor_vi": "Theo fresh_path; thuong Cap1–2 + PPE neu moc/hoa chat manh",
             "force_metaphor_ko": "fresh_path 따름; 보통 Cap1–2 + 곰팡이/강산 시 PPE",
             "sense_check_vi": "Mat + mui + anh sang manh truoc say.",
-            "sense_check_ko": "눈·코·강광 확인 후 건조.",
+            "sense_check_ko": "눈·코·강광으로 잔여 확인 후 건조.",
             "success_rate_vi": "Phuc tap: bao khoi phuc 100% — ghi nhan anh truoc/sau.",
-            "success_rate_ko": "복합 오염: 100% 복원 비보장 — 전후 사진.",
-            "refuse_when_vi": "Da/suede moc; thiet bi khong du (chan lon) → chuyen/tu choi.",
-            "refuse_when_ko": "가죽 곰팡이, 대형 이불 설비 부족 → 전문/거절.",
+            "success_rate_ko": "복합·불확실 오염: 100% 복원 비보장 — 전후 사진.",
+            "refuse_when_vi": "Khong chac chat lieu / thiet bi / an toan → dung, bao khach, chuyen chuyen.",
+            "refuse_when_ko": "원단·약품·설비·안전이 불확실하면 중단하고 고객 고지 후 전문 의.",
         },
     }
-    # Map stain id → group when group missing
+
+    # Garment-specific teach — refuse/sense must match the item, not home-textile G5
+    item_teach = {
+        "I_NECKTIE": {
+            "force_metaphor_ko": "Cap1: 블롯·두드리기만 — 문지르면 색소 번지고 형태 붕괴",
+            "force_metaphor_vi": "Cap1: tham/dap — cha = lan mau + hong form caravat",
+            "sense_check_ko": "눈: 얼룩 색 옅어짐. 강광: 잔여 확인. 형태: 넥타이 비틀림·물짐 없음.",
+            "sense_check_vi": "Mat: mau nhat. Anh sang: het vet. Form: caravat khong meo/vet nuoc.",
+            "success_rate_ko": "신선·국소 즉시: 중간~양호. 마른 후·실크 물짐: 낮음 — 사전 고지. 100% 비보장.",
+            "success_rate_vi": "Tuoi + spotting cuc bo: trung binh-cao. Kho/lua vet nuoc: thap — bao truoc.",
+            "refuse_when_ko": "큰 얼룩·이미 형태 붕괴·고객이 물세탁/100% 요구 → 국소 중단, 드라이클리닝 안내·보장 거절.",
+            "refuse_when_vi": "Vet lon / form hong / khach doi giat nuoc hoac 100% → dung spotting, huong dry-clean, tu choi cam ket.",
+        },
+        "I_SUIT": {
+            "force_metaphor_ko": "Cap1–2: 블롯·연한 솔 — 가정용 세탁기 금지",
+            "force_metaphor_vi": "Cap1–2: tham/chai nhe — CAM may nha",
+            "sense_check_ko": "눈: 얼룩 감소. 형태: 어깨·라펠 변형 없음.",
+            "sense_check_vi": "Mat: vet giam. Form: vai/ve ao khong meo.",
+            "success_rate_ko": "가벼운 국소: 중간. 캔버스·큰 얼룩: 낮음 — 드라이 우선 고지.",
+            "success_rate_vi": "Spotting nhe: trung binh. Canvas/vet lon: thap — uu tien dry-clean.",
+            "refuse_when_ko": "구조(캔버스)·큰 얼룩·고객 100% 요구 → 가정 세탁 거절, 전문 드라이 안내.",
+            "refuse_when_vi": "Canvas/vet lon/khach doi 100% → tu choi giat nha, chuyen dry-clean.",
+        },
+        "I_AO_DAI": {
+            "refuse_when_ko": "실크 불확실·고가·큰 얼룩 → 무리한 물세탁 거절, 전문/고객 동의.",
+            "refuse_when_vi": "Lua khong chac / dat / vet lon → tu choi giat manh, chuyen / dong y khach.",
+            "sense_check_ko": "눈: 얼룩·물짐 확인. 손: 과도한 마찰 흔적 없음.",
+            "sense_check_vi": "Mat: vet/vet nuoc. Tay: khong cha manh.",
+            "success_rate_ko": "섬세 원단: 중간 이하 — 100% 비보장.",
+            "success_rate_vi": "Vai mong: trung binh thap — khong cam ket 100%.",
+        },
+        "I_HANBOK": {
+            "refuse_when_ko": "천연염색·고가 한복 → 가정 세탁 거절, 전문 우선.",
+            "refuse_when_vi": "Nhuom tu nhien / dat → tu choi giat nha, uu tien chuyen.",
+            "sense_check_ko": "눈: 이염·얼룩. 형태: 고름·깃 변형 없음.",
+            "sense_check_vi": "Mat: lo mau/vet. Form: git/goreum khong hong.",
+            "success_rate_ko": "전문 의뢰 권장 — 매장 단독 100% 비보장.",
+            "success_rate_vi": "Uu tien chuyen — khong cam ket 100% tai tiem.",
+        },
+    }
+
     gid = group if group in fb else ""
+    if gid == "item_care":
+        gid = ""
     if not gid:
-        # use contains flags if present on sc
+        # Tannin/dye before oil — ketchup has oil+tannin+dye and must not fall to G5/G2-only
         if sc.get("contains_protein") and not sc.get("contains_tannin") and not sc.get("contains_oil"):
             gid = "G1"
-        elif sc.get("contains_oil") and not sc.get("contains_protein"):
-            gid = "G2"
         elif sc.get("contains_tannin"):
             gid = "G3"
         elif sc.get("contains_dye") and not sc.get("contains_oil"):
             gid = "G4"
+        elif sc.get("contains_oil"):
+            gid = "G2"
+        elif sc.get("contains_protein"):
+            gid = "G1"
         else:
             gid = "G5"
-    card = fb.get(gid) or fb["G5"]
+
+    card = dict(fb.get(gid) or fb["G5"])
+    it = item_teach.get(item_id) or {}
+    if it:
+        # Item refuse/sense/success always win for specialty garments
+        card.update(it)
+        if not gid or gid == "G5":
+            gid = f"item:{item_id}"
+
     for k, v in card.items():
         if not sc.get(k):
             sc[k] = v
+        elif it and k in it:
+            # Force-correct wrong G5 leftovers if somehow pre-filled
+            if k.startswith("refuse_when") or (
+                "가죽 곰팡이" in str(sc.get(k) or "")
+                or "대형 이불" in str(sc.get(k) or "")
+                or "chan lon" in str(sc.get(k) or "")
+                or "Da/suede moc" in str(sc.get(k) or "")
+            ):
+                sc[k] = it[k]
+            elif k in it and (gid.startswith("item:") or item_id in item_teach):
+                # Prefer item sense/success/refuse on specialty items
+                if k.startswith(("refuse_when", "sense_check", "success_rate")):
+                    sc[k] = it[k]
+
     g["stain_context"] = sc
     g["teach_group"] = gid
     return g

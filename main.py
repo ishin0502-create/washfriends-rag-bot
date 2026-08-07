@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-07-stain-item-tool-howto",
+            "build": "2026-08-07-necktie-refuse-fix",
             "checks": checks,
         },
         status_code=200,
@@ -629,9 +629,9 @@ UNWIND [
    use_for_ko:'방 불 끄고 ~15–20cm에서 비춰 잔여(단백질·형광) 확인. 건조·다림질 전에 검사.',
    use_for_en:'Lights off, hold ~15–20cm, scan residue (protein/OBA). Check before drying/ironing.'},
   {id:'T_STEAM_IRON',name_vi:'Ban ui hoi',name_ko:'스팀 다리미',
-   use_for_vi:'Chi SAU khi vet sach. Theo cham nhiet nhan. CAM ui khi con vet (khoa mau). Caravat: steamer dung, khong ep manh.',
-   use_for_ko:'얼룩이 사라진 뒤에만. 케어라벨 온도. 얼룩 남은 채 다림질 금지(열고착). 넥타이는 스팀만·강하게 누르지 말 것.',
-   use_for_en:'Only after stain is clear. Follow care-label heat. Never iron over remaining stain. Ties: upright steam, no heavy press.'},
+   use_for_vi:'Chi SAU khi vet sach. Doc nhiet do ui tren NHAN GIAT cua ao. CAM ui khi con vet (khoa mau). Caravat: chi xit hoi DUNG, KHONG ep sat ban ui.',
+   use_for_ko:'얼룩이 다 빠진 뒤에만 사용. 옷에 달린 세탁표시(케어라벨)의 다림질 온도 기호를 보고 맞출 것. 얼룩 남은 채 다리면 열고착. 넥타이: 다리판에 눌러 다리지 말고, 세워 두고 스팀만 살짝.',
+   use_for_en:'Only after stain is gone. Match iron heat to the care-label iron symbol on the garment. Never iron over remaining stain. Ties: upright steam only — do not press flat.'},
   {id:'T_MASK',name_vi:'Khau trang / mask',name_ko:'마스크(PPE)',
    use_for_vi:'Deo khi moc/mui nang/xit dung moi — ket hop gang + thong gio.',
    use_for_ko:'곰팡이·악취·용제 분무 시 착용. 장갑·환기와 함께.',
@@ -1620,7 +1620,10 @@ UNWIND [
    motion_ko:'Cap1 — 블롯·초연질만. 문지르기·연질/경질 솔 금지',
    water_temp_ko:'국소 찬물만. 통담금·세탁기 금지',
    aftercare_ko:'걸이 보관. 세운 스팀. 건조기·강하게 누르는 다림질 금지.',
-   precheck_ko:'사진. 실크/폴리 구분. 통담금·세탁기·짜기 금지. 큰 얼룩·고가품은 드라이 우선. 국소 스포팅만.'},
+   precheck_ko:'사진. 실크/폴리 구분. 통담금·세탁기·짜기 금지. 큰 얼룩·고가품은 드라이 우선. 국소 스포팅만.',
+   sense_check_ko:'눈: 얼룩 색 옅어짐. 강광: 잔여 확인. 형태: 넥타이 비틀림·물짐 없음.',
+   success_rate_ko:'신선·국소 즉시: 중간~양호. 마른 후·실크 물짐: 낮음 — 사전 고지. 100% 비보장.',
+   refuse_when_ko:'큰 얼룩·이미 형태 붕괴·고객이 물세탁/100% 요구 → 국소 중단, 드라이클리닝 안내·보장 거절.'},
   {id:'I_SUIT',name:'Wool / business suit',name_vi:'Vest / bo suit len (dong)',name_ko:'정장·수트(울·캔버스)',fabric_id:'F3',
    precheck_vi:'Chup anh. Kiem canvas/lot trong. Nhe + khong vet → steamer. Vet/mui → dry-clean / wet-clean chuyen. CAM may giat thuong.',
    why_vi:'Suit: cau truc vai + lot. May nha = meo vai. Dry-clean CHI KHI can (vet/mui) — lam thuong xuyen lam yeu soi. Giua lan: chai + treo moc rong + nghi 24-48h.',
@@ -1882,7 +1885,10 @@ SET i.name = it.name, i.name_vi = it.name_vi, i.name_ko = it.name_ko,
     i.dried_path_ko = coalesce(it.dried_path_ko, i.dried_path_ko),
     i.motion_ko = coalesce(it.motion_ko, i.motion_ko),
     i.water_temp_ko = coalesce(it.water_temp_ko, i.water_temp_ko),
-    i.aftercare_ko = coalesce(it.aftercare_ko, i.aftercare_ko)
+    i.aftercare_ko = coalesce(it.aftercare_ko, i.aftercare_ko),
+    i.sense_check_ko = coalesce(it.sense_check_ko, i.sense_check_ko),
+    i.success_rate_ko = coalesce(it.success_rate_ko, i.success_rate_ko),
+    i.refuse_when_ko = coalesce(it.refuse_when_ko, i.refuse_when_ko)
 WITH it, i
 MATCH (f:Fabric {id:it.fabric_id})
 MERGE (i)-[:MADE_OF]->(f)
