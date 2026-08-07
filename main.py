@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-07-zalo-thinking-ack",
+            "build": "2026-08-07-stain-item-tool-howto",
             "checks": checks,
         },
         status_code=200,
@@ -584,20 +584,62 @@ RETURN count(*) AS rels""")
         # Additive ops fields — fail-soft; never deletes existing stain/chem nodes
         _r(s, "T_tools", """
 UNWIND [
-  {id:'T_BRUSH_SOFT',name_vi:'Ban chai spotting mem',name_ko:'연질 스포팅 솔',use_for_vi:'Cotton, polyester, vet thuong, vanh mu'},
-  {id:'T_BRUSH_HARD',name_vi:'Ban chai spotting cung',name_ko:'경질 스포팅 솔',use_for_vi:'Denim, canvas, giay the thao'},
-  {id:'T_BRUSH_ULTRA',name_vi:'Ban chai sieu mem / mieng fot',name_ko:'초연질 솔·스펀지',use_for_vi:'Lua, len, vai mong — khong cha manh'},
-  {id:'T_CLOTH',name_vi:'Khan trang sach / giay tham',name_ko:'흰 천·흡수지',use_for_vi:'Tham, lot duoi, khong cha lan'},
-  {id:'T_SPRAY',name_vi:'Binh xit rieng (dan nhan)',name_ko:'분무기(라벨 필수)',use_for_vi:'Pha loang A3/D2/B1 — khong tron binh; PPE khi xit hoa chat'},
-  {id:'T_BRUSH_SHOE',name_vi:'Ban chai de giay (long cung)',name_ko:'운동화 밑창용 경질 솔',use_for_vi:'De cao su — KHONG dung tren mesh/lua'},
-  {id:'T_GLOVE_NITRILE',name_vi:'Gang tay nitrile (PPE)',name_ko:'니트릴 장갑(PPE)',use_for_vi:'BAT BUOC voi X2/B2/A1/A2/dung moi — khong dung gang mong voi acid/tay'},
-  {id:'T_MESH_BAG',name_vi:'Tui luoi giat',name_ko:'세탁망',use_for_vi:'Do mong, mu mem (neu cho phep), gang, day giay — giam ma sat may'},
-  {id:'T_SOAK_BIN',name_vi:'Chau ngam / thung ngam',name_ko:'담금통·침지 용기',use_for_vi:'Ngam enzyme/A3/B1 — dan nhan hoa chat, khong tron binh'},
-  {id:'T_TIMER',name_vi:'Dong ho hen gio',name_ko:'타이머',use_for_vi:'Ngam 15-60 phut — khong de qua dem khi khong giam sat'},
-  {id:'T_UV_LAMP',name_vi:'Den UV 365nm (kiem vet)',name_ko:'UV 램프(잔여 얼룩 검사용)',use_for_vi:'Phat hien protein/OBA du — tat den phong, 15-20cm'},
-  {id:'T_STEAM_IRON',name_vi:'Ban ui hoi',name_ko:'스팀 다리미',use_for_vi:'Ui theo cham nhan; CAM ui khi con vet (khoa mau)'},
-  {id:'T_MASK',name_vi:'Khau trang / mask',name_ko:'마스크(PPE)',use_for_vi:'Mui nang, moc, dung moi — ket hop gang + thong gio'}
-] AS t MERGE (n:Tool {id:t.id}) SET n += t RETURN count(n) AS created""")
+  {id:'T_BRUSH_SOFT',name_vi:'Ban chai spotting mem',name_ko:'연질 스포팅 솔',
+   use_for_vi:'Dung tren cotton/poly: cham 45 do, 1 chieu NGOAI→TRONG Cap2 — khong cha qua lai. Khong dung tren lua/len (doi ultra).',
+   use_for_ko:'면·폴리용: 브러시를 45°로 잡고 Cap2, 바깥→안 한 방향으로만. 실크·울에는 쓰지 말고 초연질로 교체.',
+   use_for_en:'Cotton/poly only: 45° Cap2 strokes outside→in, one direction. Not for silk/wool — use ultra-soft.'},
+  {id:'T_BRUSH_HARD',name_vi:'Ban chai spotting cung',name_ko:'경질 스포팅 솔',
+   use_for_vi:'Chi denim/canvas/de giay/bun: Cap3 ngan. CAM mesh, lua, len, vai mong.',
+   use_for_ko:'데님·캔버스·밑창·진흙만 Cap3 짧게. 메시·실크·울·얇은 원단 금지.',
+   use_for_en:'Denim/canvas/outsole/mud only, short Cap3. Never mesh/silk/wool/sheer.'},
+  {id:'T_BRUSH_ULTRA',name_vi:'Ban chai sieu mem / mieng fot',name_ko:'초연질 솔·스펀지',
+   use_for_vi:'Lua/len/vai mong/do tinh te: Cap1, chi dap/tham — KHONG cha. Co the dung mieng fot thay ban chai.',
+   use_for_ko:'실크·울·섬세 원단: Cap1로 두드리듯·흡수만 — 문지르기 금지. 스펀지로 대체 가능.',
+   use_for_en:'Silk/wool/delicate: Cap1 dab/blot only — never scrub. Foam pad OK.'},
+  {id:'T_CLOTH',name_vi:'Khan trang sach / giay tham',name_ko:'흰 천·흡수지',
+   use_for_vi:'(1) Khan trang: CHAM/THAM len vet NGOAI→TRONG, doi khan khi nhuom mau. (2) Giay/khan lot DUOI vai de khong loang mat sau/ban. Trang de thay mau chuyen.',
+   use_for_ko:'(1)흰 천: 얼룩 위에 바깥→안으로 찍어 흡수(블롯), 물들면 새 천. (2)흡수지/천: 원단 아래에 깔아 뒷면·작업대 번짐 방지. 흰색이라 오염 전이가 보임.',
+   use_for_en:'(1) White cloth: blot stain outside→in; change when stained. (2) Underlay blotter under fabric. White shows transfer.'},
+  {id:'T_SPRAY',name_vi:'Binh xit rieng (dan nhan)',name_ko:'분무기(라벨 필수)',
+   use_for_vi:'Pha dung dich (vd giam 1:4) vao binh RIENG, DAN NHAN ten+ty le. Xit 1-2 phat len vet — khong ngap. CAM tron nhieu hoa chat 1 binh.',
+   use_for_ko:'희석액(예: 식초 1:4)을 전용 병에 넣고 겉에 약품명·비율 라벨. 얼룩에 1–2회만 분무(흠뻑 X). 한 병에 약품 섞지 말 것.',
+   use_for_en:'Fill dedicated bottle (e.g. vinegar 1:4), label name+ratio. Mist 1–2 sprays on stain — do not soak. Never mix chemicals in one bottle.'},
+  {id:'T_BRUSH_SHOE',name_vi:'Ban chai de giay (long cung)',name_ko:'운동화 밑창용 경질 솔',
+   use_for_vi:'Chi de cao su/gai: chai kho bun roi cham D2. CAM than mesh/lua.',
+   use_for_ko:'고무·클리트 밑창만: 흙 털고 D2. 갑피 메시·실크에 사용 금지.',
+   use_for_en:'Rubber/cleat outsole only: dry mud then D2. Never mesh/silk upper.'},
+  {id:'T_GLOVE_NITRILE',name_vi:'Gang tay nitrile (PPE)',name_ko:'니트릴 장갑(PPE)',
+   use_for_vi:'BAT BUOC truoc X2/B2/A1/A2/dung moi/biohazard. Deo truoc khi mo chai. Khong dung gang mong voi acid.',
+   use_for_ko:'X2·락스·알코올·아세톤·용제·바이오하자드 전 필수 착용. 병 열기 전에 착용. 산에 얇은 장갑 금지.',
+   use_for_en:'Required before X2/chlorine/alcohol/acetone/solvent/biohazard. Put on before opening bottles.'},
+  {id:'T_MESH_BAG',name_vi:'Tui luoi giat',name_ko:'세탁망',
+   use_for_vi:'Cho do mong/mu/gang/day giay vao tui truoc may — giam ma sat, giu form.',
+   use_for_ko:'얇은 옷·모자·장갑·신발끈은 세탁망에 넣고 세탁 — 마찰·변형 감소.',
+   use_for_en:'Put delicates/hat/gloves/laces in mesh bag before machine — less abrasion.'},
+  {id:'T_SOAK_BIN',name_vi:'Chau ngam / thung ngam',name_ko:'담금통·침지 용기',
+   use_for_vi:'Pha dung dich theo dilution, ngam DUNG thoi gian (thuong 15-45 phut), dan nhan hoa chat. CAM ngam suit/caravat/lua mong toan bo neu SOP cam.',
+   use_for_ko:'희석액 만들어 규정 시간(보통 15–45분)만 담금, 통·약 라벨 확인. 정장·넥타이·얇은 실크 통담금은 SOP에서 금하면 하지 말 것.',
+   use_for_en:'Mix dilution, soak only the timed window (often 15–45 min), label bin. Do not full-soak suits/ties/sheer silk if SOP forbids.'},
+  {id:'T_TIMER',name_vi:'Dong ho hen gio',name_ko:'타이머',
+   use_for_vi:'Bam hen gio dung phut trong fresh_path/dilution (vd 15/30/45). Het gio → xa ngay. Khong de qua dem khi khong giam sat.',
+   use_for_ko:'경로·희석에 적힌 분(예: 15/30/45분)을 타이머로 재고, 끝나면 즉시 헹굼. 감시 없이 밤새 담그지 말 것.',
+   use_for_en:'Set exact minutes from path/dilution (e.g. 15/30/45). When done, rinse immediately. No overnight unattended soaks.'},
+  {id:'T_UV_LAMP',name_vi:'Den UV 365nm (kiem vet)',name_ko:'UV 램프(잔여 얼룩 검사용)',
+   use_for_vi:'Tat den phong, giu den ~15-20cm, quet tim vet con (protein/OBA). Kiem TRUOC say.',
+   use_for_ko:'방 불 끄고 ~15–20cm에서 비춰 잔여(단백질·형광) 확인. 건조·다림질 전에 검사.',
+   use_for_en:'Lights off, hold ~15–20cm, scan residue (protein/OBA). Check before drying/ironing.'},
+  {id:'T_STEAM_IRON',name_vi:'Ban ui hoi',name_ko:'스팀 다리미',
+   use_for_vi:'Chi SAU khi vet sach. Theo cham nhiet nhan. CAM ui khi con vet (khoa mau). Caravat: steamer dung, khong ep manh.',
+   use_for_ko:'얼룩이 사라진 뒤에만. 케어라벨 온도. 얼룩 남은 채 다림질 금지(열고착). 넥타이는 스팀만·강하게 누르지 말 것.',
+   use_for_en:'Only after stain is clear. Follow care-label heat. Never iron over remaining stain. Ties: upright steam, no heavy press.'},
+  {id:'T_MASK',name_vi:'Khau trang / mask',name_ko:'마스크(PPE)',
+   use_for_vi:'Deo khi moc/mui nang/xit dung moi — ket hop gang + thong gio.',
+   use_for_ko:'곰팡이·악취·용제 분무 시 착용. 장갑·환기와 함께.',
+   use_for_en:'Wear for mold/strong odor/solvent spray — with gloves + ventilation.'}
+] AS t MERGE (n:Tool {id:t.id})
+SET n.name_vi = t.name_vi, n.name_ko = t.name_ko,
+    n.use_for_vi = t.use_for_vi, n.use_for_ko = t.use_for_ko, n.use_for_en = t.use_for_en
+RETURN count(n) AS created""")
         _r(s, "U_stain_ops_protein", """
 MATCH (s:Stain) WHERE s.contains_protein = true
 SET s.precheck_vi = coalesce(s.precheck_vi, 'Xac nhan vai + vet tuoi/kho + KHONG dung nuoc nong dau'),
@@ -1564,6 +1606,21 @@ UNWIND [
    motion_vi:'Luc 1',
    water_temp_vi:'It nuoc',
    aftercare_vi:'Kem da. Kho tu nhien.'},
+  {id:'I_NECKTIE',name:'Necktie / silk or poly tie',name_vi:'Ca vat / caravat (lua hoac poly)',name_ko:'넥타이(실크·폴리)',fabric_id:'F4',
+   precheck_vi:'Chup anh. Phan loai lua vs poly (nhan). CAM ngam toan bo / may giat / vat — hong form. Uu tien dry-clean neu vet lon/dat. Spotting cuc bo THOI.',
+   why_vi:'GIAO DUC: Ca vat = giu HINH. Wet wash/ngam = bien dang. Vet: tham Cap1 NGOAI→TRONG + khan lot duoi; D2/S1 pha loang CHAM cuc bo. CAM chai mem/cung (sai sol → ultra). CAM binh xit ngap / chau ngam. Nhao: steamer DUNG, khong ep manh.',
+   fresh_path_vi:'(1) Anh + dong y: khong cam ket 100%, uu tien dry-clean neu lon. (2) Lot khan/giay DUOI. (3) Tham bot long bang khan trang Cap1 ngoai→trong. (4) D2 hoac S1 pha loang: 1-2 giot tren khan (khong do thang) → cham nhe. (5) Tham xa bang khan am lanh. (6) Tham kho. (7) Treo moc; steamer nhe neu nhao. CAM may/ngam/vat.',
+   dried_path_vi:'Vet kho: khong ngam. Spotting nhe lap 1 lan; khong het → dry-clean. Bao khach form/mau co the lech.',
+   motion_vi:'Luc 1 — tham/cham ultra; CAM cha, CAM sol mem/cung',
+   water_temp_vi:'It nuoc lanh cuc bo. CAM ngam/may',
+   aftercare_vi:'Treo moc. Steamer dung. CAM say/ui ep. Cat thoang.',
+   why_ko:'[왜 이 순서] 넥타이=형태 유지가 최우선. 물세탁·통담금=형태 붕괴. 얼룩: Cap1 바깥→안 블롯 + 아래 흡수지; 희석 D2/S1을 천에 묻혀 국소만. 연질/경질 솔 금지(초연질만). 분무로 흠뻑·담금통 금지. 구김은 세운 스팀만.',
+   fresh_path_ko:'(1)사진·동의: 100% 비보장, 큰 얼룩은 드라이 우선. (2)아래 흰 천/흡수지. (3)흰 천 Cap1 바깥→안 블롯. (4)D2 또는 S1 희석액을 천에 1–2방울 → 두드리듯. (5)찬물 적신 천으로 잔여 흡수. (6)건조 블롯. (7)걸이 보관·구김 시 세운 스팀. 세탁기·통담금·짜기 금지.',
+   dried_path_ko:'마른 얼룩: 담그지 말 것. 국소 1회 재시도 후 안 되면 드라이. 형태·색 변화 가능 고지.',
+   motion_ko:'Cap1 — 블롯·초연질만. 문지르기·연질/경질 솔 금지',
+   water_temp_ko:'국소 찬물만. 통담금·세탁기 금지',
+   aftercare_ko:'걸이 보관. 세운 스팀. 건조기·강하게 누르는 다림질 금지.',
+   precheck_ko:'사진. 실크/폴리 구분. 통담금·세탁기·짜기 금지. 큰 얼룩·고가품은 드라이 우선. 국소 스포팅만.'},
   {id:'I_SUIT',name:'Wool / business suit',name_vi:'Vest / bo suit len (dong)',name_ko:'정장·수트(울·캔버스)',fabric_id:'F3',
    precheck_vi:'Chup anh. Kiem canvas/lot trong. Nhe + khong vet → steamer. Vet/mui → dry-clean / wet-clean chuyen. CAM may giat thuong.',
    why_vi:'Suit: cau truc vai + lot. May nha = meo vai. Dry-clean CHI KHI can (vet/mui) — lam thuong xuyen lam yeu soi. Giua lan: chai + treo moc rong + nghi 24-48h.',
@@ -1818,7 +1875,14 @@ SET i.name = it.name, i.name_vi = it.name_vi, i.name_ko = it.name_ko,
     i.precheck_vi = it.precheck_vi, i.why_vi = it.why_vi,
     i.fresh_path_vi = it.fresh_path_vi, i.dried_path_vi = it.dried_path_vi,
     i.motion_vi = it.motion_vi, i.water_temp_vi = it.water_temp_vi, i.aftercare_vi = it.aftercare_vi,
-    i.fabric_id = it.fabric_id
+    i.fabric_id = it.fabric_id,
+    i.precheck_ko = coalesce(it.precheck_ko, i.precheck_ko),
+    i.why_ko = coalesce(it.why_ko, i.why_ko),
+    i.fresh_path_ko = coalesce(it.fresh_path_ko, i.fresh_path_ko),
+    i.dried_path_ko = coalesce(it.dried_path_ko, i.dried_path_ko),
+    i.motion_ko = coalesce(it.motion_ko, i.motion_ko),
+    i.water_temp_ko = coalesce(it.water_temp_ko, i.water_temp_ko),
+    i.aftercare_ko = coalesce(it.aftercare_ko, i.aftercare_ko)
 WITH it, i
 MATCH (f:Fabric {id:it.fabric_id})
 MERGE (i)-[:MADE_OF]->(f)
@@ -1826,20 +1890,20 @@ RETURN count(i) AS created""")
         _r(s, "I_items_chem_tools", """
 MATCH (cloth:Tool {id:'T_CLOTH'}), (soft:Tool {id:'T_BRUSH_SOFT'}), (ultra:Tool {id:'T_BRUSH_ULTRA'}),
       (hard:Tool {id:'T_BRUSH_HARD'}), (shoe:Tool {id:'T_BRUSH_SHOE'}), (spray:Tool {id:'T_SPRAY'}),
-      (glove:Tool {id:'T_GLOVE_NITRILE'}), (mesh:Tool {id:'T_MESH_BAG'})
-WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh
+      (glove:Tool {id:'T_GLOVE_NITRILE'}), (mesh:Tool {id:'T_MESH_BAG'}), (steam:Tool {id:'T_STEAM_IRON'})
+WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, steam
 MATCH (d2:Chemical {code:'D2'}),(d3:Chemical {code:'D3'}),(a1:Chemical {code:'A1'}),
       (a3:Chemical {code:'A3'}),(a4:Chemical {code:'A4'}),(n1:Chemical {code:'N1'}),
       (b1:Chemical {code:'B1'}),(s1:Chemical {code:'S1'}),(e1:Chemical {code:'E1'})
-WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, d2, d3, a1, a3, a4, n1, b1, s1, e1
+WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, steam, d2, d3, a1, a3, a4, n1, b1, s1, e1
 // Full rewire Item tools/chems (drop stale wrong links)
 MATCH (i:Item)
 OPTIONAL MATCH (i)-[oldt:USES_TOOL]->()
 DELETE oldt
-WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, d2, d3, a1, a3, a4, n1, b1, s1, e1, i
+WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, steam, d2, d3, a1, a3, a4, n1, b1, s1, e1, i
 OPTIONAL MATCH (i)-[oldc:USES_CHEMICAL]->()
 DELETE oldc
-WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, d2, d3, a1, a3, a4, n1, b1, s1, e1, i
+WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, steam, d2, d3, a1, a3, a4, n1, b1, s1, e1, i
 FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_GLOVE_LEATHER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(a1))
 FOREACH (_ IN CASE WHEN i.id = 'I_LEATHER_SHOE' THEN [1] ELSE [] END |
@@ -1893,6 +1957,9 @@ FOREACH (_ IN CASE WHEN i.id = 'I_WHITE_FADE' THEN [1] ELSE [] END |
 FOREACH (_ IN CASE WHEN i.id IN ['I_SUIT','I_AO_DAI','I_HANBOK'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(ultra) MERGE (i)-[:USES_TOOL]->(cloth)
   MERGE (i)-[:USES_CHEMICAL]->(s1))
+FOREACH (_ IN CASE WHEN i.id = 'I_NECKTIE' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(ultra) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(steam)
+  MERGE (i)-[:USES_CHEMICAL]->(s1) MERGE (i)-[:USES_CHEMICAL]->(d2))
 FOREACH (_ IN CASE WHEN i.id = 'I_FUR_REAL' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth))
 // PPE glove available as graph tool for chem-heavy workflows
@@ -1999,6 +2066,7 @@ RETURN size(nodes) AS cleared""")
             "rail_d": "I_CARE_LABEL + I_DRY_VS_WET + I_INTAKE_SCRIPT + I_WATER_HARDNESS + I_MACHINE_PROFILE + tools D5",
             "stage15": "S_BUTTER + S_SHOE_POLISH RICH + why_ko/fresh_path_ko for gum/bubble (KO polish)",
             "tool_p0": "Per-stain USES_TOOL matrix (clear flag links; PPE/soak/timer where SOP needs)",
+            "tool_howto": "Tool use_for_ko/vi/en + owner prompt name+howto; I_NECKTIE + fabric refine",
         }
     _drv.close()
     return JSONResponse(log)

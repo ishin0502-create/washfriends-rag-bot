@@ -128,7 +128,7 @@ RETURN
     .example_brands_vi, .wf_supply, .when_use_vi, .dilution_vi, .dilution_ko
   }) AS chemicals,
   COLLECT(DISTINCT tool {
-    .id, .name_vi, .name_ko, .use_for_vi
+    .id, .name_vi, .name_ko, .use_for_vi, .use_for_ko, .use_for_en
   }) AS tools,
   [] AS washfriends_supply,
   COLLECT(DISTINCT force {
@@ -169,7 +169,9 @@ RETURN
   i {
     .id, .name, .name_vi, .name_ko,
     .precheck_vi, .why_vi, .fresh_path_vi, .dried_path_vi,
-    .motion_vi, .water_temp_vi, .aftercare_vi, .fabric_id
+    .motion_vi, .water_temp_vi, .aftercare_vi, .fabric_id,
+    .precheck_ko, .why_ko, .fresh_path_ko, .dried_path_ko,
+    .motion_ko, .water_temp_ko, .aftercare_ko
   } AS item_context,
   CASE WHEN f IS NULL THEN null ELSE f {
     .id, .name, .name_vi, .max_temp, .can_bleach, .can_oxygen, .enzyme_safe, .acid_safe,
@@ -181,7 +183,7 @@ RETURN
     .example_brands_vi, .wf_supply, .when_use_vi, .dilution_vi, .dilution_ko
   }) AS chemicals,
   COLLECT(DISTINCT tool {
-    .id, .name_vi, .name_ko, .use_for_vi
+    .id, .name_vi, .name_ko, .use_for_vi, .use_for_ko, .use_for_en
   }) AS tools,
   [] AS washfriends_supply,
   COLLECT(DISTINCT CASE WHEN blocked IS NOT NULL THEN {
@@ -205,6 +207,7 @@ _ITEM_FABRIC_TOKEN = {
     "I_DOWN_JACKET": "polyester",
     "I_SUIT": "wool",
     "I_SUIT_SUMMER": "linen",
+    "I_NECKTIE": "silk",
     "I_AO_DAI": "silk",
     "I_HANBOK": "silk",
     "I_GOLF_WEAR": "polyester",
@@ -414,6 +417,10 @@ def _fetch_graph_context(entities: dict) -> dict:
             context["intent"] = "treatment"
             entities["intent"] = "treatment"
 
+    garment_color = entities.get("garment_color") or _infer_garment_color(raw_original)
+    if garment_color:
+        entities["garment_color"] = garment_color
+
     # Prefer franchise phrasing in the raw message over a wrong LLM entity guess
     _ALIASES = (
         ("laterite", "dat do laterite"),
@@ -506,8 +513,14 @@ def _fetch_graph_context(entities: dict) -> dict:
         if item_rows:
             context = _merge_item_into_context(context, item_rows[0])
             if isinstance(context.get("graph"), dict):
-                context["graph"] = _apply_delicate_s1_fallback(
-                    _apply_fabric_chem_safety(context["graph"])
+                g0 = dict(context["graph"])
+                if entities.get("garment_color"):
+                    g0["garment_color"] = entities["garment_color"]
+                context["graph"] = _refine_tools_for_context(
+                    _apply_delicate_s1_fallback(
+                        _apply_fabric_chem_safety(g0)
+                    ),
+                    entities,
                 )
         return context
 
@@ -541,8 +554,11 @@ def _fetch_graph_context(entities: dict) -> dict:
         context["query_type"] = "full_context"
 
     if isinstance(context.get("graph"), dict):
+        g0 = dict(context["graph"])
+        if entities.get("garment_color"):
+            g0["garment_color"] = entities["garment_color"]
         context["graph"] = _apply_delicate_s1_fallback(
-            _apply_fabric_chem_safety(context["graph"])
+            _apply_fabric_chem_safety(g0)
         )
 
     # Item care (shoes/bags/gore-tex/down/leather) — same 1)-6) fields as stains
@@ -552,9 +568,15 @@ def _fetch_graph_context(entities: dict) -> dict:
         if item_rows:
             context = _merge_item_into_context(context, item_rows[0])
             if isinstance(context.get("graph"), dict):
+                g1 = dict(context["graph"])
+                if entities.get("garment_color"):
+                    g1["garment_color"] = entities["garment_color"]
                 context["graph"] = _apply_delicate_s1_fallback(
-                    _apply_fabric_chem_safety(context["graph"])
+                    _apply_fabric_chem_safety(g1)
                 )
+
+    if isinstance(context.get("graph"), dict):
+        context["graph"] = _refine_tools_for_context(context["graph"], entities)
 
     return context
 
@@ -575,7 +597,7 @@ def _item_as_stain_shaped(item_graph: dict) -> dict:
             "name": ic.get("name"),
             "name_vi": ic.get("name_vi"),
             "name_ko": ic.get("name_ko"),
-            "tip": ic.get("why_vi"),
+            "tip": ic.get("why_ko") or ic.get("why_vi"),
             "urgency": "care",
             "precheck_vi": ic.get("precheck_vi"),
             "why_vi": ic.get("why_vi"),
@@ -584,6 +606,13 @@ def _item_as_stain_shaped(item_graph: dict) -> dict:
             "motion_vi": ic.get("motion_vi"),
             "water_temp_vi": ic.get("water_temp_vi"),
             "aftercare_vi": ic.get("aftercare_vi"),
+            "precheck_ko": ic.get("precheck_ko"),
+            "why_ko": ic.get("why_ko"),
+            "fresh_path_ko": ic.get("fresh_path_ko"),
+            "dried_path_ko": ic.get("dried_path_ko"),
+            "motion_ko": ic.get("motion_ko"),
+            "water_temp_ko": ic.get("water_temp_ko"),
+            "aftercare_ko": ic.get("aftercare_ko"),
             "group": "item_care",
         },
         "fabric_context": item_graph.get("fabric_context"),
@@ -625,13 +654,22 @@ def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
     for key in (
         "precheck_vi", "why_vi", "fresh_path_vi", "dried_path_vi",
         "motion_vi", "water_temp_vi", "aftercare_vi",
+        "precheck_ko", "why_ko", "fresh_path_ko", "dried_path_ko",
+        "motion_ko", "water_temp_ko", "aftercare_ko",
     ):
         if ic.get(key):
             sc[key] = ic[key]
-    if ic.get("why_vi"):
+    if ic.get("why_ko"):
+        sc["tip"] = ic.get("why_ko")
+    elif ic.get("why_vi"):
         sc["tip"] = ic.get("why_vi")
+    # Keep stain name/id for recognition; item name_ko for garment identity
+    if ic.get("name_ko"):
+        sc["item_name_ko"] = ic.get("name_ko")
+    if ic.get("name_vi"):
+        sc["item_name_vi"] = ic.get("name_vi")
     g["stain_context"] = sc
-    # Prefer item tools/chems for specialty garments
+    # Prefer item tools/chems for specialty garments (necktie/suit/silk etc.)
     if item_graph.get("tools") is not None:
         g["tools"] = (
             list(_COLOR_FADE_TOOLS)
@@ -652,6 +690,94 @@ def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
         g["never_use_on_fabric"] = item_graph.get("never_use_on_fabric")
     context["graph"] = g
     return context
+
+
+def _infer_garment_color(text: str) -> str:
+    """white | black | colored | '' — garment/stain-host color from owner message."""
+    if not text:
+        return ""
+    raw = text
+    t = _normalize_text(text)
+    if any(k in raw for k in ("흰", "하얀", "화이트", "백색")) or "trang" in t or "white" in t:
+        return "white"
+    if any(k in raw for k in ("검정", "검은", "블랙")) or "den " in f" {t} " or t.endswith(" den") or "black" in t:
+        return "black"
+    if any(
+        k in raw
+        for k in ("유색", "컬러", "색깔", "색상", "빨강", "파랑", "노랑", "초록", "보라", "핑크", "남색")
+    ) or any(
+        k in t
+        for k in ("mau dam", "colored", "colour", "do ", "xanh", "vang", "tim", "hong", "nau ")
+    ):
+        return "colored"
+    return ""
+
+
+def _refine_tools_for_context(graph: dict, entities: Optional[dict] = None) -> dict:
+    """Match tools to garment/fabric/color: drop soak/hard brushes on silk/tie; keep how-to ids."""
+    if not isinstance(graph, dict):
+        return graph
+    tools = [t for t in (graph.get("tools") or []) if t]
+    if not tools:
+        return graph
+
+    entities = entities or {}
+    ic = graph.get("item_context") or {}
+    item_id = ic.get("id") or entities.get("item_id") or ""
+    fabric = graph.get("fabric_context") or {}
+    fid = str(fabric.get("id") or "").upper()
+    fname = f"{fabric.get('name') or ''} {fabric.get('name_vi') or ''}".lower()
+    is_silk = fid == "F4" or "silk" in fname or "lua" in fname
+    is_wool = fid == "F3" or "wool" in fname or " len" in f" {fname}"
+    delicate = is_silk or is_wool or item_id in {
+        "I_NECKTIE", "I_SUIT", "I_AO_DAI", "I_HANBOK", "I_FUR_REAL", "I_FUR_FAUX",
+    }
+
+    by_id = {str(t.get("id") or ""): t for t in tools if t.get("id")}
+    drop = set()
+
+    if delicate:
+        drop |= {"T_BRUSH_HARD", "T_BRUSH_SHOE"}
+        if "T_BRUSH_SOFT" in by_id:
+            drop.add("T_BRUSH_SOFT")
+        if item_id in {"I_NECKTIE", "I_SUIT", "I_AO_DAI", "I_HANBOK"}:
+            drop |= {"T_SOAK_BIN", "T_TIMER", "T_MESH_BAG"}
+        if item_id == "I_NECKTIE":
+            # Tie: blot + ultra + steam only; no flood spray kit
+            drop.add("T_SPRAY")
+            allow = {"T_CLOTH", "T_BRUSH_ULTRA", "T_STEAM_IRON"}
+            for tid in list(by_id.keys()):
+                if tid and tid not in allow:
+                    drop.add(tid)
+
+    garment_color = entities.get("garment_color") or graph.get("garment_color") or ""
+    if garment_color and garment_color != "white":
+        # Keep tools; color rules applied in chem filter + prompt note
+        pass
+
+    refined = [t for t in tools if str(t.get("id") or "") not in drop]
+    # Ensure necktie always has cloth + ultra if specialty path emptied wrongly
+    if item_id == "I_NECKTIE" and not any(str(t.get("id")) == "T_CLOTH" for t in refined):
+        cloth = by_id.get("T_CLOTH")
+        if cloth:
+            refined.insert(0, cloth)
+    out = dict(graph)
+    out["tools"] = refined
+    if garment_color:
+        out["garment_color"] = garment_color
+        if garment_color == "white":
+            out["color_note_ko"] = "흰 옷: 산소표백(B1)은 원단 허용 시에만. 염소(락스)는 단백질·실크·울 금지."
+            out["color_note_vi"] = "Do TRANG: B1 chi khi vai cho phep. Javel CAM tren protein/lua/len."
+            out["color_note_en"] = "White: oxygen bleach only if fabric allows. No chlorine on protein/silk/wool."
+        elif garment_color == "colored":
+            out["color_note_ko"] = "유색: 염소·강력 표백 금지. 이염 주의 — 흰 천으로 전이 확인."
+            out["color_note_vi"] = "Vai MAU: CAM Javel/tay manh. Theo doi lo mau tren khan trang."
+            out["color_note_en"] = "Colored: no chlorine/harsh bleach. Watch dye transfer on white cloth."
+        elif garment_color == "black":
+            out["color_note_ko"] = "검정·진한 색: 표백 금지. 잔여 얼룩은 강광으로 확인(눈에 덜 띔)."
+            out["color_note_vi"] = "Den/dam: CAM tay. Kiem vet bang anh sang manh."
+            out["color_note_en"] = "Black/dark: no bleach. Inspect residue under strong light."
+    return out
 
 
 def _infer_item_from_text(text: str) -> str:
@@ -691,6 +817,10 @@ def _infer_item_from_text(text: str) -> str:
         return "I_GOLF_GLOVE_LEATHER" if golf else "I_GLOVE_LEATHER"
     if leather and not golf:
         return "I_LEATHER_GARMENT"
+
+    # Necktie before suit (넥타이 must not become I_SUIT)
+    if any(k in raw for k in ("넥타이", "넥 타이")) or "necktie" in t or "neck tie" in t or "ca vat" in t or "caravat" in t or "cavat" in t:
+        return "I_NECKTIE"
 
     # Color fade / restore before generic denim
     fade = any(
@@ -894,7 +1024,9 @@ _COLOR_FADE_TOOLS = [
         "id": "T_FABRIC_MARKER",
         "name_vi": "But mau vai (chi cho NHO <= dong xu; tam thoi)",
         "name_ko": "천용 컬러펜(소면적·동전 이하만, 임시)",
-        "use_for_vi": "Vua/lon: khong dung but — chuyen nhuom / boi thuong",
+        "use_for_vi": "Cho NHO: cham ngoai→trong, co dinh nhiet theo nhan. VUA/LON: KHONG dung but — chuyen nhuom/boi thuong.",
+        "use_for_ko": "소면적만: 바깥→안 터치, 병 안내대로 열고정. 중·대면적: 펜 금지 — 염색/배상.",
+        "use_for_en": "Small spot only: dab outside→in, heat-set per pen label. Medium/large: no pen — re-dye/compensate.",
     }
 ]
 
@@ -930,8 +1062,7 @@ def _apply_delicate_s1_fallback(graph: dict) -> dict:
 def _apply_fabric_chem_safety(graph: dict) -> dict:
     """Drop chemicals unsafe for the matched fabric so the LLM cannot recommend them."""
     fabric = graph.get("fabric_context") or {}
-    if not fabric:
-        return graph
+    garment_color = str(graph.get("garment_color") or "").lower()
 
     fid = str(fabric.get("id") or "").upper()
     fname = f"{fabric.get('name') or ''} {fabric.get('name_vi') or ''}".lower()
@@ -941,6 +1072,9 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
     is_suede = fid == "F9" or "suede" in fname or "nubuck" in fname or "da lon" in fname
     is_fur = fid == "F10" or "fur" in fname or "long thu" in fname
     delicate = is_silk or is_wool or is_leather or is_suede or is_fur
+    # If no fabric matched, still apply color bleach rules when color known
+    if not fabric and not garment_color:
+        return graph
 
     chems = [c for c in (graph.get("chemicals") or []) if c]
     safe, blocked = [], []
@@ -984,6 +1118,11 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
             reasons.append("fabric_no_acid")
         if fabric.get("enzyme_safe") is False and code in {"E1", "E2", "E3"}:
             reasons.append("fabric_no_enzyme")
+        # Garment color: never chlorine / reducing bleach on non-white
+        if garment_color in {"colored", "black"} and code in {"B2", "X1"}:
+            reasons.append("color_no_chlorine_or_reducing")
+        if garment_color == "black" and code in {"B1", "A4"}:
+            reasons.append("black_no_bleach")
         if reasons:
             blocked.append({
                 "name_vi": c.get("name_vi"),
@@ -1232,11 +1371,20 @@ def _sanitize_graph_for_owner(graph, lang: str):
     def _tool(t: dict) -> dict:
         tid = str(t.get("id") or "")
         if lang == "ko":
-            out = {"name_ko": t.get("name_ko")}
+            out = {
+                "name_ko": t.get("name_ko"),
+                "use_for_ko": t.get("use_for_ko") or t.get("use_for_en"),
+            }
         elif lang == "en":
-            out = {"name": _TOOL_NAME_EN.get(tid) or t.get("name_ko") or t.get("name_vi") or tid}
+            out = {
+                "name": _TOOL_NAME_EN.get(tid) or t.get("name_ko") or t.get("name_vi") or tid,
+                "use_for_en": t.get("use_for_en") or t.get("use_for_ko") or t.get("use_for_vi"),
+            }
         else:
-            out = {"name_vi": t.get("name_vi"), "use_for_vi": t.get("use_for_vi")}
+            out = {
+                "name_vi": t.get("name_vi"),
+                "use_for_vi": t.get("use_for_vi"),
+            }
         return {k: v for k, v in out.items() if v}
 
     def _chem(c: dict) -> dict:
@@ -1296,11 +1444,14 @@ def _sanitize_graph_for_owner(graph, lang: str):
         "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
         "force_metaphor_vi", "sense_check_vi", "success_rate_vi",
         "refuse_when_vi", "group_care_order_vi", "name_vi",
+        "item_name_vi",
     )
     KO_FIELDS = (
         "why_ko", "fresh_path_ko", "dried_path_ko",
         "force_metaphor_ko", "sense_check_ko", "success_rate_ko",
         "refuse_when_ko", "group_care_order_ko", "name_ko",
+        "precheck_ko", "motion_ko", "water_temp_ko", "aftercare_ko",
+        "item_name_ko",
     )
 
     sc = g.get("stain_context")
@@ -1384,6 +1535,12 @@ def _sanitize_graph_for_owner(graph, lang: str):
         ):
             if ic2.get(field):
                 ic2[field] = _expand_chem_codes_in_text(str(ic2[field]), lang="vi")
+        for field in (
+            "why_ko", "fresh_path_ko", "dried_path_ko",
+            "precheck_ko", "motion_ko", "water_temp_ko", "aftercare_ko",
+        ):
+            if ic2.get(field):
+                ic2[field] = _expand_chem_codes_in_text(str(ic2[field]), lang="ko")
         if lang == "ko":
             for field in (
                 "why_vi", "fresh_path_vi", "dried_path_vi",
@@ -1393,16 +1550,33 @@ def _sanitize_graph_for_owner(graph, lang: str):
             if ic2.get("name_ko"):
                 ic2.pop("name", None)
         elif lang == "vi":
-            ic2.pop("name_ko", None)
+            for field in (
+                "why_ko", "fresh_path_ko", "dried_path_ko",
+                "precheck_ko", "motion_ko", "water_temp_ko", "aftercare_ko", "name_ko",
+            ):
+                ic2.pop(field, None)
         else:
             for field in (
                 "why_vi", "fresh_path_vi", "dried_path_vi",
                 "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
+                "why_ko", "fresh_path_ko", "dried_path_ko",
+                "precheck_ko", "motion_ko", "water_temp_ko", "aftercare_ko",
                 "name_vi", "name_ko",
             ):
                 ic2.pop(field, None)
         ic2.pop("id", None)
         g["item_context"] = ic2
+
+    # Color notes: keep only matching language
+    if lang == "ko":
+        g.pop("color_note_vi", None)
+        g.pop("color_note_en", None)
+    elif lang == "vi":
+        g.pop("color_note_ko", None)
+        g.pop("color_note_en", None)
+    else:
+        g.pop("color_note_ko", None)
+        g.pop("color_note_vi", None)
 
     if g.get("tools"):
         g["tools"] = [_tool(t) for t in g["tools"] if t]
@@ -1522,10 +1696,11 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     if lang == "ko":
         lang_rule = (
             "한국어만. 베트남어·영어 금지. "
-            "단계: (1)오염·원단 (2)도구(tools[]의 name_ko만·없으면 해당 없음·지어내기 금지) "
+            "단계: (1)오염·원단·색상 (2)도구 — tools[]의 각 항목을 'name_ko: use_for_ko' 한 줄로 "
+            "(사용법 생략·지어내기 금지; 없으면 해당 없음) "
             "(3)힘·방향 Cap (4)약품(name_ko) (5)수온 (6)후관리. "
             "[왜 이 순서] → … → [감각 체크] → [성공률·고지] → [거절·보내기]. "
-            "why_ko/fresh_path_ko/sense_check_ko 등이 있으면 그대로 한국어로. "
+            "why_ko/fresh_path_ko/sense_check_ko·color_note_ko가 있으면 그대로. "
             "없으면 contains_*·chemicals·tools 사실만으로 한국어 작성 — 외국어 원문 복사 금지. "
             "희석 dilution_ko. 마크다운 금지. 코드/id 금지."
         )
@@ -1539,9 +1714,11 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     elif lang == "en":
         lang_rule = (
             "English ONLY. No Korean or Vietnamese words/headers. "
-            "Steps: (1) Identify (2) Tools (3) Force+direction Cap (4) Chemicals (5) Temp (6) Aftercare. "
+            "Steps: (1) Identify stain/fabric/color (2) Tools — each tools[] as 'name: use_for_en' "
+            "(how-to required; do not invent) "
+            "(3) Force+direction Cap (4) Chemicals (5) Temp (6) Aftercare. "
             "Blocks: [Why this order] [Sense check] [Success rate / disclose] [Refuse / refer]. "
-            "Use English name/tip and chemical name fields. Do not copy foreign text. "
+            "Use English name/tip, color_note_en, and chemical name fields. Do not copy foreign text. "
             "No markdown. No internal codes."
         )
         wrapper = f"""Owner question: {user_message}
@@ -1554,10 +1731,11 @@ Answer from this data only. Do not mix languages."""
     else:
         lang_rule = (
             "CHỈ tiếng Việt. CẤM Hàn/Anh. "
-            "Bước: (1) Nhận diện (2) Dụng cụ(CHỈ tools[].name_vi; rỗng→không cần; CẤM bịa) "
+            "Bước: (1) Nhận diện (vet/vai/màu) (2) Dụng cụ — mỗi tools[] dạng 'name_vi: use_for_vi' "
+            "(bắt buộc cách dùng; CẤM bịa; rỗng→không cần) "
             "(3) Lực+hướng Cap (4) Hóa chất (5) Nhiệt độ (6) Sau xử lý. "
             "[Tại sao thứ tự này] → … → [Kiểm tra giác quan] → [Tỷ lệ & báo khách] → [Từ chối / chuyển]. "
-            "Dùng why_vi/fresh_path_vi nếu có. Không copy name_ko/Hangul. "
+            "Dùng why_vi/fresh_path_vi/color_note_vi nếu có. Không copy name_ko/Hangul. "
             "Pha loãng dilution_vi. Không markdown. Không mã nội bộ."
         )
         wrapper = f"""Câu hỏi từ chủ cửa hàng: {user_message}
