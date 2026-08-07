@@ -200,22 +200,28 @@ def build_match_diagnosis(
     weight_missing = weight == "unknown"
 
     bands_ko = (
-        "두께별: 얇음→Cap1·블롯·통담금·경질솔 금지 / "
-        "보통→아래 SOP 기준 / "
-        "두꺼움→Cap2–3·담금·솔 여유. "
-        "실크·울이면 효소·산소·강한 산 대신 중성세제·국소."
+        "두께별 차이(반드시 말할 것): "
+        "①얇음→Cap1·블롯만·통담금·경질솔 금지 / "
+        "②보통→아래 SOP 기준 / "
+        "③두꺼움→Cap2–3·담금·솔 여유. "
+        "실크·울이면 효소·산소·강한 산 대신 중성세제 국소. "
+        "색 미확인이면 산소·염소 표백은 넣지 말고 ‘흰옷 확인 후’만 안내."
     )
     bands_vi = (
-        "Theo độ dày: mỏng→Cap1·blot·cấm ngâm cả áo / "
-        "vừa→SOP dưới / "
-        "dày→Cap2–3·ngâm. "
-        "Lụa/len: S1 cục bộ, không enzyme/oxy/acid mạnh."
+        "Theo độ dày (bắt buộc nêu): "
+        "①mỏng→Cap1·blot·cấm ngâm cả áo / "
+        "②vừa→SOP dưới / "
+        "③dày→Cap2–3. "
+        "Lụa/len: S1 cục bộ. "
+        "Chưa rõ màu: không nêu tẩy oxy/Javel — chỉ sau khi xác nhận trắng."
     )
     bands_en = (
-        "By thickness: thin→Cap1 blot, no full soak / "
-        "medium→SOP below / "
-        "thick→Cap2–3 soak room. "
-        "Silk/wool: neutral detergent local only."
+        "By thickness (must state): "
+        "①thin→Cap1 blot, no full soak / "
+        "②medium→SOP below / "
+        "③thick→Cap2–3. "
+        "Silk/wool: neutral local only. "
+        "Unknown color: omit oxygen/chlorine — only after white confirmed."
     )
 
     card = {
@@ -251,7 +257,8 @@ def build_match_diagnosis(
         ),
         "accuracy_rule_ko": (
             "(1)에서 반드시: 오염 성분 + 원단 + 두께(+색). "
-            "원단·두께 미상이면 weight_bands로 얇/보통/두꺼움 차이를 말하고 SOP는 보통(면) 기준으로 완결. "
+            "원단·두께 미상이면 weight_bands로 얇/보통/두꺼움 차이를 말하고 SOP는 보통 기준으로 완결. "
+            "색 미확인이면 산소·염소 표백을 (4)에 넣지 말 것. "
             "도구 분·희석·사용법은 tools[]/chemicals[]만 — 지어내기 금지."
         ),
         "accuracy_rule_vi": (

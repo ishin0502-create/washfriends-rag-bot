@@ -25,12 +25,12 @@ CHEM_META: dict[str, dict[str, str]] = {
         "dilution_en": "vinegar 1 : water 4",
     },
     "B1": {
-        "name_ko": "산소계 표백제(과탄산 계열)",
-        "name_vi": "Tẩy oxy",
-        "name_en": "Oxygen bleach",
-        "dilution_ko": "병 라벨 따름; 보통 15–45분 — 구석 색 테스트",
-        "dilution_vi": "Theo nhãn chai; thường 15-45 phút — test màu",
-        "dilution_en": "Per bottle label; usually 15–45 min — spot test",
+        "name_ko": "산소계 표백제(과탄산 계열) — 흰옷만",
+        "name_vi": "Tẩy oxy — CHỈ đồ trắng",
+        "name_en": "Oxygen bleach — white garments only",
+        "dilution_ko": "흰옷만·구석 색 테스트; 병 라벨; 보통 15–45분. 유색·색미상은 쓰지 말 것.",
+        "dilution_vi": "CHỈ trắng + test góc; theo nhãn; 15-45 phút. Cấm màu/chưa rõ màu.",
+        "dilution_en": "White only + corner test; per label; 15–45 min. Never on colored/unknown color.",
     },
     "D2": {
         "name_ko": "주방세제(중성)",
@@ -1320,6 +1320,9 @@ def _chem_blocked(code: str, flags: dict, garment_color: str) -> tuple[bool, str
         return True, "유색·검정: 염소·환원표백 금지", "Màu/đen: cấm Javel"
     if garment_color == "black" and c in {"B1", "A4"}:
         return True, "검정: 표백 금지", "Đen: cấm tẩy"
+    # Unknown / missing color: never offer oxygen/chlorine/reducing as active step
+    if (not garment_color or garment_color in {"unknown", ""}) and c in {"B1", "A4", "B2", "X1"}:
+        return True, "색 미확인: 표백(산소·염소·환원) 생략 — 흰옷 확인 후", "Chưa rõ màu: bỏ tẩy — chỉ sau khi xác nhận trắng"
     if flags.get("no_acetone") and c == "A2":
         return True, "아세테이트·레이온: 아세톤 금지", "Acetate/rayon: cấm acetone"
     if (flags.get("is_leather") or flags.get("is_suede") or flags.get("is_fur")) and c in {
@@ -1342,13 +1345,18 @@ def apply_context_to_protocol(
     out.weight = weight or out.weight
     out.garment_color = garment_color or out.garment_color
     flags = flags or {}
-    color = (out.garment_color or "").lower()
+    color = (out.garment_color or "").lower().strip()
 
     for s in out.steps:
-        if s.when == "white_only" and color and color != "white":
+        # Require explicit white — unknown/empty/colored all skip white_only steps
+        if s.when == "white_only" and color != "white":
             s.blocked = True
-            s.block_reason_ko = "유색·색미상: 산소표백 단계 생략(흰옷만). 색 확인 후 재적용."
-            s.block_reason_vi = "Không trắng: bỏ bước oxy. Xác nhận màu rồi mới dùng."
+            if not color or color == "unknown":
+                s.block_reason_ko = "색 미확인: 산소·표백 단계 생략. 흰옷 확인 후에만 적용(구석 테스트)."
+                s.block_reason_vi = "Chưa rõ màu: bỏ tẩy oxy. Chỉ khi xác nhận trắng (+test góc)."
+            else:
+                s.block_reason_ko = "유색·검정: 산소표백 단계 생략(흰옷만)."
+                s.block_reason_vi = "Không trắng: bỏ bước oxy."
             continue
 
         if not s.chem:

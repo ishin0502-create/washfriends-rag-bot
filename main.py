@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-07-session-followup-p0",
+            "build": "2026-08-07-edu-quality-gate",
             "checks": checks,
         },
         status_code=200,

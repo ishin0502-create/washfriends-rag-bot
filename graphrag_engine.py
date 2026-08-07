@@ -1550,7 +1550,7 @@ def _chem_everyday_map(lang: str = "vi") -> dict[str, str]:
             "D1": "기름·오일 용제(탈지제)",
             "D2": "주방세제(중성)",
             "D3": "일반 세탁 세제(강력)",
-            "B1": "산소계 표백제(과탄산·옥시클린 계열)",
+            "B1": "산소계 표백제(과탄산·옥시클린 계열) — 흰옷만",
             "B2": "염소계 표백제(락스/자벨)",
             "A1": "이소프로필 알코올(소독용 알코올)",
             "A2": "아세톤(매니큐어 리무버 계열)",
@@ -2240,9 +2240,14 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "한국어만. 베트남어·영어 금지. "
             "단계: (1)오염·원단·두께·색상 — match_diagnosis의 chemistry·fabric_type·fabric_weight·"
             "fabric_rule을 반드시 반영(소수성 오일 vs 단백질 vs 탄닌 등). "
-            "원단·두께 미상이면 weight_bands_ko로 얇/보통/두꺼움 차이를 (1)에 넣고 "
+            "원단·두께 미상이면 weight_bands를 (1)에 반드시 넣고 "
             "SOP는 보통 두께 기준으로 (2)–(6)까지 완결할 것. "
+            "색 미확인·유색이면 chemicals[]에 없는 산소/염소 표백을 (4)에 넣지 말 것 — "
+            "‘흰옷 확인 후·구석 테스트’만 안내. "
             "ask_if_needed는 선택 안내일 뿐 — 질문만 하고 SOP를 비우지 말 것. "
+            "그래프에 _compact_followup이 true이면: (1)에서 원단·두께·색 확정만 짧게, "
+            "(2)–(6)은 변경점만(도구 Cap·표백 여부). 전체 SOP 장황 반복 금지. "
+            "한국어만 자연스럽게(‘식초로’ 등). 어색한 조사·외국어 혼용 금지. "
             "(2)도구 — tools[]의 각 항목을 'name_ko: use_for_ko' 한 줄로 "
             "(사용법 생략·지어내기 금지; 없으면 해당 없음). "
             "타이머·담금통은 use_for_ko에 적힌 정확한 분(예: 15–45분)을 그대로 말할 것. "
@@ -2290,6 +2295,8 @@ Answer from this data only. Do not mix languages."""
             "(chemistry, fabric_type, fabric_weight, fabric_rule). "
             "Nếu chưa rõ vải/độ dày: nêu weight_bands_vi và hoàn tất SOP mức vừa — "
             "không chỉ hỏi rồi dừng. ask_if_needed chỉ là gợi ý tùy chọn. "
+            "Chưa rõ màu / màu: CẤM bịa tẩy oxy trong (4) nếu không có trong chemicals[]. "
+            "Nếu _compact_followup=true: xác nhận vải/độ dày ngắn, chỉ nêu điểm đổi — không lặp SOP dài. "
             "(2) Dụng cụ — mỗi tools[] dạng 'name_vi: use_for_vi' "
             "(bắt buộc cách dùng; CẤM bịa; rỗng→không cần). "
             "Đồng hồ/chau ngâm: nói đúng số phút trong use_for_vi. "
@@ -2474,7 +2481,11 @@ def generate_response(user_message: str, channel: str = "", user_id: str = "") -
     elif channel and user_id and pending.get("awaiting") == "treatment_clarify" and _message_has_new_stain_topic(user_message):
         clear_session(channel, user_id)
 
-    answer = _generate_response_core(effective, cache_question=user_message if not merge_pending else effective)
+    answer = _generate_response_core(
+        effective,
+        cache_question=user_message if not merge_pending else effective,
+        compact_followup=bool(merge_pending),
+    )
 
     # Remember stain for next fabric/weight clarify turn
     if channel and user_id and answer and "찾을 수 없" not in answer:
@@ -2522,12 +2533,16 @@ def _message_has_new_stain_topic(msg: str) -> bool:
     return any(k in raw for k in keys) or any(k in t for k in ("blood", "coffee", "wine", "oil", "ink", "kimchi", "latte", "ca phe", "muc"))
 
 
-def _generate_response_core(user_message: str, cache_question: str | None = None) -> str:
+def _generate_response_core(
+    user_message: str,
+    cache_question: str | None = None,
+    compact_followup: bool = False,
+) -> str:
     """Core GraphRAG answer (single-turn text)."""
     lang = detect_reply_lang(user_message)
     cq = cache_question or user_message
     # Fast path — lang in context so KO/VI caches never mix
-    cached = cache_lookup(cq, build_context_key({"lang": lang}))
+    cached = cache_lookup(cq, build_context_key({"lang": lang, "compact": compact_followup}))
     if cached:
         return cached
 
@@ -2535,6 +2550,8 @@ def _generate_response_core(user_message: str, cache_question: str | None = None
     entities["_raw"] = user_message
     # Hard override language from script (more reliable than LLM lang field)
     entities["lang"] = lang
+    if compact_followup:
+        entities["_compact_followup"] = True
     # Hard override for high-value franchise phrases (before graph routing)
     # More specific phrases first.
     raw_n = _normalize_text(user_message)
@@ -2985,5 +3002,20 @@ def _generate_response_core(user_message: str, cache_question: str | None = None
 
     if not graph_data or graph_data == {} or graph_data == []:
         return _empty_graph_reply(entities)
+
+    if compact_followup and isinstance(graph_context.get("graph"), dict):
+        g = dict(graph_context["graph"])
+        g["_compact_followup"] = True
+        g["followup_note_ko"] = (
+            "후속 확인 턴: (1)에서 원단·두께·색만 짧게 확정. "
+            "(2)–(6)은 변경점만. 전체 SOP 장황 반복 금지. "
+            "표백은 chemicals[]에 있을 때만."
+        )
+        g["followup_note_vi"] = (
+            "Lượt xác nhận: nêu ngắn vải/độ dày/màu. "
+            "Chỉ điểm đổi ở (2)-(6), không lặp SOP dài."
+        )
+        graph_context = dict(graph_context)
+        graph_context["graph"] = g
 
     return _answer_with_optional_cache(cq, entities, graph_context)

@@ -87,6 +87,26 @@ def test_colored_skips_oxygen():
     assert "B1" not in codes
 
 
+def test_unknown_color_skips_oxygen():
+    """Color not stated → no oxygen in executable chemicals (all stains)."""
+    g = _wine_graph(color="")
+    out = apply_protocol_to_graph(g, entities={"fabric_type": "cotton"})
+    codes = [c["code"] for c in out["chemicals"]]
+    assert "A3" in codes
+    assert "B1" not in codes
+    assert "S1" not in codes
+
+
+def test_white_cotton_keeps_oxygen():
+    g = _wine_graph(color="white")
+    out = apply_protocol_to_graph(
+        g, entities={"fabric_type": "cotton", "garment_color": "white"}
+    )
+    codes = [c["code"] for c in out["chemicals"]]
+    assert "A3" in codes
+    assert "B1" in codes
+
+
 def test_silk_wine_replaces_acid_with_s1_explicitly():
     g = _wine_graph(fabric_name="Silk", fabric_id="F4")
     g["fabric_context"]["acid_safe"] = False
