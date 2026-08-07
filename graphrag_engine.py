@@ -779,6 +779,163 @@ def _refine_tools_for_context(graph: dict, entities: Optional[dict] = None) -> d
             out["color_note_ko"] = "검정·진한 색: 표백 금지. 잔여 얼룩은 강광으로 확인(눈에 덜 띔)."
             out["color_note_vi"] = "Den/dam: CAM tay. Kiem vet bang anh sang manh."
             out["color_note_en"] = "Black/dark: no bleach. Inspect residue under strong light."
+    return _bind_tool_howto_to_protocol(out)
+
+
+def _protocol_text_blob(graph: dict) -> str:
+    chunks = []
+    sc = graph.get("stain_context") or {}
+    for k in (
+        "fresh_path_ko", "fresh_path_vi", "dried_path_ko", "dried_path_vi",
+        "why_ko", "why_vi", "tip", "precheck_vi", "precheck_ko",
+    ):
+        if sc.get(k):
+            chunks.append(str(sc[k]))
+    for c in graph.get("chemicals") or []:
+        for k in ("dilution_ko", "dilution_vi", "when_use_vi", "name_ko", "name_vi", "shop_name_vi"):
+            if c.get(k):
+                chunks.append(str(c[k]))
+    return "\n".join(chunks)
+
+
+def _parse_minute_range(text: str):
+    """Return (lo, hi) minutes from protocol/dilution text, or None."""
+    if not text:
+        return None
+    ranges = []
+    for m in re.finditer(
+        r"(\d+)\s*[-–~到至]\s*(\d+)\s*(?:분|phút|phut|minutes?|mins?)",
+        text,
+        re.I,
+    ):
+        a, b = int(m.group(1)), int(m.group(2))
+        if 1 <= a <= 600 and 1 <= b <= 600:
+            ranges.append((min(a, b), max(a, b)))
+    # Prefer soak-like windows first
+    for pref in ((15, 45), (15, 60), (15, 30), (10, 30), (5, 10)):
+        if pref in ranges:
+            return pref
+    if ranges:
+        return ranges[0]
+    singles = []
+    for m in re.finditer(
+        r"(?:ngam|담금|soak|hen\s*gio|타이머)[^\d]{0,20}(\d+)\s*(?:분|phút|phut|min)",
+        text,
+        re.I,
+    ):
+        n = int(m.group(1))
+        if 1 <= n <= 600:
+            singles.append(n)
+    if not singles:
+        for m in re.finditer(r"(\d+)\s*(?:분|phút|phut)\b", text, re.I):
+            n = int(m.group(1))
+            if 5 <= n <= 120:
+                singles.append(n)
+    if singles:
+        n = singles[0]
+        return (n, n)
+    return None
+
+
+def _chem_owner_name(c: dict, lang: str) -> str:
+    if lang == "ko":
+        return str(c.get("name_ko") or c.get("shop_name_vi") or c.get("name_vi") or c.get("name") or "").strip()
+    if lang == "en":
+        return str(c.get("name") or c.get("name_ko") or c.get("name_vi") or "").strip()
+    return str(c.get("shop_name_vi") or c.get("name_vi") or c.get("name") or "").strip()
+
+
+def _pick_spray_chem(chems: list) -> Optional[dict]:
+    if not chems:
+        return None
+    by_code = {str(c.get("code") or "").upper(): c for c in chems if c}
+    for code in ("A3", "D2", "A1", "A4", "B1", "S1"):
+        if code in by_code:
+            return by_code[code]
+    for c in chems:
+        dil = f"{c.get('dilution_ko') or ''} {c.get('dilution_vi') or ''}"
+        if re.search(r"\d+\s*[:：]\s*\d+|pha|희석|1-2|1–2", dil, re.I):
+            return c
+    return chems[0]
+
+
+def _bind_tool_howto_to_protocol(graph: dict) -> dict:
+    """Rewrite spray/soak/timer how-to with THIS stain's minutes + dilution (education-grade)."""
+    if not isinstance(graph, dict):
+        return graph
+    tools = [dict(t) for t in (graph.get("tools") or []) if t]
+    if not tools:
+        return graph
+
+    chems = [c for c in (graph.get("chemicals") or []) if c]
+    blob = _protocol_text_blob(graph)
+    soak = _parse_minute_range(blob) or (15, 45)
+    lo, hi = soak
+    min_ko = f"{lo}분" if lo == hi else f"{lo}–{hi}분"
+    min_vi = f"{lo} phut" if lo == hi else f"{lo}-{hi} phut"
+    min_en = f"{lo} min" if lo == hi else f"{lo}-{hi} min"
+
+    spray = _pick_spray_chem(chems)
+    spray_name_ko = _chem_owner_name(spray, "ko") if spray else "희석 약품"
+    spray_name_vi = _chem_owner_name(spray, "vi") if spray else "dung dich pha"
+    spray_name_en = _chem_owner_name(spray, "en") if spray else "diluted chemical"
+    dil_ko = (spray.get("dilution_ko") if spray else None) or "병·경로 희석"
+    dil_vi = (spray.get("dilution_vi") if spray else None) or "pha theo dilution"
+    dil_en = dil_ko if spray and spray.get("dilution_ko") else "per dilution on label/path"
+
+    bound = []
+    for t in tools:
+        tid = str(t.get("id") or "")
+        if tid == "T_SPRAY":
+            t["name_ko"] = "분무기(약마다 따로·겉에 이름·비율 쓰기)"
+            t["name_vi"] = "Binh xit (moi hoa chat 1 binh + ghi ten/ty le)"
+            t["use_for_ko"] = (
+                f"이 얼룩용: (4)약품의「{spray_name_ko}」을 「{dil_ko}」로 타서, "
+                f"다른 약이 안 들어 있는 분무기에만 넣는다. 병 겉에 「{spray_name_ko} / {dil_ko}」라고 펜으로 적는다"
+                f"(섞이면 위험하거나 효과가 없어짐). 얼룩에 1–2번만 뿌리고 흠뻑 적시지 말 것."
+            )
+            t["use_for_vi"] = (
+                f"Cho vet nay: pha 「{spray_name_vi}」 theo 「{dil_vi}」 vao binh RIENG (khong tron thuoc khac). "
+                f"Viet len binh 「{spray_name_vi} / {dil_vi}」. Xit 1-2 phat — khong ngap."
+            )
+            t["use_for_en"] = (
+                f"For this stain: mix 「{spray_name_en}」 at 「{dil_en}」 in a dedicated bottle (no other chemical). "
+                f"Write 「{spray_name_en} / {dil_en}」 on the bottle. Mist 1-2 sprays — do not soak."
+            )
+        elif tid == "T_TIMER":
+            t["use_for_ko"] = (
+                f"이 오염·약품 기준 처리 시간은 {min_ko}. 타이머/휴대폰 알람을 {min_ko}에 맞추고, "
+                f"울리면 즉시 찬물로 헹군다. 감시 없이 밤새 담그지 말 것."
+            )
+            t["use_for_vi"] = (
+                f"Thoi gian xu ly cho vet nay: {min_vi}. Bam hen gio {min_vi}; het gio → xa nuoc lanh ngay. "
+                f"Khong de qua dem khi khong giam sat."
+            )
+            t["use_for_en"] = (
+                f"Treatment time for this stain: {min_en}. Set a timer for {min_en}; when it rings, rinse cold immediately. "
+                f"No overnight unattended soak."
+            )
+        elif tid == "T_SOAK_BIN":
+            t["use_for_ko"] = (
+                f"(4)약품 희석액을 통에 만들어 {min_ko}만 담근다. 통에 약 이름을 확인. "
+                f"정장·넥타이·얇은 실크는 통담금 금지(해당 시)."
+            )
+            t["use_for_vi"] = (
+                f"Pha dung dich (4) vao chau, ngam dung {min_vi}. Dan nhan hoa chat. "
+                f"CAM ngam suit/caravat/lua mong neu SOP cam."
+            )
+            t["use_for_en"] = (
+                f"Mix the (4) chemicals in a bin and soak only {min_en}. Label the chemical. "
+                f"Do not full-soak suits/ties/sheer silk if SOP forbids."
+            )
+        bound.append(t)
+
+    out = dict(graph)
+    out["tools"] = bound
+    out["protocol_minutes_ko"] = min_ko
+    out["protocol_minutes_vi"] = min_vi
+    out["spray_recipe_ko"] = f"{spray_name_ko} / {dil_ko}" if spray else ""
+    out["spray_recipe_vi"] = f"{spray_name_vi} / {dil_vi}" if spray else ""
     return out
 
 
@@ -1573,12 +1730,20 @@ def _sanitize_graph_for_owner(graph, lang: str):
     if lang == "ko":
         g.pop("color_note_vi", None)
         g.pop("color_note_en", None)
+        g.pop("protocol_minutes_vi", None)
+        g.pop("spray_recipe_vi", None)
     elif lang == "vi":
         g.pop("color_note_ko", None)
         g.pop("color_note_en", None)
+        g.pop("protocol_minutes_ko", None)
+        g.pop("spray_recipe_ko", None)
     else:
         g.pop("color_note_ko", None)
         g.pop("color_note_vi", None)
+        g.pop("protocol_minutes_ko", None)
+        g.pop("protocol_minutes_vi", None)
+        g.pop("spray_recipe_ko", None)
+        g.pop("spray_recipe_vi", None)
 
     if g.get("tools"):
         g["tools"] = [_tool(t) for t in g["tools"] if t]
@@ -1767,8 +1932,10 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
         lang_rule = (
             "한국어만. 베트남어·영어 금지. "
             "단계: (1)오염·원단·색상 (2)도구 — tools[]의 각 항목을 'name_ko: use_for_ko' 한 줄로 "
-            "(사용법 생략·지어내기 금지; 없으면 해당 없음) "
-            "(3)힘·방향 Cap (4)약품(name_ko) (5)수온 (6)후관리. "
+            "(사용법 생략·지어내기 금지; 없으면 해당 없음). "
+            "타이머·담금통은 use_for_ko에 적힌 정확한 분(예: 15–45분)을 그대로 말할 것. "
+            "분무기는 「무슨 약을 어떤 비율로 넣고, 병 겉에 왜 적는지」를 use_for_ko 그대로. "
+            "(3)힘·방향 Cap (4)약품(name_ko·dilution_ko) (5)수온 (6)후관리. "
             "[왜 이 순서] → … → [감각 체크] → [성공률·고지] → [거절·보내기]. "
             "why_ko/fresh_path_ko/sense_check_ko·color_note_ko가 있으면 그대로. "
             "없으면 contains_*·chemicals·tools 사실만으로 한국어 작성 — 외국어 원문 복사 금지. "
@@ -1802,7 +1969,9 @@ Answer from this data only. Do not mix languages."""
         lang_rule = (
             "CHỈ tiếng Việt. CẤM Hàn/Anh. "
             "Bước: (1) Nhận diện (vet/vai/màu) (2) Dụng cụ — mỗi tools[] dạng 'name_vi: use_for_vi' "
-            "(bắt buộc cách dùng; CẤM bịa; rỗng→không cần) "
+            "(bắt buộc cách dùng; CẤM bịa; rỗng→không cần). "
+            "Đồng hồ/chau ngâm: nói đúng số phút trong use_for_vi. "
+            "Bình xịt: nói đúng thuốc + tỷ lệ + vì sao ghi nhãn theo use_for_vi. "
             "(3) Lực+hướng Cap (4) Hóa chất (5) Nhiệt độ (6) Sau xử lý. "
             "[Tại sao thứ tự này] → … → [Kiểm tra giác quan] → [Tỷ lệ & báo khách] → [Từ chối / chuyển]. "
             "Dùng why_vi/fresh_path_vi/color_note_vi nếu có. Không copy name_ko/Hangul. "
