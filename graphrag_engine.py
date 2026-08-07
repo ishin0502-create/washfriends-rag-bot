@@ -433,6 +433,10 @@ def _fetch_graph_context(entities: dict) -> dict:
         ("ri set", "ri set"),
         ("kim chi", "kim chi"),
         ("kimchi", "kim chi"),
+        ("ruou vang do", "ruou vang do"),
+        ("ruou vang", "ruou vang do"),
+        ("red wine", "ruou vang do"),
+        ("wine", "ruou vang do"),
     )
     alias_hit = None
     haystack = f"{raw_msg} {stain_input}".strip()
@@ -454,6 +458,8 @@ def _fetch_graph_context(entities: dict) -> dict:
             stain_id = "S_RUST"
         elif alias_hit == "kim chi":
             stain_id = "S_KIMCHI"
+        elif alias_hit == "ruou vang do":
+            stain_id = "S_RED_WINE"
     elif not stain_input and raw_msg and not (item_id and not stain_id):
         # Item-only care (e.g. I_DRESS_SHIRT): do not fuzzy raw text into a stain
         stain_input = raw_msg
@@ -2447,16 +2453,22 @@ def generate_response(user_message: str) -> str:
         entities["stain_id"] = "S_BUBBLE_TEA"
         entities["stain_type"] = "tra sua tran chau"
         entities.pop("item_id", None)
-    elif any(k in user_message for k in ("레드와인", "적포도주")) or "ruou vang do" in raw_n or "red wine" in raw_n:
-        entities["intent"] = "treatment"
-        entities["stain_id"] = "S_RED_WINE"
-        entities["stain_type"] = "ruou vang do"
-    elif any(k in user_message for k in ("화이트와인", "맥주", "백포도주")) or "ruou vang trang" in raw_n or "white wine" in raw_n or (
+    elif any(k in user_message for k in ("화이트와인", "화이트 와인", "맥주", "백포도주")) or "ruou vang trang" in raw_n or "white wine" in raw_n or (
         " bia" in f" {raw_n}" or raw_n.startswith("bia") or "beer" in raw_n
     ):
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_WHITE_WINE_BEER"
         entities["stain_type"] = "ruou vang trang"
+    elif any(
+        k in user_message
+        for k in ("레드와인", "레드 와인", "적포도주", "와인", "포도주", "와인얼룩")
+    ) or "ruou vang do" in raw_n or "ruou vang" in raw_n or "red wine" in raw_n or (
+        " wine" in f" {raw_n}" or raw_n.startswith("wine") or raw_n.endswith(" wine") or raw_n == "wine"
+    ):
+        # Bare "와인"/wine → red wine SOP (most common laundry ask); white already handled above
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_RED_WINE"
+        entities["stain_type"] = "ruou vang do"
     elif any(k in user_message for k in ("콜라", "사이다", "탄산음료", "탄산")) or "nuoc ngot" in raw_n or "soft drink" in raw_n or "cola" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_SOFT_DRINK"
