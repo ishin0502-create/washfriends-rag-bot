@@ -127,6 +127,31 @@ def test_jiulsu_not_wool():
     assert _infer_fabric_from_text("얼룩 지울수 있나요") != "wool"
 
 
+def test_protocol_v2_coverage():
+    for sid in (
+        "S_MILK_COFFEE", "S_BLOOD_DRY", "S_LIPSTICK", "S_MOTORBIKE_OIL",
+        "S_INK_PEN", "S_RUST", "S_BUBBLE_TEA", "S_SOY_SAUCE", "S_KETCHUP",
+    ):
+        assert has_protocol(sid), sid
+    latte = build_protocol(
+        {"stain_context": {"id": "S_MILK_COFFEE"}, "fabric_context": {"id": "F1", "name": "Cotton"}, "tools": [], "chemicals": []},
+        entities={"fabric_type": "cotton"},
+    )
+    assert latte is not None
+    codes = latte.chem_codes()
+    assert codes.index("E1") < codes.index("A3")
+
+
+def test_entity_cotton_beats_graph_wool():
+    g = _wine_graph(fabric_name="Wool", fabric_id="F3")
+    g["fabric_context"]["acid_safe"] = False
+    g["fabric_context"]["can_oxygen"] = False
+    out = apply_protocol_to_graph(g, entities={"fabric_type": "cotton", "_raw": "면 와인 지울수"})
+    codes = [c["code"] for c in out["chemicals"]]
+    assert "A3" in codes
+    assert "S1" not in codes
+
+
 if __name__ == "__main__":
     failed = 0
     for fn in [v for k, v in list(globals().items()) if k.startswith("test_")]:
