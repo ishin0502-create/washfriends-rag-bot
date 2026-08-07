@@ -172,6 +172,49 @@ def test_entity_cotton_beats_graph_wool():
     assert "S1" not in codes
 
 
+def test_protocol_clears_legacy_blocked_fields():
+    g = _wine_graph()
+    g["chemicals_blocked_for_fabric"] = [{"name_ko": "식초", "reason": "poison"}]
+    g["delicate_chem_rule"] = "Chi dung chemicals[] con lai..."
+    out = apply_protocol_to_graph(g, entities={"fabric_type": "cotton"})
+    assert "chemicals_blocked_for_fabric" not in out
+    assert "delicate_chem_rule" not in out
+    assert any(c["code"] == "A3" for c in out["chemicals"])
+
+
+def test_fabric_safety_skipped_when_protocol_stain_primary():
+    from graphrag_engine import _apply_fabric_chem_safety
+
+    g = _wine_graph(fabric_name="Wool", fabric_id="F3")
+    g["fabric_context"]["acid_safe"] = False
+    g["fabric_context"]["can_oxygen"] = False
+    g["stain_context"]["fresh_path_ko"] = "KEEP_ME_LEGACY"
+    before = [c["code"] for c in g["chemicals"]]
+    out = _apply_fabric_chem_safety(g, entities={"fabric_type": "cotton", "stain_id": "S_RED_WINE"})
+    assert [c["code"] for c in out["chemicals"]] == before
+    assert out["stain_context"]["fresh_path_ko"] == "KEEP_ME_LEGACY"
+    assert "chemicals_blocked_for_fabric" not in out
+
+
+def test_fabric_safety_still_filters_without_protocol():
+    from graphrag_engine import _apply_fabric_chem_safety
+
+    g = {
+        "stain_context": {"id": "S_NO_PROTOCOL_FAKE", "fresh_path_ko": "path"},
+        "fabric_context": {"id": "F3", "name": "Wool", "acid_safe": False, "can_oxygen": False},
+        "chemicals": [
+            {"code": "A3", "name_ko": "식초", "safe_on_wool": False},
+            {"code": "S1", "name_ko": "중성", "safe_on_wool": True},
+        ],
+        "tools": [],
+    }
+    out = _apply_fabric_chem_safety(g, entities={})
+    codes = [c["code"] for c in out["chemicals"]]
+    assert "A3" not in codes
+    assert "S1" in codes
+    assert out.get("chemicals_blocked_for_fabric")
+
+
 if __name__ == "__main__":
     failed = 0
     for fn in [v for k, v in list(globals().items()) if k.startswith("test_")]:

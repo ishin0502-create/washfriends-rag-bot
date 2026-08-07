@@ -556,7 +556,7 @@ def _fetch_graph_context(entities: dict) -> dict:
                     g0["garment_color"] = entities["garment_color"]
                 context["graph"] = _refine_tools_for_context(
                     _apply_delicate_s1_fallback(
-                        _apply_fabric_chem_safety(g0)
+                        _apply_fabric_chem_safety(g0, entities)
                     ),
                     entities,
                 )
@@ -596,7 +596,7 @@ def _fetch_graph_context(entities: dict) -> dict:
         if entities.get("garment_color"):
             g0["garment_color"] = entities["garment_color"]
         context["graph"] = _apply_delicate_s1_fallback(
-            _apply_fabric_chem_safety(g0)
+            _apply_fabric_chem_safety(g0, entities)
         )
 
     # Item care (shoes/bags/gore-tex/down/leather) — same 1)-6) fields as stains
@@ -610,7 +610,7 @@ def _fetch_graph_context(entities: dict) -> dict:
                 if entities.get("garment_color"):
                     g1["garment_color"] = entities["garment_color"]
                 context["graph"] = _apply_delicate_s1_fallback(
-                    _apply_fabric_chem_safety(g1)
+                    _apply_fabric_chem_safety(g1, entities)
                 )
 
     if isinstance(context.get("graph"), dict):
@@ -871,12 +871,14 @@ def _refine_tools_for_context(graph: dict, entities: Optional[dict] = None) -> d
             out["color_note_vi"] = "Den/dam: CAM tay. Kiem vet bang anh sang manh."
             out["color_note_en"] = "Black/dark: no bleach. Inspect residue under strong light."
     # Protocol single-truth: sync path + chemicals + spray/timer from ordered steps.
-    # Legacy binder only when no protocol template for this stain.
+    # Legacy spray/timer binder only when no stain_primary Protocol (item_primary
+    # keeps item SOP; non-protocol stains still need narrative→tool binding).
     from protocol import apply_protocol_to_graph
 
     out = apply_protocol_to_graph(out, entities)
-    if not out.get("protocol") or out.get("protocol_mode") == "item_primary":
-        out = _bind_tool_howto_to_protocol(out)
+    if out.get("protocol") and out.get("protocol_mode") == "stain_primary":
+        return _attach_match_diagnosis(out, entities)
+    out = _bind_tool_howto_to_protocol(out)
     return _attach_match_diagnosis(out, entities)
 
 
@@ -1351,10 +1353,33 @@ def _apply_delicate_s1_fallback(graph: dict) -> dict:
     return out
 
 
-def _apply_fabric_chem_safety(graph: dict) -> dict:
-    """Drop chemicals unsafe for the matched fabric so the LLM cannot recommend them."""
+def _apply_fabric_chem_safety(graph: dict, entities: Optional[dict] = None) -> dict:
+    """Drop chemicals unsafe for the matched fabric so the LLM cannot recommend them.
+
+    Skipped for stain_primary Protocol stains: Protocol.apply_context owns chem
+    block/replace, and this legacy filter used to leave chemicals_blocked_* /
+    rewritten fresh_path_* that contradicted Protocol renders (form A breaks B).
+    """
+    if not isinstance(graph, dict):
+        return graph
+    entities = entities or {}
+    try:
+        from protocol import has_protocol, overlay_mode_for_item
+
+        sc = graph.get("stain_context") or {}
+        sid = str(sc.get("id") or entities.get("stain_id") or "")
+        item_id = str(
+            (graph.get("item_context") or {}).get("id")
+            or entities.get("item_id")
+            or ""
+        )
+        if has_protocol(sid) and overlay_mode_for_item(item_id) == "stain_primary":
+            return graph
+    except Exception:
+        pass
+
     fabric = graph.get("fabric_context") or {}
-    garment_color = str(graph.get("garment_color") or "").lower()
+    garment_color = str(graph.get("garment_color") or entities.get("garment_color") or "").lower()
 
     fid = str(fabric.get("id") or "").upper()
     fname = f"{fabric.get('name') or ''} {fabric.get('name_vi') or ''}".lower()

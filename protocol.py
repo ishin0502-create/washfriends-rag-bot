@@ -1540,6 +1540,9 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
 
     out["chemicals"] = render_chemicals(proto, out.get("chemicals") or [])
     out["tools"] = bind_tools_from_protocol(proto, list(out.get("tools") or []))
+    # Drop legacy fabric-safety dual-truth leftovers so the LLM cannot prefer them.
+    out.pop("chemicals_blocked_for_fabric", None)
+    out.pop("delicate_chem_rule", None)
     sp = proto.spray_step()
     if sp and sp.chem:
         meta = CHEM_META.get(sp.chem.upper(), {})
