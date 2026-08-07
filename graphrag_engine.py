@@ -27,6 +27,12 @@ from neo4j import GraphDatabase, Driver
 from openai import OpenAI
 
 from entity_extractor import extract_entities
+from reply_lang import (
+    detect_reply_lang,
+    reply_language_leaks,
+    retry_addon,
+    system_prompt_for,
+)
 from response_cache import (
     lookup as cache_lookup,
     store as cache_store,
@@ -1075,7 +1081,7 @@ def _apply_fabric_chem_safety(graph: dict) -> dict:
 
 
 def _chem_everyday_map(lang: str = "vi") -> dict[str, str]:
-    """Internal code → owner everyday name (KO/VI)."""
+    """Internal code → owner everyday name (KO/VI/EN)."""
     if lang == "ko":
         return {
             "E1": "효소(프로테아제) 세제·효소제",
@@ -1100,6 +1106,30 @@ def _chem_everyday_map(lang: str = "vi") -> dict[str, str]:
             "X1": "환원 표백제(하이드로설파이트·흰 면/린넨 전용)",
             "X2": "옥살산(녹·철·라테라이트용)",
         }
+    if lang == "en":
+        return {
+            "E1": "enzyme (protease) detergent",
+            "E2": "starch-enzyme detergent",
+            "E3": "lipase / grease enzyme detergent",
+            "D1": "degreasing solvent",
+            "D2": "dish soap (neutral)",
+            "D3": "heavy laundry detergent",
+            "B1": "oxygen bleach (percarbonate / Oxi-type)",
+            "B2": "chlorine bleach",
+            "A1": "isopropyl alcohol",
+            "A2": "acetone (nail-polish remover type)",
+            "A3": "white vinegar (~5%)",
+            "A4": "hydrogen peroxide 3%",
+            "A5": "diluted ammonia",
+            "N1": "baking soda",
+            "N2": "table salt",
+            "N3": "cornstarch / baby powder (oil absorbent)",
+            "S1": "Wash Friends neutral detergent",
+            "WF_SOFT": "Wash Friends softener",
+            "WF_FRAG": "Wash Friends fragrance spray",
+            "X1": "reducing bleach (hydrosulfite — white cotton/linen only)",
+            "X2": "oxalic acid (rust / laterite — gloves)",
+        }
     return {
         "E1": "nuoc giat / bot ngam enzyme (protease)",
         "E2": "nuoc giat enzyme (tinh bot)",
@@ -1123,6 +1153,24 @@ def _chem_everyday_map(lang: str = "vi") -> dict[str, str]:
         "X1": "bot tay khu (sodium hydrosulfite) — chi cotton/linen TRANG",
         "X2": "acid oxalic — ri set / dat do (gang tay)",
     }
+
+
+_TOOL_NAME_EN = {
+    "T_CLOTH": "clean cloth / blotting paper",
+    "T_SPRAY": "spray bottle (labeled)",
+    "T_BRUSH_SOFT": "soft spotting brush",
+    "T_BRUSH_HARD": "firm spotting brush",
+    "T_BRUSH_ULTRA": "ultra-soft brush",
+    "T_BRUSH_SHOE": "shoe brush",
+    "T_GLOVE_NITRILE": "nitrile gloves",
+    "T_MESH_BAG": "mesh laundry bag",
+    "T_SOAK_BIN": "soak bin",
+    "T_TIMER": "timer",
+    "T_UV_LIGHT": "UV / strong inspection light",
+    "T_STEAM_IRON": "steam iron",
+    "T_MASK": "mask / eye protection",
+    "T_FABRIC_MARKER": "fabric color pen (small area only)",
+}
 
 
 def _expand_chem_codes_in_text(text: str, lang: str = "vi") -> str:
@@ -1174,23 +1222,21 @@ def _scrub_internal_codes(text: str, lang: str = "vi") -> str:
 
 def _sanitize_graph_for_owner(graph, lang: str):
     """Drop ids / wrong-language fields so the LLM cannot echo them.
-    Expand chem codes inside path/why text to everyday names.
+    Expand chem codes only inside same-language narrative fields.
     """
     if not isinstance(graph, dict):
         return graph
     g = dict(graph)
+    lang = lang if lang in ("ko", "vi", "en") else "vi"
 
     def _tool(t: dict) -> dict:
-        out = {
-            "name_ko": t.get("name_ko"),
-            "name_vi": t.get("name_vi"),
-            "use_for_vi": t.get("use_for_vi"),
-        }
+        tid = str(t.get("id") or "")
         if lang == "ko":
-            out.pop("name_vi", None)
-            out.pop("use_for_vi", None)
-        elif lang == "vi":
-            out.pop("name_ko", None)
+            out = {"name_ko": t.get("name_ko")}
+        elif lang == "en":
+            out = {"name": _TOOL_NAME_EN.get(tid) or t.get("name_ko") or t.get("name_vi") or tid}
+        else:
+            out = {"name_vi": t.get("name_vi"), "use_for_vi": t.get("use_for_vi")}
         return {k: v for k, v in out.items() if v}
 
     def _chem(c: dict) -> dict:
@@ -1215,62 +1261,118 @@ def _sanitize_graph_for_owner(graph, lang: str):
             "safe_on_wool": c.get("safe_on_wool"),
             "safe_on_silk": c.get("safe_on_silk"),
         }
-        # Expand any leftover codes inside alt/role strings
         for k in list(keep.keys()):
             if isinstance(keep[k], str):
-                keep[k] = _expand_chem_codes_in_text(keep[k], lang=lang)
+                # Expand codes using the field's language, not mixed
+                field_lang = "ko" if k.endswith("_ko") or k == "name_ko" else (
+                    "vi" if k.endswith("_vi") or k in ("shop_name_vi", "name_vi", "when_use_vi") else lang
+                )
+                if k == "name" or k == "role":
+                    field_lang = "en" if lang == "en" else field_lang
+                keep[k] = _expand_chem_codes_in_text(keep[k], lang=field_lang if lang != "en" else "en")
         if lang == "ko":
-            for k in ("name_vi", "shop_name_vi", "buy_where_vi", "alt1_vi", "alt2_vi", "alt3_vi",
-                      "when_use_vi", "dilution_vi", "example_brands_vi"):
+            for k in (
+                "name", "name_vi", "shop_name_vi", "buy_where_vi", "alt1_vi", "alt2_vi", "alt3_vi",
+                "when_use_vi", "dilution_vi", "example_brands_vi", "role",
+            ):
                 keep.pop(k, None)
         elif lang == "vi":
-            keep.pop("name_ko", None)
-            keep.pop("buy_where_ko", None)
-            keep.pop("dilution_ko", None)
-            keep.pop("alt1_ko", None)
-            keep.pop("alt2_ko", None)
-            keep.pop("alt3_ko", None)
+            for k in (
+                "name", "name_ko", "buy_where_ko", "dilution_ko",
+                "alt1_ko", "alt2_ko", "alt3_ko", "role",
+            ):
+                keep.pop(k, None)
+        else:  # en
+            for k in list(keep.keys()):
+                if k.endswith("_vi") or k.endswith("_ko") or k == "shop_name_vi":
+                    keep.pop(k, None)
+            # Prefer English everyday name from code map if only code leaked into name
+            if keep.get("name"):
+                keep["name"] = _expand_chem_codes_in_text(str(keep["name"]), lang="en")
         return {k: v for k, v in keep.items() if v is not None and v != ""}
 
-    # Expand codes in narrative fields BEFORE LLM sees them
+    VI_FIELDS = (
+        "why_vi", "fresh_path_vi", "dried_path_vi",
+        "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
+        "force_metaphor_vi", "sense_check_vi", "success_rate_vi",
+        "refuse_when_vi", "group_care_order_vi", "name_vi",
+    )
+    KO_FIELDS = (
+        "why_ko", "fresh_path_ko", "dried_path_ko",
+        "force_metaphor_ko", "sense_check_ko", "success_rate_ko",
+        "refuse_when_ko", "group_care_order_ko", "name_ko",
+    )
+
     sc = g.get("stain_context")
     if isinstance(sc, dict):
         sc2 = dict(sc)
-        for field in (
-            "tip", "why_vi", "fresh_path_vi", "dried_path_vi",
-            "why_ko", "fresh_path_ko", "dried_path_ko",
-            "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
-            "group_care_order_vi", "group_care_order_ko",
-            "force_metaphor_vi", "force_metaphor_ko",
-            "sense_check_vi", "sense_check_ko",
-            "success_rate_vi", "success_rate_ko",
-            "refuse_when_vi", "refuse_when_ko",
-        ):
+        # Expand each narrative with ITS language before dropping
+        for field in VI_FIELDS:
             if sc2.get(field):
-                sc2[field] = _expand_chem_codes_in_text(str(sc2[field]), lang=lang)
-        # Language gate: drop opposite-language narratives so LLM cannot echo them
+                sc2[field] = _expand_chem_codes_in_text(str(sc2[field]), lang="vi")
+        for field in KO_FIELDS:
+            if sc2.get(field):
+                sc2[field] = _expand_chem_codes_in_text(str(sc2[field]), lang="ko")
+        if sc2.get("tip"):
+            tip_s = str(sc2["tip"])
+            tip_lang = "ko" if re.search(r"[가-힣]", tip_s) else (
+                "vi" if re.search(
+                    r"[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđĐ]",
+                    tip_s,
+                    re.I,
+                ) else "en"
+            )
+            sc2["tip"] = _expand_chem_codes_in_text(tip_s, lang=tip_lang if tip_lang != "en" else "en")
+
         if lang == "ko":
+            for k in VI_FIELDS:
+                sc2.pop(k, None)
+            # Never feed English/VI tip into KO prompt
+            tip = sc2.get("tip")
+            if tip and not re.search(r"[가-힣]", str(tip)):
+                sc2.pop("tip", None)
             if sc2.get("why_ko"):
                 sc2["tip"] = sc2["why_ko"]
-            for k in (
-                "why_vi", "fresh_path_vi", "dried_path_vi",
-                "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
-                "force_metaphor_vi", "sense_check_vi", "success_rate_vi",
-                "refuse_when_vi", "group_care_order_vi",
-            ):
-                # Keep why_vi only if no why_ko (LLM must translate); drop paths/teach VI always when KO slots exist
-                if k == "why_vi" and not sc2.get("why_ko"):
-                    continue
-                if k in ("fresh_path_vi", "dried_path_vi") and not sc2.get(k.replace("_vi", "_ko")):
-                    continue
-                sc2.pop(k, None)
+            # Drop English stain name when KO name exists (avoids EN echo)
+            if sc2.get("name_ko"):
+                sc2.pop("name", None)
         elif lang == "vi":
-            for k in (
-                "why_ko", "fresh_path_ko", "dried_path_ko",
-                "force_metaphor_ko", "sense_check_ko", "success_rate_ko",
-                "refuse_when_ko", "group_care_order_ko",
-            ):
+            for k in KO_FIELDS:
                 sc2.pop(k, None)
+            tip = sc2.get("tip")
+            if tip and re.search(r"[가-힣]", str(tip)):
+                sc2.pop("tip", None)
+            # Prefer why_vi as tip for VI; drop English tip if why_vi present
+            if sc2.get("why_vi"):
+                sc2["tip"] = sc2["why_vi"]
+            elif tip and not re.search(
+                r"[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđĐ]",
+                str(tip),
+                re.I,
+            ):
+                # Keep English tip only as last resort for VI (LLM will Vietnamese)
+                pass
+            sc2.pop("name_ko", None)
+        else:  # en
+            for k in VI_FIELDS + KO_FIELDS:
+                sc2.pop(k, None)
+            # Keep English name + tip; strip GIAO DUC Vietnamese tips
+            tip = sc2.get("tip")
+            if tip and (
+                re.search(r"[가-힣]", str(tip))
+                or re.search(r"(?i)GIAO\s*DUC|Nhận diện", str(tip))
+                or re.search(
+                    r"[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđĐ]",
+                    str(tip),
+                    re.I,
+                )
+            ):
+                sc2.pop("tip", None)
+            if sc2.get("tip"):
+                sc2["tip"] = _expand_chem_codes_in_text(str(sc2["tip"]), lang="en")
+
+        # Never expose internal ids to owner LLM
+        sc2.pop("id", None)
         g["stain_context"] = sc2
 
     ic = g.get("item_context")
@@ -1281,7 +1383,25 @@ def _sanitize_graph_for_owner(graph, lang: str):
             "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
         ):
             if ic2.get(field):
-                ic2[field] = _expand_chem_codes_in_text(str(ic2[field]), lang=lang)
+                ic2[field] = _expand_chem_codes_in_text(str(ic2[field]), lang="vi")
+        if lang == "ko":
+            for field in (
+                "why_vi", "fresh_path_vi", "dried_path_vi",
+                "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi", "name_vi",
+            ):
+                ic2.pop(field, None)
+            if ic2.get("name_ko"):
+                ic2.pop("name", None)
+        elif lang == "vi":
+            ic2.pop("name_ko", None)
+        else:
+            for field in (
+                "why_vi", "fresh_path_vi", "dried_path_vi",
+                "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
+                "name_vi", "name_ko",
+            ):
+                ic2.pop(field, None)
+        ic2.pop("id", None)
         g["item_context"] = ic2
 
     if g.get("tools"):
@@ -1294,88 +1414,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
 
 
 # ─── LLM Responder ────────────────────────────────────────────────────────────
-
-SYSTEM_PROMPT = """Bạn là chuyên gia giặt ủi của Wash Friends Vietnam.
-Đối tượng: CHỦ CỬA HÀNG nhượng quyền (đồng nghiệp) — không phải khách lẻ.
-Giọng điệu: kinh nghiệm nội bộ Wash Friends — tự tin, dễ đọc, cụ thể như hướng dẫn kỹ thuật tại cửa hàng.
-
-QUY TẮC TRẢ LỜI:
-1. NGÔN NGỮ BẮT BUỘC: trả lời ĐÚNG ngôn ngữ câu hỏi.
-   - Câu hỏi tiếng Hàn → CHỈ tiếng Hàn (không xen Việt/Anh). Câu hỏi tiếng Việt → CHỈ tiếng Việt.
-   - Tiếng Hàn: tools.name_ko; hóa chất name_ko. CẤM in name_vi, id dụng cụ (T_CLOTH…), mã hóa chất.
-2. CHỈ dùng DỮ LIỆU TỪ ĐỒ THỊ của ĐÚNG vết này — không bịa, không mẹo dân gian, không lẫn vết khác.
-   Thiếu field → bỏ qua hoặc hỏi 1 câu. CẤM in tên field kỹ thuật (why_vi, fresh_path_vi, code, id…).
-3. Cảnh báo an toàn ĐẦU câu — chữ thường/hoa ngắn, CẤM markdown ** ## * _
-4. Mở đầu BẮT BUỘC khối [왜 이 순서] / [Tại sao thứ tự này] (2–5 câu) từ why_ko (Hàn) hoặc why_vi / tip — nguyên tắc hóa học ĐÚNG vết này (GIAO DUC). Có why_ko thì dùng why_ko, CẤM copy why_vi sang câu Hàn. Không bỏ khối này khi có why/tip.
-5. Sau đó khối XỬ LÝ — 1)-6) (stain và item_care cùng format):
-   (1) Nhận diện: BẮT BUỘC nêu ĐÚNG loại vết từ stain_context (name_ko/name_vi) + tươi/khô + màu vải nếu user nói
-       (vd: "과일 주스, 젖은 상태, 흰 면"). CẤM câu mơ hồ kiểu "균일하게 분포/분류입니다" khi không có trong đồ thị.
-   (2) Dụng cụ — chỉ tên người dùng (name_ko / name_vi), CẤM id T_…
-       Nếu tools[] RỖNG: viết "해당 없음" / "khong can dung cu dac biet" HOẶC lấy từ fresh_path
-       (vd bút màu vải, chụp ảnh) — CẤM bịa "흰 천·흡수지" khi không có trong tools[]
-   (3) Lực + hướng — Cap 1–4 + 비유감각 nếu có force_levels / force_metaphor_* (Hàn: 아기 얼굴·안경 닦기·수세미 등). Cụ thể thấm/nhấn ngoài→trong.
-   (4) Hóa chất — BẮT BUỘC ghi TÊN THƯỜNG NGÀY từ chemicals[] (name_ko / shop_name_vi):
-       muối, enzyme, giấm, nước rửa chén, bột tẩy oxy, nước giặt trung tính Wash Friends…
-       Kèm: pha loãng (dilution_*), nơi mua (buy_where_*), thay thế nếu có (alt*).
-       Nêu rõ từng bước + thời gian ngâm nếu có trong fresh_path / dilution.
-       CẤM để trống kiểu "를 1리터" / "cho X vào…" mà không nói X là gì.
-       CẤM mã nội bộ. CẤM mẹo dân gian (kem đánh răng, cafe/trà nhuộm…).
-       Chỉ trộn 2 chất khi fresh_path / dilution ghi rõ tỷ lệ; còn lại xử lý tuần tự + xả.
-   (5) Nhiệt độ nước + max_temp vải
-   (6) Sau xử lý: đủ ý kiểm tra ánh sáng / còn thì làm lại (đúng thứ tự hóa chất) / phơi bóng mát — CẤM câu kết kiểu quảng cáo "최상의 결과"
-   Nếu có item_context: đây là chăm sóc món (giày/túi/áo phao/Gore-Tex…) — vẫn dùng 1)-6), không đổi giọng.
-5b. SAU 1)-6) BẮT BUỘC thêm 3 khối ngắn (plain text, không markdown):
-   [감각 체크] / [Kiểm tra giác quan]: mắt/tay/mũi từ sense_check_* hoặc suy từ fresh_path (vd nước trong, hết nhờn, hết mùi).
-   [성공률·고지] / [Tỷ lệ & báo khách]: success_rate_* hoặc "không cam kết 100%; nhiệt/sấy khi còn vết = cố định".
-   [거절·보내기] / [Từ chối / chuyển]: refuse_when_* hoặc khi lụa/len/da hỏng cấu trúc / không đủ máy — nói rõ chuyển chuyên hoặc từ chối.
-5c. CẤM bỏ [왜]/[감각]/[성공률]/[거절] chỉ vì muốn ngắn. Tối đa vẫn 900 từ — cắt phần lan man, không cắt khối giáo dục.6. KHÔNG tự chèn WF_SOFT / WF_FRAG. S1 chỉ khi có trong chemicals[] (lụa/len hoặc đã gắn).
-7. CẤM mẹo dân gian, thương hiệu ngoài, viện/web/AI/PDF
-8. Không markdown **, ##, *, _ — Zalo plain text thuần (không in dấu ** quanh tiêu đề)
-9. Không trộn tiếng Anh vụng (cấm: external, internal, soft brush…). Lực/hướng viết đủ ngôn ngữ trả lời (Hàn: 바깥→안 / Việt: ngoài→trong)
-
-HÓA CHẤT (bắt buộc):
-- Người nghe đã là chủ tiệm: CẤM nói "mua ở tiệm giặt / 세탁소에서 구입".
-  Mua ngoài → siêu thị/약국/cửa hóa chất (buy_where_*). Hàng WF → "kho / cung ứng Wash Friends".
-- KHÔNG đọc mã nội bộ (A3, B1, E1, S1…) như mã kỹ thuật. Nói tên dùng hàng ngày:
-  name_ko (Hàn) hoặc shop_name_vi / name_vi (Việt). Ví dụ: "워시프렌즈 중성세제", "giấm trắng 5%".
-- Có thể nhắc tên hàng ngày — tuyệt đối không viết mã S1 / A3 / B1 / E1…
-- Da (leather) / suede: CAM máy giặt, CAM tẩy oxy/javel, CAM nhiệt/nắng gắt.
-  Da bóng: ít nước + cồn nhẹ (test) + kem dưỡng. Suede: không nước → chải khô / chuyên nghiệp.
-- Phục hồi mất màu vải MÀU (I_COLOR_FADE / color_fade_rules):
-  BẮT BUỘC chia diện tích trong (1)(2)(3)(4):
-  - Nhỏ (<= đồng xu): bút màu vải — nói "임시/다시 빠질 수 있음" (Hàn) / "tam thoi" (Việt). Lực: chấm/칠 ngoài→trong, CẤM "밝혀줍니다".
-  - Vừa/lớn: CẤM chỉ bút — chuyển nhuộm / giải thích không khớp 100% / bồi thường.
-  (4) chemicals rỗng = "해당 없음" — CẤM detergent. CẤM mẹo: jean mới giặt chung, cafe/trà, muối 10:1, ngâm nóng tự nhuộm.
-  (5) Bước phục hồi: không giặt máy/tay để "phục hồi màu". Giặt lật trái + lạnh = duy trì sau, nói rõ nếu nhắc.
-  Denim bạc màu do mặc+UV: giải thích đặc trưng, không gọi lỗi giặt nếu đã báo.
-- Pha loãng: CHỈ dùng dilution_ko (Hàn) hoặc dilution_vi (Việt) nếu có.
-  Không có dilution_* → "병 라벨·본사 안내 따름" / "theo hướng dẫn trên chai / kho WF" — CẤM bịa tỷ lệ (vd 1:4 cho S1).
-  Hàn tự nhiên: "식초 1 : 물 4". Việt: "1 phần giấm + 4 phần nước". CẤM "1부분…4부분".
-- THỨ TỰ theo tính chất vết (KHÔNG pha cocktail "detergent A+B+C" kiểu 2:1:1 / 1:2:1):
-  Protein → nước lạnh + enzyme (nếu vải cho). Dầu → hút bột rồi surfactant. Tannin/màu → acid nhẹ rồi oxy (nếu vải cho).
-  Vết phức hợp: làm TỪNG BƯỚC theo fresh_path / care_order nhóm, XẢ giữa bước — không đổ chung một chậu.
-  Chỉ dùng paste tỷ lệ khi ĐỒ THỊ / fresh_path ghi rõ; còn lại CẤM bịa tỷ lệ trộn.
-  Test góc khuất trước khi xử lý cả món. Tuyệt đối không trộn chất trong never_mix_alerts (vd ammonia + javel).
-- B1 = thuốc tẩy oxy (KHÔNG phải "세제 axit"). A3 = giấm / axit nhẹ.
-- can_bleach=false → CẤM Javel/chlorine (B2). Polyester/linen/denim vẫn có thể dùng tẩy oxy (B1) nếu B1 còn trong chemicals[] (test góc; denim màu có thể phai nhẹ).
-- Vải lụa/len/rayon/da/suede/fur HOẶC chemical.safe_on_silk/safe_on_wool = false HOẶC fabric enzyme_safe/acid_safe = false HOẶC can_oxygen=false:
-  → KHÔNG khuyến nghị hóa chất không an toàn (kể cả B1/A4 trên lụa/len/da).
-  → Chỉ dùng S1 nếu S1 có trong chemicals[]. Không bịa S1 khi chemicals[] rỗng vì lý do khác (vd phục hồi màu).
-  → Nếu chỉ còn cảnh báo: nói rõ "không dùng trên lụa/len" thay vì vẫn bảo dùng.
-- Nếu có chemicals_blocked_for_fabric / delicate_chem_rule: tuân thủ tuyệt đối — không lấy bước tẩy/axit/enzyme từ tip nếu đã bị chặn.
-
-CẤP LỰC: Cap1 Rat nhe | Cap2 Nhe | Cap3 Vua | Cap4 Manh
-Tối đa 900 từ."""
-
-
-def detect_reply_lang(text: str) -> str:
-    """Detect reply language from user text. Korean Hangul wins; else Vietnamese default."""
-    if not text:
-        return "vi"
-    if re.search(r"[가-힣]", text):
-        return "ko"
-    # Latin/ASCII-only short messages → still default vi for franchise VN
-    return "vi"
+# System prompts live in reply_lang.system_prompt_for(lang) — never mix languages.
 
 
 def _enrich_teach_slots(graph: dict) -> dict:
@@ -1482,73 +1521,51 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     query_type = graph_context.get("query_type", "unknown")
     if lang == "ko":
         lang_rule = (
-            "수신 대상은 워시프렌즈 점주(동료). 본문에 '청자'/'청자 여러분' 쓰지 말 것. "
-            "한국어만(베트남어·영어 금지). 마크다운(** ## *) 금지. "
-            "힘·방향은 '바깥→안'처럼 한국어만 (external/internal 금지). "
-            "약품은 name_ko·일상명만 (A3/B1/S1 코드 말하지 말 것). "
-            "도구는 name_ko만 — T_CLOTH 같은 id, name_vi 출력 금지. "
-            "tools[]가 비면: '해당 없음' 또는 fresh_path의 도구(천용 컬러펜 등). 흰 천을 지어내지 말 것. "
-            "chemicals[]가 비면: 중성세제/세제로 칸 채우지 말 것. fresh_path대로 "
-            "(색바램=면적 분기: 소=천용 컬러펜 임시·바깥→안 '칠/찍기'(밝혀줍니다 금지); "
-            "중·대=재염색·100% 불일치 고지·보상. 매장 세제로 색 복원 금지. "
-            "새 청바지 같이 빨기·커피/차·소금물 고착·열탕 자가염색 금지). "
-            "수온(5): 복원 단계에서는 세탁·열탕으로 색을 되살리지 말 것. "
-            "뒤집기+찬물 단독은 '유지'일 때만 짧게. "
-            "희석은 dilution_ko만: '식초 1 : 물 4' 형식. '1부분' 금지. "
-            "'세탁소에서 구입' 금지 — 슈퍼/약국/화공, WF는 본사·창고 공급. "
-            "실크·울이고 chemicals[]에 중성세제가 있을 때만 중성세제 사용. "
-            "B1=산소계 표백제(산성 세제 아님). "
-            "can_bleach=false → 염소(락스)만 금지. 폴리·린넨은 chemicals[]에 산소표백이 있으면 구석 테스트 후 사용 가능. "
-            "실크·울·레이온·가죽에는 산소표백/과산화수소 금지. "
-            "why/신선·굳음 내용만 쓰고 필드명 출력 금지. 민간요법·다른 오염법 금지. "
-            "(4)약품: chemicals[]의 name_ko를 반드시 이름 그대로 쓸 것 "
-            "(소금·효소세제·식초·주방세제·산소계 표백제·워시프렌즈 중성세제 등). "
-            "희석(dilution_ko)·구매처(buy_where_ko)·대체(alt*_ko) 있으면 함께. "
-            "'를 1리터'처럼 약품명 빠진 문장 금지. 민간요법(치약 등) 금지. "
-            "혼합 비율은 그래프에 있을 때만; 없으면 순차 처리+헹굼. "
-            "필수 교육 형식(빠지면 안 됨, 마크다운 금지): "
-            "[왜 이 순서] why_ko가 있으면 why_ko만(why_vi 복사·베트남어·영어 원문 금지); "
-            "없으면 why/tip을 한국어로 번역 → "
-            "(1)오염·원단 (2)도구(name_ko) (3)힘·방향+Cap비유 (4)약품 (5)수온 "
-            "(6)후관리: 강한 빛에서 잔존 확인→남으면 재처리(건조 금지), 그늘·통풍 건조 → "
-            "[감각 체크] 눈/손/코 → [성공률·고지] 100% 보장 금지·열고착 고지 → "
-            "[거절·보내기] 손상·실크/울/가죽·설비 부족 시. "
-            "fresh_path_ko/dried_path_ko/sense_check_ko/success_rate_ko/refuse_when_ko/"
-            "force_metaphor_ko가 있으면 그대로 한국어로 반영. "
-            "약 혼합: A/B/C 칵테일 비율(2:1:1 등) 지어내기 금지. 성분별 순차 처리+중간 헹굼. "
-            "구석 테스트 후 전체. never_mix는 절대 준수."
+            "한국어만. 베트남어·영어 금지. "
+            "단계: (1)오염·원단 (2)도구(name_ko) (3)힘·방향 Cap (4)약품(name_ko) (5)수온 (6)후관리. "
+            "[왜 이 순서] → … → [감각 체크] → [성공률·고지] → [거절·보내기]. "
+            "why_ko/fresh_path_ko/sense_check_ko 등이 있으면 그대로 한국어로. "
+            "없으면 contains_*·chemicals·tools 사실만으로 한국어 작성 — 외국어 원문 복사 금지. "
+            "희석 dilution_ko. 마크다운 금지. 코드/id 금지."
         )
+        wrapper = f"""점주 질문: {user_message}
+
+[그래프 데이터 — 질의유형: {query_type}]
+{graph_json}
+
+{lang_rule}
+위 데이터만 사용. 다른 얼룩/언어 섞지 말 것."""
+    elif lang == "en":
+        lang_rule = (
+            "English ONLY. No Korean or Vietnamese words/headers. "
+            "Steps: (1) Identify (2) Tools (3) Force+direction Cap (4) Chemicals (5) Temp (6) Aftercare. "
+            "Blocks: [Why this order] [Sense check] [Success rate / disclose] [Refuse / refer]. "
+            "Use English name/tip and chemical name fields. Do not copy foreign text. "
+            "No markdown. No internal codes."
+        )
+        wrapper = f"""Owner question: {user_message}
+
+[GRAPH DATA — query type: {query_type}]
+{graph_json}
+
+{lang_rule}
+Answer from this data only. Do not mix languages."""
     else:
         lang_rule = (
-            "Nguoi nhan: chu cua hang Wash Friends (dong nghiep). CHỈ tiếng Việt. "
-            "CẤM markdown ** ##. CẤM in chu '청자'. "
-            "Lực/hướng: 'ngoài→trong' — không xen English. "
-            "Hóa chất: shop_name_vi / tên thường — CẤM mã A3/B1/E1/S1. "
-            "tools[] rỗng → 'khong can dung cu dac biet' / theo fresh_path — CẤM bịa khan tham. "
-            "chemicals[] rỗng → CẤM bịa nuoc giat trung tinh; theo fresh_path "
-            "(phai mau mau: but mau / nhuom / khong phuc hoi bang detergent). "
-            "Pha loãng: CHỈ dilution_vi; không có → 'theo hướng dẫn trên chai / kho WF' — không bịa tỷ lệ. "
-            "CẤM 'mua ở tiệm giặt' — siêu thị/nhà thuốc/cửa hóa chất; hàng WF = kho cung ứng. "
-            "Lụa/len: chỉ dùng S1 nếu có trong chemicals[]. "
-            "B1 = tẩy oxy (không gọi chất tẩy axit). "
-            "Không in tên field. Không mẹo dân gian. "
-            "BẮT BUỘC khối giáo dục plain text: "
-            "[Tại sao thứ tự này] why/tip → 1)-6) nhận diện/dụng cụ/lực+Cap/hóa chất/nhiệt độ/"
-            "sau xử lý → [Kiểm tra giác quan] mắt/tay/mũi → [Tỷ lệ & báo khách] không cam kết 100% → "
-            "[Từ chối / chuyển] khi hỏng cấu trúc hoặc thiếu máy. "
-            "Dùng sense_check_*/success_rate_*/refuse_when_*/force_metaphor_* nếu có. "
-            "CẤM bịa tỷ lệ trộn detergent A+B+C; xử lý tuần tự theo tính chất + xả giữa bước; test góc."
+            "CHỈ tiếng Việt. CẤM Hàn/Anh. "
+            "Bước: (1) Nhận diện (2) Dụng cụ(name_vi) (3) Lực+hướng Cap (4) Hóa chất (5) Nhiệt độ (6) Sau xử lý. "
+            "[Tại sao thứ tự này] → … → [Kiểm tra giác quan] → [Tỷ lệ & báo khách] → [Từ chối / chuyển]. "
+            "Dùng why_vi/fresh_path_vi nếu có. Không copy name_ko/Hangul. "
+            "Pha loãng dilution_vi. Không markdown. Không mã nội bộ."
         )
-
-    return f"""Câu hỏi từ chủ cửa hàng: {user_message}
+        wrapper = f"""Câu hỏi từ chủ cửa hàng: {user_message}
 
 [DỮ LIỆU ĐỒ THỊ — loại truy vấn: {query_type}]
 {graph_json}
 
 {lang_rule}
-Chỉ trả lời từ dữ liệu trên (chemicals của vết này, tools, washfriends_supply khi đúng).
-Null/thiếu → hỏi thêm hoặc bỏ qua — tuyệt đối không bịa và không lẫn sang vết khác.
-Giọng nội bộ Wash Friends — không nêu nguồn bên ngoài."""
+Chỉ trả lời từ dữ liệu trên. Không trộn ngôn ngữ."""
+    return wrapper
 
 
 def _call_llm(llm_prompt: str, lang: str = "vi") -> str:
@@ -1556,7 +1573,7 @@ def _call_llm(llm_prompt: str, lang: str = "vi") -> str:
         model="gpt-4o-mini",
         max_tokens=1024,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt_for(lang)},
             {"role": "user", "content": llm_prompt},
         ],
     )
@@ -1573,6 +1590,13 @@ def _empty_graph_reply(entities: dict, *, image: bool = False) -> str:
                 "• 어떤 종류의 얼룩인가요? (기름, 혈액, 커피 등)\n"
                 "• 어떤 원단인가요? (면, 실크, 폴리에스터 등)"
             )
+        if lang == "en":
+            return (
+                "I received the photo but cannot identify the stain clearly.\n\n"
+                "Please tell me:\n"
+                "• What kind of stain? (oil, blood, coffee, etc.)\n"
+                "• What fabric? (cotton, silk, polyester, etc.)"
+            )
         return (
             "Toi da nhan anh nhung kho xac dinh chinh xac loai vet ban.\n\n"
             "Vui long cho biet them:\n"
@@ -1586,6 +1610,14 @@ def _empty_graph_reply(entities: dict, *, image: bool = False) -> str:
             "• 어떤 종류의 얼룩인가요? (예: 기름, 혈액, 커피)\n"
             "• 어떤 원단인가요? (예: 면, 실크, 폴리에스터)\n"
             "• 얼룩이 생긴 지 얼마나 됐나요?"
+        )
+    if lang == "en":
+        return (
+            "Sorry — I could not find matching guidance.\n\n"
+            "Please share:\n"
+            "• Stain type (e.g. oil, blood, coffee)\n"
+            "• Fabric (e.g. cotton, silk, polyester)\n"
+            "• How old is the stain?"
         )
     return (
         "Xin loi, toi khong tim thay thong tin cho cau hoi nay.\n\n"
@@ -1603,16 +1635,34 @@ def _answer_with_optional_cache(
     *,
     prefix: str = "",
 ) -> str:
-    """LLM answer with fail-open cache. Skips cache when graph is empty."""
+    """LLM answer with fail-open cache. Skips cache when graph is empty.
+    Retries once if reply mixes languages.
+    """
     lang = entities.get("lang") or "vi"
+    if lang not in ("ko", "vi", "en"):
+        lang = detect_reply_lang(cache_question)
+        entities["lang"] = lang
     ctx_key = build_context_key(entities)
     cached = cache_lookup(cache_question, ctx_key)
-    if cached:
+    if cached and not reply_language_leaks(cached, lang):
         return cached
+    # Contaminated cache entry → ignore and regenerate
+    if cached and reply_language_leaks(cached, lang):
+        print(f"[LANG] ignore contaminated cache lang={lang} leaks={reply_language_leaks(cached, lang)}")
 
     base_prompt = _build_llm_prompt(cache_question, graph_context, lang=lang)
     llm_prompt = (prefix + "\n\n" + base_prompt) if prefix else base_prompt
     answer = _call_llm(llm_prompt, lang=lang)
+    leaks = reply_language_leaks(answer, lang)
+    if leaks:
+        print(f"[LANG] leak detected lang={lang} reasons={leaks}; retrying")
+        retry_prompt = retry_addon(lang) + "\n\n" + llm_prompt
+        answer2 = _call_llm(retry_prompt, lang=lang)
+        if not reply_language_leaks(answer2, lang):
+            answer = answer2
+        else:
+            print(f"[LANG] retry still leaks={reply_language_leaks(answer2, lang)}; keeping second attempt")
+            answer = answer2
     cache_store(cache_question, answer, ctx_key)
     return answer
 

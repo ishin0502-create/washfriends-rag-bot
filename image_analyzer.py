@@ -75,6 +75,12 @@ def fetch_image_as_base64(url):
 
 
 def _detect_lang(caption: str, fallback: str = "vi") -> str:
+    try:
+        from reply_lang import detect_reply_lang
+        if caption and str(caption).strip():
+            return detect_reply_lang(caption)
+    except Exception:
+        pass
     if caption and re.search(r"[가-힣]", caption):
         return "ko"
     return fallback or "vi"
