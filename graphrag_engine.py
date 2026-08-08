@@ -247,6 +247,9 @@ _ITEM_FABRIC_TOKEN = {
     "I_INTAKE_SCRIPT": "cotton",
     "I_WATER_HARDNESS": "cotton",
     "I_MACHINE_PROFILE": "cotton",
+    "I_SORT": "cotton",
+    "I_RINSE": "cotton",
+    "I_QC_HANDOVER": "cotton",
 }
 Q_RESCUE = """
 MATCH (s:Stain)
@@ -1101,6 +1104,94 @@ def _bind_tool_howto_to_protocol(graph: dict) -> dict:
     return out
 
 
+def _process_stage_blocked(raw: str, t: str) -> bool:
+    """True when a named stain or specific garment should win over sort/rinse/QC."""
+    stain_named = any(
+        k in raw
+        for k in (
+            "얼룩", "커피", "와인", "피 ", "혈액", "김치", "잉크", "곰팡이", "기름",
+            "녹", "립스틱", "케첩", "마요", "구토", "소변", "대변",
+        )
+    ) or any(
+        k in t
+        for k in (
+            "vet ", " ca phe", "ruou", "mau ", "kimchi", "muc ", "moc", "dau an",
+            "blood", "wine", "coffee", "ink", "mold", "ketchup",
+        )
+    )
+    garment = any(
+        k in raw
+        for k in (
+            "구스이불", "구스이블", "솜이불", "이불", "패딩", "다운", "정장", "수트",
+            "운동화", "스니커", "구두", "모자", "캡", "커튼", "수건", "시트",
+            "아오자이", "한복", "넥타이", "가죽", "스웨이드", "모피", "와이셔츠",
+            "골프", "등산화", "데님", "청바지", "인조가죽", "레자",
+        )
+    ) or any(
+        k in t
+        for k in (
+            "duvet", "comforter", "sneaker", "leather", "suit", "curtain",
+            "towel", "hanbok", "ao dai", "necktie", "denim", "gore",
+        )
+    )
+    return stain_named or garment
+
+
+def _wants_sort(raw: str, t: str) -> bool:
+    return any(
+        k in raw
+        for k in (
+            "세탁물 분류", "빨래 분류", "분류해서", "분류 방법", "분류기준", "분류 기준",
+            "분리세탁", "분리 세탁", "흰옷 유색", "흰옷과 유색", "같이 돌리면",
+            "이염 방지 분류", "색상별 분리",
+        )
+    ) or any(
+        k in t
+        for k in (
+            "phan loai do", "phan loai giat", "tach mau", "tach trang",
+            "giat rieng mau", "sort laundry", "sort clothes", "separate colors",
+            "lights and darks", "lights & darks", "color sorting",
+        )
+    )
+
+
+def _wants_rinse(raw: str, t: str) -> bool:
+    return any(
+        k in raw
+        for k in (
+            "추가 헹굼", "추가헹굼", "헹굼 방법", "헹굼이", "헹구는 법", "헹굼은 언제",
+            "잔여 세제", "세제 잔여", "뻣뻣한 빨래", "헹굼 부족",
+        )
+    ) or any(
+        k in t
+        for k in (
+            "xa them", "them xa", "extra rinse", "how to rinse", "rinse cycle",
+            "detergent residue", "xa ky", "xa du",
+        )
+    )
+
+
+def _wants_qc_handover(raw: str, t: str) -> bool:
+    return any(
+        k in raw
+        for k in (
+            "출고 전", "출고전", "인도 전", "인도전", "고객 인도", "픽업 전",
+            "품질 점검", "품질점검", "출고 체크", "인도 멘트", "인도멘트",
+            "QC 체크", "QC체크", "검품",
+        )
+    ) or any(
+        k in t
+        for k in (
+            "kiem tra truoc giao", "checklist giao", "ban giao khach",
+            "quality check", "handover checklist", "before pickup",
+            "pre-pickup", "qc checklist", "customer handover",
+        )
+    ) or (
+        ("qc" in t or "q.c" in t)
+        and any(k in t for k in ("check", "list", "handover", "pickup", "giao"))
+    ) or ("qc" in raw.lower() and any(k in raw for k in ("점검", "체크", "인도", "출고")))
+
+
 def _infer_item_from_text(text: str) -> str:
     """Detect franchise item types from KO/VI/EN — KB-backed Item ids only."""
     if not text:
@@ -1221,6 +1312,13 @@ def _infer_item_from_text(text: str) -> str:
         return "I_WATER_HARDNESS"
     if any(k in raw for k in ("세탁기 코스", "세탁기 설정", "건조기 설정", "건조기 코스", "탈수 코스", "세탁기 어떻게", "건조기 어떻게")) or "washer" in t or "dryer setting" in t or "chuong trinh may" in t:
         return "I_MACHINE_PROFILE"
+    if not _process_stage_blocked(raw, t):
+        if _wants_sort(raw, t):
+            return "I_SORT"
+        if _wants_rinse(raw, t):
+            return "I_RINSE"
+        if _wants_qc_handover(raw, t):
+            return "I_QC_HANDOVER"
 
     # Finishing-only (no garment) — suit/dress/shirt keep their item ids below
     finish_kw = any(
@@ -3247,6 +3345,21 @@ def _generate_response_core(
     elif any(k in user_message for k in ("세탁기 코스", "세탁기 설정", "건조기 설정", "건조기 코스")) or "washer" in raw_n or "dryer" in raw_n:
         entities["intent"] = "treatment"
         entities["item_id"] = "I_MACHINE_PROFILE"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif (not _process_stage_blocked(user_message, raw_n)) and _wants_sort(user_message, raw_n):
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_SORT"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif (not _process_stage_blocked(user_message, raw_n)) and _wants_rinse(user_message, raw_n):
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_RINSE"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif (not _process_stage_blocked(user_message, raw_n)) and _wants_qc_handover(user_message, raw_n):
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_QC_HANDOVER"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
     elif any(k in user_message for k in ("선크림", "자외선차단", "자외선 차단")) or "kem chong nang" in raw_n or "sunscreen" in raw_n:

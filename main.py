@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-08-lang-sanitize-v6",
+            "build": "2026-08-08-process-stages-v1",
             "checks": checks,
         },
         status_code=200,
@@ -1919,7 +1919,31 @@ UNWIND [
    dried_path_vi:'Con vet: CAM ui (khoa nhiet). Airdresser thoi khong du cho nep suit/wedding.',
    motion_vi:'Luc 0-1 — steam; ui theo nhan',
    water_temp_vi:'N/A — nhiet ui theo nhan',
-   aftercare_vi:'Treo moc. Bao khach gioi han airdresser.'}
+   aftercare_vi:'Treo moc. Bao khach gioi han airdresser.'},
+  {id:'I_SORT',name:'Laundry sorting / load separation',name_vi:'Phan loai do giat (tach mau)',name_ko:'세탁물 분류·분리 세탁',fabric_id:'F1',
+   precheck_vi:'Dem do TRUOC may. Tach trang/sang, mau dam, mong (lua/len), khan/chan, biohazard.',
+   why_vi:'GIAO DUC: Sai phan loai = loang mau + mui + cheo nhiem. Phan loai truoc xu ly vet.',
+   fresh_path_vi:'(1)Dem+anh. (2)5 gio: trang / mau dam / mong / khan-chan / biohazard. (3)Denim moi rieng. (4)Keo+lat trai. (5)Roi spot+chuong trinh.',
+   dried_path_vi:'Da loang: tach, CAM say → S_DYE_TRANSFER.',
+   motion_vi:'Cap0 — phan loai',
+   water_temp_vi:'N/A',
+   aftercare_vi:'Ghi phieu phan loai. Bao rui ro loang.'},
+  {id:'I_RINSE',name:'Rinse / extra rinse education',name_vi:'Xa / xa them (het bot)',name_ko:'헹굼·추가 헹굼 교육',fabric_id:'F1',
+   precheck_vi:'Dau hieu: vai cang, bot du, vang lai, do be/down. Nuoc cung → I_WATER_HARDNESS.',
+   why_vi:'GIAO DUC: Xa kem = bot du + vang/cang. Down/chan/do be BAT BUOC xa them. Khong thay bang softener.',
+   fresh_path_vi:'(1)Hoi cang/bot/down/nuoc cung. (2)Them 1 lan xa. (3)A3 xa cuoi neu cung (CAM tron Javel). (4)Kiem truoc say.',
+   dried_path_vi:'Cang/vang: xa lai. CAM chi softener.',
+   motion_vi:'Cap0 — chon xa them',
+   water_temp_vi:'Lanh~am theo nhan',
+   aftercare_vi:'Say khi het bot. Khan: it softener.'},
+  {id:'I_QC_HANDOVER',name:'QC checklist + customer handover',name_vi:'QC + ban giao khach',name_ko:'QC·출고 점검·고객 인도',fabric_id:'F1',
+   precheck_vi:'Truoc say/goi/lay: anh sang + tay + mui. Doi anh luc nhan.',
+   why_vi:'GIAO DUC: Thieu QC = khieu nai. Con vet ma say = khoa. Bao gioi han luc giao.',
+   fresh_path_vi:'(1)Anh sang kiem vet. (2)Tay/mui/form. (3)Doi anh nhan. (4)Loi giao gioi han. (5)Goi+huong dan. (6)Fail: ghi ly do.',
+   dried_path_vi:'Khieu nai: doi anh nhan+QC.',
+   motion_vi:'Cap0 — kiem + giao tiep',
+   water_temp_vi:'N/A',
+   aftercare_vi:'Luu anh+phieu. Bao gioi han.'}
 ] AS it
 MERGE (i:Item {id:it.id})
 SET i.name = it.name, i.name_vi = it.name_vi, i.name_ko = it.name_ko,
@@ -2001,8 +2025,12 @@ FOREACH (_ IN CASE WHEN i.id = 'I_SWIMWEAR' THEN [1] ELSE [] END |
 FOREACH (_ IN CASE WHEN i.id = 'I_ODOR_SMOKE' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(spray) MERGE (i)-[:USES_CHEMICAL]->(a3)
   MERGE (i)-[:USES_CHEMICAL]->(n1) MERGE (i)-[:USES_CHEMICAL]->(d2))
-FOREACH (_ IN CASE WHEN i.id IN ['I_CARE_LABEL','I_DRY_VS_WET','I_INTAKE_SCRIPT','I_WATER_HARDNESS','I_MACHINE_PROFILE'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_CARE_LABEL','I_DRY_VS_WET','I_INTAKE_SCRIPT','I_WATER_HARDNESS','I_MACHINE_PROFILE','I_SORT','I_RINSE','I_QC_HANDOVER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth))
+FOREACH (_ IN CASE WHEN i.id = 'I_RINSE' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_CHEMICAL]->(a3))
+FOREACH (_ IN CASE WHEN i.id = 'I_QC_HANDOVER' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(uv))
 FOREACH (_ IN CASE WHEN i.id = 'I_WATER_HARDNESS' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_CHEMICAL]->(a3) MERGE (i)-[:USES_CHEMICAL]->(d3))
 FOREACH (_ IN CASE WHEN i.id = 'I_CURTAIN_URETHANE' THEN [1] ELSE [] END |
@@ -2101,7 +2129,17 @@ RETURN count(i) AS items""")
                         i.aftercare_ko = $aftercare_ko,
                         i.sense_check_ko = coalesce($sense_check_ko, i.sense_check_ko),
                         i.success_rate_ko = coalesce($success_rate_ko, i.success_rate_ko),
-                        i.refuse_when_ko = coalesce($refuse_when_ko, i.refuse_when_ko)
+                        i.refuse_when_ko = coalesce($refuse_when_ko, i.refuse_when_ko),
+                        i.precheck_vi = coalesce($precheck_vi, i.precheck_vi),
+                        i.why_vi = coalesce($why_vi, i.why_vi),
+                        i.fresh_path_vi = coalesce($fresh_path_vi, i.fresh_path_vi),
+                        i.dried_path_vi = coalesce($dried_path_vi, i.dried_path_vi),
+                        i.aftercare_vi = coalesce($aftercare_vi, i.aftercare_vi),
+                        i.precheck_en = coalesce($precheck_en, i.precheck_en),
+                        i.why_en = coalesce($why_en, i.why_en),
+                        i.fresh_path_en = coalesce($fresh_path_en, i.fresh_path_en),
+                        i.dried_path_en = coalesce($dried_path_en, i.dried_path_en),
+                        i.aftercare_en = coalesce($aftercare_en, i.aftercare_en)
                     """,
                     id=iid,
                     precheck_ko=edu.get("precheck_ko") or "",
@@ -2114,6 +2152,16 @@ RETURN count(i) AS items""")
                     sense_check_ko=edu.get("sense_check_ko") or "",
                     success_rate_ko=edu.get("success_rate_ko") or "",
                     refuse_when_ko=edu.get("refuse_when_ko") or "",
+                    precheck_vi=edu.get("precheck_vi") or None,
+                    why_vi=edu.get("why_vi") or None,
+                    fresh_path_vi=edu.get("fresh_path_vi") or None,
+                    dried_path_vi=edu.get("dried_path_vi") or None,
+                    aftercare_vi=edu.get("aftercare_vi") or None,
+                    precheck_en=edu.get("precheck_en") or None,
+                    why_en=edu.get("why_en") or None,
+                    fresh_path_en=edu.get("fresh_path_en") or None,
+                    dried_path_en=edu.get("dried_path_en") or None,
+                    aftercare_en=edu.get("aftercare_en") or None,
                 )
                 n_spec += 1
             log["I_specialty_ko_enrich"] = {"updated": n_spec}
@@ -2220,12 +2268,23 @@ RETURN count(s) AS updated
 UNWIND $rows AS o
 MATCH (i:Item {id:o.id})
 SET i.why_ko = o.why_ko, i.why_vi = coalesce(o.why_vi, i.why_vi),
+    i.why_en = coalesce(o.why_en, i.why_en),
     i.fresh_path_ko = o.fresh_path_ko, i.fresh_path_vi = coalesce(o.fresh_path_vi, i.fresh_path_vi),
+    i.fresh_path_en = coalesce(o.fresh_path_en, i.fresh_path_en),
     i.dried_path_ko = o.dried_path_ko,
+    i.dried_path_vi = coalesce(o.dried_path_vi, i.dried_path_vi),
+    i.dried_path_en = coalesce(o.dried_path_en, i.dried_path_en),
     i.aftercare_ko = o.aftercare_ko, i.aftercare_vi = coalesce(o.aftercare_vi, i.aftercare_vi),
+    i.aftercare_en = coalesce(o.aftercare_en, i.aftercare_en),
     i.sense_check_ko = o.sense_check_ko, i.sense_check_vi = o.sense_check_vi,
+    i.sense_check_en = coalesce(o.sense_check_en, i.sense_check_en),
     i.success_rate_ko = o.success_rate_ko, i.success_rate_vi = o.success_rate_vi,
-    i.refuse_when_ko = o.refuse_when_ko, i.refuse_when_vi = o.refuse_when_vi
+    i.success_rate_en = coalesce(o.success_rate_en, i.success_rate_en),
+    i.refuse_when_ko = o.refuse_when_ko, i.refuse_when_vi = o.refuse_when_vi,
+    i.refuse_when_en = coalesce(o.refuse_when_en, i.refuse_when_en),
+    i.precheck_ko = coalesce(o.precheck_ko, i.precheck_ko),
+    i.precheck_vi = coalesce(o.precheck_vi, i.precheck_vi),
+    i.precheck_en = coalesce(o.precheck_en, i.precheck_en)
 RETURN count(i) AS updated
 """,
                 rows=_ops,
@@ -2320,7 +2379,7 @@ RETURN size(nodes) AS cleared""")
             "tools_ppe": "kb/laundry_kb_v3_tools_equipment.md",
             "bubble_tea": "kb/laundry_kb_v3_stains_tannin.md",
             "rail_c": "I_BED_SHEET/TOWEL/BABY/SWIM + S_SUNSCREEN/TAR/MASCARA/HAIR_DYE + I_ODOR_SMOKE",
-            "rail_d": "I_CARE_LABEL + I_DRY_VS_WET + I_INTAKE_SCRIPT + I_WATER_HARDNESS + I_MACHINE_PROFILE + tools D5",
+            "rail_d": "I_CARE_LABEL + I_DRY_VS_WET + I_INTAKE_SCRIPT + I_WATER_HARDNESS + I_MACHINE_PROFILE + I_SORT + I_RINSE + I_QC_HANDOVER + tools D5",
             "stage15": "S_BUTTER + S_SHOE_POLISH RICH + why_ko/fresh_path_ko for gum/bubble (KO polish)",
             "tool_p0": "Per-stain USES_TOOL matrix (clear flag links; PPE/soak/timer where SOP needs)",
             "tool_howto": "Tool use_for bound to stain minutes+dilution; spray explains which chem+why label",

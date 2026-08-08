@@ -113,6 +113,33 @@ OPS_DRILLS = {
     },
 }
 
+# Process-stage drills — keep in sync via process_stage_care (full KO/VI/EN).
+try:
+    from process_stage_care import PROCESS_STAGE_IDS, education_for_process
+
+    for _pid in sorted(PROCESS_STAGE_IDS):
+        _edu = education_for_process(_pid)
+        if _edu:
+            OPS_DRILLS[_pid] = {
+                k: v
+                for k, v in _edu.items()
+                if k.startswith(
+                    (
+                        "why_",
+                        "fresh_path_",
+                        "dried_path_",
+                        "aftercare_",
+                        "sense_check_",
+                        "success_rate_",
+                        "refuse_when_",
+                        "precheck_",
+                        "must_include_",
+                    )
+                )
+            }
+except Exception:
+    pass
+
 AFTERCARE_FORCE_KO = (
     "건조·다림질 전 강광으로 잔여 확인. 얼룩·미끄럼·냄새 남은 채 열을 가하면 열고착."
 )

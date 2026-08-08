@@ -104,6 +104,7 @@ Generic 화장품/makeup without type → prefer S_LIPSTICK if lip color; else S
 담배냄새 = I_ODOR_SMOKE. 선크림 = S_SUNSCREEN. 마스카라 = S_MASCARA. 타르 = S_TAR. 염색약 = S_HAIR_DYE.
 케어라벨/세탁표시 = I_CARE_LABEL. 드라이 vs 물세탁 = I_DRY_VS_WET. 접수/체크인 스크립트 = I_INTAKE_SCRIPT.
 경수/수돗물 = I_WATER_HARDNESS. 세탁기·건조기 코스 = I_MACHINE_PROFILE.
+세탁물 분류/흰옷·유색 분리 = I_SORT. 추가 헹굼/잔여 세제 = I_RINSE. 출고·QC·고객 인도 = I_QC_HANDOVER.
 모자/캡 세탁(비골프) = I_HAT_CAP. 골프모자 = I_GOLF_HAT.
 If the user names a specific stain, intent MUST be "treatment" (not mystery).
 

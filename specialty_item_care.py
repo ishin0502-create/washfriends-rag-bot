@@ -8,6 +8,12 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from process_stage_care import (
+    PROCESS_STAGE_IDS,
+    apply_process_stage_hints,
+    education_for_process,
+)
+
 
 SPECIALTY_CARE_IDS = frozenset({
     "I_DUVET_GOOSE",
@@ -31,6 +37,7 @@ SPECIALTY_CARE_IDS = frozenset({
     "I_SUIT_SUMMER",
     "I_DRESS",
     "I_DRESS_SHIRT",
+    *PROCESS_STAGE_IDS,
 })
 
 
@@ -98,6 +105,9 @@ def _default_must_include(item_id: str, edu: dict[str, str]) -> str:
         "I_SUIT_SUMMER": "스팀, 에어드레서, 촉촉할 때 다림질",
         "I_DRESS": "스팀, 비즈 판 금지, 에어드레서 한계",
         "I_DRESS_SHIRT": "깃→커프→소매→몸, 에어드레서 보조",
+        "I_SORT": "흰/유색/섬세 분리, 수건·바이오해저드 별도, 이염 예방",
+        "I_RINSE": "추가 헹굼, 잔여 세제 제거, 경수 시 보정, 유연제 대체 금지",
+        "I_QC_HANDOVER": "강광 잔여 확인, 접수 사진 대조, 한계 고지, 출고 체크리스트",
     }
     if item_id in presets:
         return presets[item_id]
@@ -164,6 +174,8 @@ def education_for(item_id: str, *, entities: Optional[dict] = None) -> dict[str,
         return _linen_garment(finish=finish)
     if item_id == "I_FINISHING":
         return _finishing_matrix()
+    if item_id in PROCESS_STAGE_IDS:
+        return education_for_process(item_id)
     if item_id in {"I_SUIT", "I_SUIT_SUMMER"} and finish:
         return _suit_finishing(summer=(item_id == "I_SUIT_SUMMER"))
     if item_id == "I_DRESS" and (finish or _is_wedding(entities)):
@@ -198,8 +210,9 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
         cand = str(sc.get("id") or entities.get("stain_id") or "")
         if cand.startswith("S_"):
             real_stain = cand
+    # Stain+item: keep stain SOP (except machine/dry-vs-wet ops overlays).
+    # Process-stage cards rely on routing guards — do NOT override a real S_* SOP.
     if real_stain and item_id not in {"I_MACHINE_PROFILE", "I_DRY_VS_WET"}:
-        # Stain+item: keep stain SOP; hotel/bio notes only for towel/sheet as tip addendum
         if item_id in {"I_TOWEL", "I_BED_SHEET"} and (_is_hotel(entities) or _is_biohazard_heavy(entities)):
             out = dict(graph)
             sc2 = dict(sc) if isinstance(sc, dict) else {}
@@ -244,10 +257,14 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
         "I_SHOE_LACES", "I_HAT_CAP", "I_GOLF_HAT",
         "I_SUIT", "I_SUIT_SUMMER", "I_DRESS", "I_DRESS_SHIRT",
         "I_FUR_REAL", "I_FUR_FAUX", "I_TOWEL", "I_BED_SHEET",
+        *PROCESS_STAGE_IDS,
     }
     if item_id in wash_ids:
         out["item_wash_mode"] = True
         sc2["item_wash_mode"] = True
+    if item_id in PROCESS_STAGE_IDS:
+        out = apply_process_stage_hints(out, item_id)
+        sc2 = out.get("stain_context") or sc2
         out["stain_context"] = sc2
 
     # Chem kits for specialty
