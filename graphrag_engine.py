@@ -2326,6 +2326,14 @@ def _enrich_rescue_aftercare(graph: dict) -> dict:
 
     g = dict(graph)
     sc = dict(g.get("stain_context") or {})
+    # Item wash / specialty garments: do not append stain strong-light + rescue
+    if (
+        g.get("item_wash_mode")
+        or g.get("specialty_item_care")
+        or sc.get("item_wash_mode")
+        or sc.get("group") == "item_care"
+    ):
+        return g
     if not sc:
         # Item-only ops cards still get aftercare force on item_context
         ic = dict(g.get("item_context") or {})
@@ -2367,7 +2375,29 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     graph_json = json.dumps(safe_graph, ensure_ascii=False, indent=2, default=str)
     query_type = graph_context.get("query_type", "unknown")
     if lang == "ko":
-        lang_rule = (
+        item_wash = isinstance(safe_graph, dict) and (
+            safe_graph.get("item_wash_mode")
+            or (safe_graph.get("stain_context") or {}).get("item_wash_mode")
+            or safe_graph.get("specialty_item_care")
+        )
+        if item_wash:
+            lang_rule = (
+                "한국어만. 베트남어·영어 금지. "
+                "이 질문은 얼룩 제거가 아니라 품목 일반 세탁/관리다. "
+                "단계: (1)품목·라벨·용량·오염 유무 — "
+                "「오염 없음→일반 세탁 / 오염 있음→겉만 국소 전처리 후 일반 세탁」을 먼저 구분. "
+                "소수성 오일·단백질 등 얼룩 chemistry를 (1)의 주제로 끌어오지 말 것. "
+                "(2)도구 — tools[]의 name_ko: use_for_ko만. "
+                "일반 세탁에 옥살산·락스·아세톤용 니트릴 장갑 PPE를 끌어오지 말 것(해당 얼룩 SOP가 아닐 때). "
+                "(3)힘·방향 (4)약품(name_ko·dilution_ko) (5)수온 (6)건조·후관리. "
+                "fresh_path_ko 번호 단계·【오염 없음】/【오염 있음】 구분을 빠짐없이. "
+                "must_include_ko가 있으면 그 단어·구를 답에 모두 포함. "
+                "테니스볼·대형 전면투입·추가 헹굼·퍼크 금지가 있으면 반드시. "
+                "[왜 이 순서] → [감각 체크] → [성공률·고지] → [거절·보내기]. "
+                "마크다운 금지. 코드/id 금지. 그래프에 없는 약·도구 지어내기 금지."
+            )
+        else:
+            lang_rule = (
             "한국어만. 베트남어·영어 금지. "
             "단계: (1)오염·원단·두께·색상 — match_diagnosis의 chemistry·fabric_type·fabric_weight·"
             "fabric_rule을 반드시 반영(소수성 오일 vs 단백질 vs 탄닌 등). "
@@ -2402,7 +2432,7 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "요약으로 생략 금지. must_include_ko가 있으면 그 단어·구를 답에 모두 포함. "
             "특히 테니스볼·건조볼·대형 전면투입·추가 헹굼·에어드레서·인조가죽 구분·수축 고지·"
             "락스 금지·100% 복원 불가 멘트가 fresh_path/must_include에 있으면 반드시 말할 것."
-        )
+            )
         wrapper = f"""점주 질문: {user_message}
 
 [그래프 데이터 — 질의유형: {query_type}]

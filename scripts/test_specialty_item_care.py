@@ -179,6 +179,37 @@ def test_enforce_must_include_appends_air():
     assert "※ 필수 안내" in ans
 
 
+def test_goose_general_wash_not_stain_frame():
+    edu = education_for("I_DUVET_GOOSE", entities={"_raw": "구스이블 어떻게 세탁하나요?"})
+    assert "【오염 없음" in edu["fresh_path_ko"] or "오염 없음" in edu["fresh_path_ko"]
+    assert "옥살산" not in edu["fresh_path_ko"]
+    assert "강광" not in edu.get("aftercare_ko", "")
+    edu_stain = education_for(
+        "I_DUVET_GOOSE", entities={"_raw": "구스이불에 커피 얼룩"}
+    )
+    assert "오염 있음" in edu_stain["fresh_path_ko"]
+
+    g = {
+        "item_context": {"id": "I_DUVET_GOOSE", "name_ko": "구스이불"},
+        "stain_context": {"group": "item_care", "id": "I_DUVET_GOOSE"},
+        "tools": [
+            {"id": "T_CLOTH", "name_ko": "흰 천"},
+            {"id": "T_GLOVE_NITRILE", "name_ko": "니트릴 장갑"},
+        ],
+        "chemicals": [{"code": "A3"}],
+    }
+    out = apply_specialty_item_education(
+        g, entities={"item_id": "I_DUVET_GOOSE", "_raw": "구스이블 어떻게 세탁하나요?"}
+    )
+    assert out.get("item_wash_mode") is True
+    ids = [t.get("id") for t in out.get("tools") or []]
+    assert "T_WASHER_LARGE" in ids or any("세탁기" in str(t.get("name_ko")) for t in out.get("tools") or [])
+    assert "T_GLOVE_NITRILE" not in ids
+    names = " ".join(str(t.get("name_ko") or "") + str(t.get("use_for_ko") or "") for t in out.get("tools") or [])
+    assert "옥살산" not in names
+    assert "테니스" in names or "건조볼" in names
+
+
 if __name__ == "__main__":
     test_goose_typo_maps()
     test_hotel_sheet_not_cotton_duvet()
@@ -195,4 +226,5 @@ if __name__ == "__main__":
     test_must_include_on_goose_and_suit()
     test_finishing_injects_air_dresser_tool()
     test_enforce_must_include_appends_air()
+    test_goose_general_wash_not_stain_frame()
     print("OK specialty_item_care")

@@ -108,16 +108,32 @@ def _default_must_include(item_id: str, edu: dict[str, str]) -> str:
     return ", ".join(bits)
 
 
+def _has_stain_cue(entities: Optional[dict]) -> bool:
+    """True when owner mentioned a stain/odor — not a plain 'how to wash' question."""
+    raw = _raw(entities)
+    if (entities or {}).get("stain_id") or (entities or {}).get("stain_type"):
+        return True
+    return any(
+        k in raw
+        for k in (
+            "얼룩", "묻었", "묻은", "오염", "피 ", "혈액", "커피", "와인", "곰팡이",
+            "냄새", "토", "구토", "소변", "황변", "기름", "김치", "잉크",
+            "vet ", "mau ", "moc", "mui ",
+        )
+    )
+
+
 def education_for(item_id: str, *, entities: Optional[dict] = None) -> dict[str, str]:
     hotel = _is_hotel(entities)
     bio = _is_biohazard_heavy(entities)
     finish = _wants_finishing(entities)
+    stain = _has_stain_cue(entities)
     if item_id == "I_DUVET_GOOSE":
-        return _goose_duvet()
+        return _goose_duvet(has_stain=stain)
     if item_id == "I_DUVET_COTTON":
-        return _cotton_duvet()
+        return _cotton_duvet(has_stain=stain)
     if item_id == "I_DOWN_JACKET":
-        return _down_jacket()
+        return _down_jacket(has_stain=stain)
     if item_id == "I_TOWEL":
         return _towel(hotel=hotel, bio=bio)
     if item_id == "I_BED_SHEET":
@@ -209,19 +225,72 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
     out["stain_context"] = sc2
     out["specialty_item_care"] = True
     out["protocol_mode"] = "item_primary"
+    # Item wash framing (not stain spotting) for duvet/down and other specialty
+    wash_ids = {
+        "I_DUVET_GOOSE", "I_DUVET_COTTON", "I_DOWN_JACKET",
+        "I_MACHINE_PROFILE", "I_DRY_VS_WET", "I_FINISHING",
+        "I_LINEN_GARMENT", "I_FAUX_LEATHER", "I_SNEAKER", "I_SNEAKER_WHITE",
+        "I_SHOE_LACES", "I_SUIT", "I_SUIT_SUMMER", "I_DRESS", "I_DRESS_SHIRT",
+        "I_FUR_REAL", "I_FUR_FAUX", "I_TOWEL", "I_BED_SHEET",
+    }
+    if item_id in wash_ids:
+        out["item_wash_mode"] = True
+        sc2["item_wash_mode"] = True
+        out["stain_context"] = sc2
 
     # Chem kits for specialty
-    if item_id == "I_DUVET_GOOSE" or item_id == "I_DOWN_JACKET":
-        out["chemicals"] = [
+    if item_id == "I_DUVET_GOOSE" or item_id == "I_DOWN_JACKET" or item_id == "I_DUVET_COTTON":
+        if item_id == "I_DUVET_COTTON":
+            out["chemicals"] = [
+                {
+                    "code": "D3",
+                    "name_ko": "일반 세탁세제(이불·소량)",
+                    "dilution_ko": "소량. 과다·유연제 금지(잔여·뭉침).",
+                }
+            ]
+            out["empty_chems_ok"] = False
+        else:
+            out["chemicals"] = [
+                {
+                    "code": "S1",
+                    "name_ko": "워시프렌즈 중성세제(다운·섬세용)",
+                    "name_vi": "Nuoc giat trung tinh / down-wash",
+                    "dilution_ko": "병 안내·소량만. 일반 강세제·유연제·표백 금지. 반드시 추가 헹굼.",
+                    "when_use_ko": "다운·구스·패딩 물세탁 시 우선.",
+                }
+            ]
+            out["empty_chems_ok"] = False
+        # Replace stain-spotting tools with wash/dry tools
+        out["tools"] = [
             {
-                "code": "S1",
-                "name_ko": "워시프렌즈 중성세제(다운·섬세용)",
-                "name_vi": "Nuoc giat trung tinh / down-wash",
-                "dilution_ko": "병 안내·소량만. 일반 강세제·유연제·표백 금지. 반드시 추가 헹굼.",
-                "when_use_ko": "다운·구스·패딩 물세탁 시 우선.",
-            }
+                "id": "T_WASHER_LARGE",
+                "name_ko": "대형 전면투입 세탁기(약 7kg+·상업용)",
+                "use_for_ko": (
+                    "섬세/이불 코스, 찬물~≤30℃(솜이불은 30–40℃), 탈수 약. "
+                    "소형 가정기는 용량 부족 — 거절/대형기 안내. 추가 헹굼 1회 필수."
+                ),
+            },
+            {
+                "id": "T_DRYER_LOW",
+                "name_ko": "건조기(저온) + 테니스볼/건조볼 2–3개",
+                "use_for_ko": (
+                    "저온 건조. 20–30분마다 꺼내 손으로 뭉친 털 풀기. 총 2–4시간. "
+                    "가운데 차가움 없을 때까지. 고온건조 금지."
+                ),
+            },
         ]
-        out["empty_chems_ok"] = False
+        if _has_stain_cue(entities):
+            out["tools"].insert(
+                0,
+                {
+                    "id": "T_CLOTH",
+                    "name_ko": "흰 천(겉커버 국소만)",
+                    "use_for_ko": (
+                        "오염이 있을 때만: 겉커버·표면 국소 얼룩만 Cap1 닦기. "
+                        "속통 전체를 스포팅하듯 문지르지 말 것. 옥살산·락스 PPE는 해당 얼룩 SOP에서만."
+                    ),
+                },
+            )
     elif item_id in {"I_TOWEL", "I_BED_SHEET"} and (
         _is_hotel(entities) or (entities.get("garment_color") == "white") or "흰" in _raw(entities)
     ):
@@ -316,98 +385,114 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
     return out
 
 
-def _goose_duvet() -> dict[str, str]:
+def _goose_duvet(*, has_stain: bool = False) -> dict[str, str]:
+    branch = (
+        "【오염 있음】겉커버·표면만 국소 전처리(흰 천 Cap1). 속통 전체 스포팅·문지르기 금지. "
+        "그다음 아래 일반 세탁. 심한 곰팡이·생체오염은 별도 SOP/거절 검토.\n"
+        if has_stain
+        else "【오염 없음 — 일반 세탁】얼룩 지우기가 아니라 속통 통세탁·건조 절차.\n"
+    )
     return {
         "precheck_ko": (
-            "구스·오리털(다운) 이불: 라벨 확인. 찢김·바늘구멍은 세탁 전 수선. "
-            "가정용 소형기(용량 부족)면 대형 전면투입(약 7kg+)·상업용으로. "
-            "이불커버는 자주 세탁, 다운 속통은 1–3년에 1회가 일반."
+            "구스·오리털(다운) 이불 일반 세탁. "
+            "먼저 묻는다: 눈에 띄는 얼룩·곰팡이·심한 냄새가 있는가? "
+            "없으면 일반 세탁, 있으면 국소 전처리 후 일반 세탁. "
+            "라벨·찢김 수선. 소형기면 대형 전면투입(약 7kg+)·상업용. "
+            "이불커버는 자주, 다운 속통은 보통 1–3년에 1회."
         ),
         "why_ko": (
-            "[왜 이 순서] 다운=천연 오일 유지가 보온·로프트. "
-            "퍼크(PERC) 드라이는 오일을 빼 바스러짐 → 온화 물세탁 우선. "
-            "소량 중성/다운세제 + 추가 헹굼 + 저온건조+테니스볼로 뭉침 풀기. "
-            "가운데가 축축하면 24–48시간 내 곰팡이."
+            "[왜 이 순서] 질문은 품목 세탁. 다운=천연 오일→퍼크 드라이 비권장. "
+            "중성/다운세제 소량+추가 헹굼+저온건조+테니스볼. "
+            "오염이 있을 때만 겉 국소 전처리 — 옥살산·락스 장갑을 일반세탁에 끌어오지 말 것."
         ),
         "fresh_path_ko": (
+            f"{branch}"
             "(1)구멍·심지 점검·수선. 지퍼·단추 잠금. "
-            "(2)커버 국소 얼룩만 전처리(전체 스포팅 금지). "
-            "(3)대형 전면투입 세탁기: 섬세/이불 코스, 찬물~≤30℃, 다운전용·중성세제(S1) 소량, "
+            "(2)대형 전면투입 세탁기: 섬세/이불 코스, 찬물~≤30℃, 다운전용·중성세제(S1) 소량, "
             "탈수 약·저속, 반드시 추가 헹굼 1회. 비틀어 짜기 금지. "
-            "(4)건조기 저온 + 깨끗한 테니스볼(또는 건조볼) 2–3개. "
+            "(3)건조기 저온 + 깨끗한 테니스볼(또는 건조볼) 2–3개. "
             "20–30분마다 꺼내 손으로 뭉친 털 풀어 주기. 총 2–4시간. "
-            "(5)가운데를 만져 차가움·축축함 없을 때까지 — 미건조면 추가 건조/통풍. "
-            "(6)유연제·산소/염소표백·고온·퍼크 드라이 금지."
+            "(4)가운데를 만져 차가움·축축함 없을 때까지 — 미건조면 추가 건조. "
+            "(5)유연제·산소/염소표백·고온·퍼크 드라이 금지."
         ),
         "dried_path_ko": (
-            "이미 뭉침·냄새: 저온 재건조+테니스볼로 풀어 주기. "
-            "곰팡이·심한 냄새면 PPE 후 국소 처리·재세탁, 안되면 전문·거절."
+            "이미 뭉침·냄새: 저온 재건조+테니스볼. "
+            "곰팡이·심한 오염이면 해당 얼룩 SOP+PPE — 일반세탁 경로와 섞지 말 것."
         ),
-        "motion_ko": "Cap0–1 — 기계 섬세. 비틀어 짜기·강하게 문지르기 금지.",
+        "motion_ko": "Cap0–1 — 기계 섬세. 비틀어 짜기·속통 전체 문지르기 금지.",
         "water_temp_ko": "찬물 / ≤30℃. 온수·삶기 금지. 건조는 저온만.",
         "aftercare_ko": (
-            "저온건조+테니스볼(건조볼) 2–3개로 20–30분마다 뭉침 풀기 → "
-            "가운데 완전 건조 확인 후 보관. 커버 사용. 제습·통풍. "
-            "건조 전 강광으로 얼룩 잔여 확인(열=고착)."
+            "저온건조+테니스볼 2–3개로 20–30분마다 뭉침 풀기 → "
+            "가운데 완전 건조 확인 후 보관. 커버 사용. 제습·통풍."
         ),
-        "sense_check_ko": "손: 가운데 차가움 없음. 눈: 뭉침 해소·로프트 회복. 코: 곰팡이·세제 잔여 냄새 없음.",
+        "sense_check_ko": "손: 가운데 차가움 없음. 눈: 뭉침 해소·로프트. 코: 곰팡이·세제 냄새 없음.",
         "success_rate_ko": "대형기+다운세제+테니스볼 완전건조: 높음. 소형기·미건조: 뭉침·곰팡이 위험.",
         "refuse_when_ko": "용량 부족 소형기 강제, 퍼크 드라이 요구, 찢긴 채 세탁 → 거절/대형기·수선 안내.",
         "must_include_ko": "대형 전면투입, 추가 헹굼, 테니스볼, 퍼크 금지",
     }
 
 
-def _cotton_duvet() -> dict[str, str]:
+def _cotton_duvet(*, has_stain: bool = False) -> dict[str, str]:
+    branch = (
+        "【오염 있음】겉만 국소 전처리 후 아래 세탁.\n"
+        if has_stain
+        else "【오염 없음 — 일반 세탁】\n"
+    )
     return {
-        "precheck_ko": "솜·폴리 충전 이불(구스 아님). 구스/다운과 구분. 대형기 필요 시 안내.",
+        "precheck_ko": (
+            "솜·폴리 충전 이불(구스 아님). 오염 유무 확인. 구스/다운과 구분. 대형기 필요 시 안내."
+        ),
         "why_ko": (
-            "[왜 이 순서] 솜/폴리는 다운보다 튼튼하나 세제 잔여·탈수 부족 시 뭉침. "
-            "소량 세제+추가헹굼+저온~중온 건조+볼."
+            "[왜 이 순서] 품목 세탁. 솜/폴리는 세제 잔여·탈수 부족 시 뭉침. "
+            "소량 세제+추가헹굼+저온~중온 건조+테니스볼."
         ),
         "fresh_path_ko": (
-            "(1)크기 vs 세탁기 용량 확인. (2)얼룩 국소 전처리. "
-            "(3)섬세/이불 코스 30–40℃, 세제 소량, 추가 헹굼. "
-            "(4)건조 저온~중온 + 테니스볼, 20–30분마다 털기. "
-            "(5)가운데 완전 건조 확인. (6)유연제 과다 금지."
+            f"{branch}"
+            "(1)크기 vs 세탁기 용량. (2)섬세/이불 코스 30–40℃, 세제 소량, 추가 헹굼. "
+            "(3)건조 저온~중온 + 테니스볼, 20–30분마다 털기. "
+            "(4)가운데 완전 건조. (5)유연제 과다 금지."
         ),
-        "dried_path_ko": "뭉침: 재건조+볼. 곰팡이: 밀듀 경로+PPE.",
-        "motion_ko": "기계 위주 Cap0. 국소만 Cap2.",
+        "dried_path_ko": "뭉침: 재건조+테니스볼. 곰팡이: 밀듀 SOP+PPE.",
+        "motion_ko": "기계 위주 Cap0. 오염 있을 때만 국소 Cap2.",
         "water_temp_ko": "30–40℃(끓이기 금지).",
         "aftercare_ko": "커버 자주 세탁. 속통 연 2–4회. 완전 건조 후 보관.",
         "sense_check_ko": "손: 가운데 건조. 눈: 뭉침 없음.",
         "success_rate_ko": "대형기+완전건조: 높음.",
         "refuse_when_ko": "용량 부족으로 억지 세탁 → 대형기 안내.",
+        "must_include_ko": "대형기, 추가 헹굼, 테니스볼",
     }
 
 
-def _down_jacket() -> dict[str, str]:
+def _down_jacket(*, has_stain: bool = False) -> dict[str, str]:
+    branch = (
+        "【오염 있음】겉면 국소만 전처리 후 아래 세탁. 속 충전재 전체 문지르기 금지.\n"
+        if has_stain
+        else "【오염 없음 — 일반 세탁】\n"
+    )
     return {
         "precheck_ko": (
-            "다운·패딩 점퍼: 솔기·배플·지퍼 점검. 구멍은 세탁 전 수선(안 하면 털 유출). "
-            "전면투입기만(교반기 있는 상부투입 비권장). 라벨 확인."
+            "다운·패딩 점퍼 일반 세탁. 오염 유무 확인. "
+            "솔기·배플·지퍼 점검. 구멍은 세탁 전 수선. 전면투입기만(상부 교반기 비권장)."
         ),
         "why_ko": (
-            "[왜 이 순서] 패딩=세제 잔여→뭉침, 미건조→곰팡이. "
-            "다운세제/중성 소량+추가 헹굼+저온건조+테니스볼이 핵심. "
-            "퍼크 드라이는 다운 오일 손상 위험 — 라벨·전문 판단."
+            "[왜 이 순서] 품목 세탁. 세제 잔여→뭉침, 미건조→곰팡이. "
+            "다운세제/중성+추가 헹굼+저온건조+테니스볼. 퍼크는 라벨·전문 판단."
         ),
         "fresh_path_ko": (
+            f"{branch}"
             "(1)지퍼·포켓 정리, 구멍 수선. "
-            "(2)전면투입기 빈 코스로 잔여 세제 헹굼(선택). "
-            "(3)섬세/손세탁 코스, 찬물~≤30℃, 다운전용·S1 소량, 탈수 약, 추가 헹굼 필수. "
-            "(4)건조기 저온 + 테니스볼 2–3개. 30분마다 꺼내 손으로 뭉친 충전재 풀어 주기. 총 2–4시간. "
-            "(5)가운데·배플이 차가우면 추가 건조. 로프트(부피) 회복 확인. "
-            "(6)고온·강탈수·유연제·표백 금지."
+            "(2)전면투입기 섬세, 찬물~≤30℃, S1 소량, 탈수 약, 추가 헹굼 필수. "
+            "(3)건조기 저온 + 테니스볼 2–3개. 30분마다 뭉침 풀기. 총 2–4시간. "
+            "(4)가운데·배플 완전 건조·로프트 확인. "
+            "(5)고온·강탈수·유연제·표백 금지."
         ),
-        "dried_path_ko": "미건조 냄새: 재건조+테니스볼. 로프트 50% 미만: 털 손상 가능 — 고객 고지.",
+        "dried_path_ko": "미건조 냄새: 재건조+테니스볼. 로프트 크게 줄면 고객 고지.",
         "motion_ko": "Cap0–1. 세탁기 섬세. 비틀어 짜기 금지.",
         "water_temp_ko": "찬물 / ≤30℃. 건조 저온.",
-        "aftercare_ko": (
-            "저온건조+테니스볼로 뭉침 풀기. 완전 건조 후 보관. 통풍. 건조 전 강광 잔여 확인."
-        ),
-        "sense_check_ko": "손: 배플 가운데 건조·부피 회복. 코: 곰팡이·세제 냄새 없음.",
-        "success_rate_ko": "전면투입+다운세제+테니스볼 완전건조: 높음. 미건조: 곰팡이 확정 위험.",
-        "refuse_when_ko": "상부 교반기만 있는 기종 강제, 찢긴 채 세탁, 고온건조 요구 → 거절/안내.",
+        "aftercare_ko": "저온건조+테니스볼. 완전 건조 후 보관. 통풍.",
+        "sense_check_ko": "손: 배플 가운데 건조·부피. 코: 곰팡이·세제 냄새 없음.",
+        "success_rate_ko": "전면투입+다운세제+테니스볼 완전건조: 높음.",
+        "refuse_when_ko": "상부 교반기만 강제, 찢긴 채 세탁, 고온건조 → 거절/안내.",
         "must_include_ko": "전면투입, 추가 헹굼, 테니스볼",
     }
 
