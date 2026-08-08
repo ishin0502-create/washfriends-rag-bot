@@ -64,6 +64,30 @@ CHEM_META: dict[str, dict[str, str]] = {
         "dilution_vi": "Nguyên hoặc theo nhãn — test góc, thông gió",
         "dilution_en": "Neat or per label — corner test, ventilate",
     },
+    "L1": {
+        "name_ko": "가죽 전용 클리너",
+        "name_vi": "Dung dịch vệ sinh da (leather cleaner)",
+        "name_en": "Leather cleaner",
+        "dilution_ko": "병 안내 — 천에 묻혀 국소만, 통담금·세탁기 금지",
+        "dilution_vi": "Theo nhãn — khăn, không ngâm",
+        "dilution_en": "Per bottle — cloth spot only, no soak",
+    },
+    "L2": {
+        "name_ko": "가죽 크림·컨디셔너",
+        "name_vi": "Kem dưỡng da (leather cream)",
+        "name_en": "Leather cream / conditioner",
+        "dilution_ko": "원액 얇게 → 잉여 닦기 (클리너 후 완전 건조 뒤)",
+        "dilution_vi": "Nguyên mỏng → lau dư (sau khi khô)",
+        "dilution_en": "Thin neat coat → wipe excess after dry",
+    },
+    "L3": {
+        "name_ko": "가죽 프로텍터(방수·오염방지)",
+        "name_vi": "Xịt bảo vệ da (protector)",
+        "name_en": "Leather protector",
+        "dilution_ko": "크림 마른 뒤 20–30cm 약분무(선택)",
+        "dilution_vi": "Sau kem khô — xịt nhẹ 20-30cm (tuỳ chọn)",
+        "dilution_en": "After cream cured — light spray 20–30cm optional",
+    },
     "N3": {
         "name_ko": "옥수수전분·전분(흡착)",
         "name_vi": "Bột ngô / tinh bột",
@@ -2184,6 +2208,12 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
             delicate=bool(flags.get("delicate_protein")),
             proto=None,
         )
+        try:
+            from leather_care import apply_leather_education
+
+            out = apply_leather_education(out, entities)
+        except Exception:
+            pass
         return out
 
     out = dict(graph)
@@ -2201,6 +2231,12 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
             delicate=bool(flags.get("delicate_protein")),
             proto=None,
         )
+        try:
+            from leather_care import apply_leather_education
+
+            out = apply_leather_education(out, entities)
+        except Exception:
+            pass
         return out
 
     sc = dict(out.get("stain_context") or {})

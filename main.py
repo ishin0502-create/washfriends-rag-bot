@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-08-soak-cap-plain",
+            "build": "2026-08-08-leather-care",
             "checks": checks,
         },
         status_code=200,
@@ -342,6 +342,25 @@ MERGE (s2)-[:USES_CHEMICAL]->(x2b)
 WITH count(*) AS _
 MATCH (s3:Stain {id:'S_SHIRT_YELLOW'}),(x1:Chemical {code:'X1'})
 MERGE (s3)-[:USES_CHEMICAL]->(x1)
+RETURN count(*) AS rels""")
+        # Leather shop chems (L1 cleaner / L2 cream / L3 protector) — not textile soak kits
+        _r(s, "E2c_leather_chems", """
+UNWIND [
+  {code:'L1',name:'Leather cleaner',name_vi:'Dung dich ve sinh da (leather cleaner)',name_ko:'가죽 전용 클리너',role:'pH-balanced leather surface cleaner — minimal water',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Dung dich/xit ve sinh da (leather cleaner)',buy_where_vi:'Cua do da, sieu thi do gia dung / giay',buy_where_ko:'구두·가죽용품점, 대형마트 신발케어',alt1_vi:'Xa phong da (leather soap) pha rat loang',alt2_vi:'Khan am + xa phong trung tinh cuc it (test)',alt3_vi:'Het hang: chi lau am nhe — CAM bot giat/Javel',alt1_ko:'가죽비누 아주 약희석',alt2_ko:'중성세제 극소량+미지근한 천(구석 테스트)',alt3_ko:'없으면 미지근한 천만 — 일반세제·락스·산소표백 금지',example_brands_vi:'',wf_supply:false,when_use_vi:'Da bong: lau vet / bao duong. CAM suede/nubuck nuoc.',when_use_ko:'평활 가죽 표면 청소. 스웨이드·누벅 물/클리너 금지.',dilution_vi:'Theo nhan chai — it nuoc, khan, khong ngam',dilution_ko:'병 안내 — 천에 묻혀 국소만, 통담금·세탁기 금지'},
+  {code:'L2',name:'Leather cream / conditioner',name_vi:'Kem duong da (leather cream/conditioner)',name_ko:'가죽 크림·컨디셔너',role:'Restore oils after clean/mold — prevents dryness/cracking',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Kem da / conditioner da',buy_where_vi:'Cua do da, cua giay',buy_where_ko:'구두·가죽용품점',alt1_vi:'Leather balm / balsam',alt2_vi:'Mink oil chi khi nhan cho (co the toi mau)',alt3_vi:'CAM boi dau an / vaseline',alt1_ko:'레더 밤·밤삼',alt2_ko:'밍크오일(라벨 허용 시 — 어두워질 수 있음)',alt3_ko:'식용유·바셀린 금지',example_brands_vi:'',wf_supply:false,when_use_vi:'BAT BUOC sau xu ly moc/vet tren da bong — khi da KHO.',when_use_ko:'평활 가죽: 클리너/곰팡이 후 완전 건조 뒤 필수 보습.',dilution_vi:'Nguyen chat — boi mong, deu, lau du',dilution_ko:'원액 얇게 → 잉여 닦기'},
+  {code:'L3',name:'Leather protector',name_vi:'Xit bao ve da (protector/water repellent)',name_ko:'가죽 프로텍터(방수·오염방지)',role:'Optional water/stain repellent after cream cured',safe_on_wool:false,safe_on_silk:false,shop_name_vi:'Xit chong tham / protector da-giay',buy_where_vi:'Cua giay, sieu thi',buy_where_ko:'구두용품점·마트 신발케어',alt1_vi:'Bo qua neu khach khong can',alt2_vi:'Suede: chi xit suede/nubuck rieng',alt3_vi:'Thong gio khi xit',alt1_ko:'고객이 원치 않으면 생략',alt2_ko:'스웨이드는 전용 스프레이만',alt3_ko:'환기 후 분무',example_brands_vi:'',wf_supply:false,when_use_vi:'Sau kem da kho — bao ve. Khong thay the kem.',when_use_ko:'크림 마른 뒤 선택. 크림 대체가 아님.',dilution_vi:'Xit nhe 20-30cm, de kho theo nhan',dilution_ko:'20–30cm 약분무, 병 안내대로 건조'}
+] AS c
+MERGE (n:Chemical {code:c.code})
+SET n += c
+RETURN count(n) AS created""")
+        _r(s, "E2d_leather_chem_safety", """
+MATCH (c:Chemical) WHERE c.code IN ['L1','L2','L3']
+MATCH (f:Fabric) WHERE f.id IN ['F3','F4','F7']
+MERGE (f)-[:NEVER_USE]->(c)
+WITH count(*) AS _
+MATCH (l1:Chemical {code:'L1'})
+MATCH (f9:Fabric {id:'F9'})
+MERGE (f9)-[:NEVER_USE]->(l1)
 RETURN count(*) AS rels""")
         _r(s, "F_stains_protein", """
 UNWIND [
@@ -1905,24 +1924,28 @@ MATCH (cloth:Tool {id:'T_CLOTH'}), (soft:Tool {id:'T_BRUSH_SOFT'}), (ultra:Tool 
 WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, steam
 MATCH (d2:Chemical {code:'D2'}),(d3:Chemical {code:'D3'}),(a1:Chemical {code:'A1'}),
       (a3:Chemical {code:'A3'}),(a4:Chemical {code:'A4'}),(n1:Chemical {code:'N1'}),
-      (b1:Chemical {code:'B1'}),(s1:Chemical {code:'S1'}),(e1:Chemical {code:'E1'})
-WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, steam, d2, d3, a1, a3, a4, n1, b1, s1, e1
+      (b1:Chemical {code:'B1'}),(s1:Chemical {code:'S1'}),(e1:Chemical {code:'E1'}),
+      (l1:Chemical {code:'L1'}),(l2:Chemical {code:'L2'}),(l3:Chemical {code:'L3'})
+OPTIONAL MATCH (mask:Tool {id:'T_MASK'})
+WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, steam, d2, d3, a1, a3, a4, n1, b1, s1, e1, l1, l2, l3, mask
 // Full rewire Item tools/chems (drop stale wrong links)
 MATCH (i:Item)
 OPTIONAL MATCH (i)-[oldt:USES_TOOL]->()
 DELETE oldt
-WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, steam, d2, d3, a1, a3, a4, n1, b1, s1, e1, i
+WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, steam, d2, d3, a1, a3, a4, n1, b1, s1, e1, l1, l2, l3, mask, i
 OPTIONAL MATCH (i)-[oldc:USES_CHEMICAL]->()
 DELETE oldc
-WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, steam, d2, d3, a1, a3, a4, n1, b1, s1, e1, i
-FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_GLOVE_LEATHER'] THEN [1] ELSE [] END |
-  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(a1))
-FOREACH (_ IN CASE WHEN i.id = 'I_LEATHER_SHOE' THEN [1] ELSE [] END |
-  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(a1) MERGE (i)-[:USES_CHEMICAL]->(d2))
-FOREACH (_ IN CASE WHEN i.id = 'I_GOLF_GLOVE_LEATHER' THEN [1] ELSE [] END |
-  MERGE (i)-[:USES_TOOL]->(cloth))
+WITH cloth, soft, ultra, hard, shoe, spray, glove, mesh, steam, d2, d3, a1, a3, a4, n1, b1, s1, e1, l1, l2, l3, mask, i
+FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_LEATHER_SHOE','I_GLOVE_LEATHER','I_GOLF_GLOVE_LEATHER'] THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(glove)
+  MERGE (i)-[:USES_CHEMICAL]->(l1) MERGE (i)-[:USES_CHEMICAL]->(l2) MERGE (i)-[:USES_CHEMICAL]->(l3)
+  MERGE (i)-[:USES_CHEMICAL]->(a1))
+FOREACH (_ IN CASE WHEN i.id IN ['I_LEATHER_GARMENT','I_LEATHER_BAG','I_LEATHER_SHOE','I_GLOVE_LEATHER','I_GOLF_GLOVE_LEATHER'] AND mask IS NOT NULL THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(mask))
 FOREACH (_ IN CASE WHEN i.id IN ['I_SUEDE_GARMENT','I_SUEDE_BAG','I_SUEDE_SHOE'] THEN [1] ELSE [] END |
-  MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth))
+  MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(glove))
+FOREACH (_ IN CASE WHEN i.id IN ['I_SUEDE_GARMENT','I_SUEDE_BAG','I_SUEDE_SHOE'] AND mask IS NOT NULL THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(mask))
 FOREACH (_ IN CASE WHEN i.id IN ['I_SNEAKER','I_RUNNING_MESH','I_SNEAKER_WHITE','I_GOLF_SHOE','I_HIKING_SHOE'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(shoe)
   MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(n1))
@@ -1992,6 +2015,44 @@ FOREACH (_ IN CASE WHEN i.id = 'I_UNIFORM' THEN [1] ELSE [] END |
 FOREACH (_ IN CASE WHEN i.id IN ['I_CURTAIN_URETHANE','I_DUVET_GOOSE','I_DUVET_COTTON'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(glove))
 RETURN count(i) AS items""")
+        # Enrich leather/suede item KO from leather_care (runtime also overlays mold path)
+        try:
+            from leather_care import LEATHER_FAMILY_IDS, education_for
+            n_leather = 0
+            for iid in sorted(LEATHER_FAMILY_IDS):
+                edu = education_for(iid, stain_id="", entities=None)
+                if not edu:
+                    continue
+                s.run(
+                    """
+                    MATCH (i:Item {id:$id})
+                    SET i.precheck_ko = $precheck_ko,
+                        i.why_ko = $why_ko,
+                        i.fresh_path_ko = $fresh_path_ko,
+                        i.dried_path_ko = $dried_path_ko,
+                        i.motion_ko = $motion_ko,
+                        i.water_temp_ko = $water_temp_ko,
+                        i.aftercare_ko = $aftercare_ko,
+                        i.sense_check_ko = coalesce($sense_check_ko, i.sense_check_ko),
+                        i.success_rate_ko = coalesce($success_rate_ko, i.success_rate_ko),
+                        i.refuse_when_ko = coalesce($refuse_when_ko, i.refuse_when_ko)
+                    """,
+                    id=iid,
+                    precheck_ko=edu.get("precheck_ko") or "",
+                    why_ko=edu.get("why_ko") or "",
+                    fresh_path_ko=edu.get("fresh_path_ko") or "",
+                    dried_path_ko=edu.get("dried_path_ko") or "",
+                    motion_ko=edu.get("motion_ko") or "",
+                    water_temp_ko=edu.get("water_temp_ko") or "",
+                    aftercare_ko=edu.get("aftercare_ko") or "",
+                    sense_check_ko=edu.get("sense_check_ko") or "",
+                    success_rate_ko=edu.get("success_rate_ko") or "",
+                    refuse_when_ko=edu.get("refuse_when_ko") or "",
+                )
+                n_leather += 1
+            log["I_leather_ko_enrich"] = {"updated": n_leather}
+        except Exception as e:
+            log["I_leather_ko_enrich"] = f"ERR:{str(e)[:120]}"
         _r(s, "Z15_paths_final_rich_ko", """
 UNWIND [
   {id:'S_BUTTER',
