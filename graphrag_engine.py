@@ -224,6 +224,9 @@ _ITEM_FABRIC_TOKEN = {
     "I_GOLF_GLOVE_SYNTH": "polyester",
     "I_FUR_REAL": "fur",
     "I_FUR_FAUX": "polyester",
+    "I_FAUX_LEATHER": "polyester",
+    "I_LINEN_GARMENT": "linen",
+    "I_FINISHING": "cotton",
     "I_HIKING_SHOE": "polyester",
     "I_DENIM": "denim",
     "I_COLOR_FADE": "cotton",
@@ -1093,8 +1096,14 @@ def _infer_item_from_text(text: str) -> str:
     """Detect franchise item types from KO/VI/EN — KB-backed Item ids only."""
     if not text:
         return ""
-    raw = text
-    t = _normalize_text(text)
+    raw = (
+        text.replace("구스이블", "구스이불")
+        .replace("구스 이블", "구스이불")
+        .replace("구스 이불", "구스이불")
+        .replace("오리털 이불", "오리털이불")
+        .replace("거위털 이불", "거위털이불")
+    )
+    t = _normalize_text(raw)
     suede = any(k in raw for k in ("스웨이드", "누벅")) or "suede" in t or "nubuck" in t or "da lon" in t
     leather = any(k in raw for k in ("가죽",)) or "leather" in t or "ao da" in t or "giay da" in t or "tui da" in t
     bag = any(k in raw for k in ("가방", "지갑")) or "tui xach" in t or "tui da" in t or "handbag" in t or "vi da" in t
@@ -1103,6 +1112,22 @@ def _infer_item_from_text(text: str) -> str:
     golf = "골프" in raw or "golf" in t
     fur = any(k in raw for k in ("모피", "퍼코트", "모피코트")) or "fur" in t or "ao long" in t or "long thu" in t
     faux = any(k in raw for k in ("인조", "페이크")) or "faux" in t or "synthetic fur" in t or "long gia" in t
+    faux_leather = (
+        any(
+            k in raw
+            for k in (
+                "인조가죽", "인조 가죽", "레자", "비건레더", "비건 레더",
+                "PU가죽", "PU 가죽", "PVC가죽", "합성가죽", "인조피혁", "페이크가죽",
+            )
+        )
+        or "faux leather" in t
+        or "synthetic leather" in t
+        or "vegan leather" in t
+        or "pu leather" in t
+        or "da gia" in t
+        or "da pu" in t
+        or (leather and any(k in raw for k in ("인조", "페이크")) and not fur)
+    )
 
     # Fur before leather (overlap on "fur trim")
     if fur and faux:
@@ -1111,6 +1136,10 @@ def _infer_item_from_text(text: str) -> str:
         return "I_FUR_REAL"
     if faux and ("퍼" in raw or "fur" in t or "long" in t):
         return "I_FUR_FAUX"
+
+    # Faux/PU leather before real leather (same "가죽" token)
+    if faux_leather:
+        return "I_FAUX_LEATHER"
 
     if suede and bag:
         return "I_SUEDE_BAG"
@@ -1163,8 +1192,26 @@ def _infer_item_from_text(text: str) -> str:
         return "I_INTAKE_SCRIPT"
     if any(k in raw for k in ("경수", "센물", "수돗물 경도", "물때")) or "hard water" in t or "nuoc cung" in t:
         return "I_WATER_HARDNESS"
-    if any(k in raw for k in ("세탁기 코스", "세탁기 설정", "건조기", "탈수 코스")) or "washer" in t or "dryer setting" in t or "chuong trinh may" in t:
+    if any(k in raw for k in ("세탁기 코스", "세탁기 설정", "건조기 설정", "건조기 코스", "탈수 코스", "세탁기 어떻게", "건조기 어떻게")) or "washer" in t or "dryer setting" in t or "chuong trinh may" in t:
         return "I_MACHINE_PROFILE"
+
+    # Finishing-only (no garment) — suit/dress/shirt keep their item ids below
+    finish_kw = any(
+        k in raw
+        for k in (
+            "다림질", "스팀다리미", "스팀 다리미", "에어드레서", "에어 드레서",
+            "피니싱", "다림법", "다리는 법", "스팀 다림",
+        )
+    ) or "airdresser" in t or "air dresser" in t or "steam iron" in t
+    garment_for_finish = any(
+        k in raw
+        for k in (
+            "정장", "수트", "양복", "턱시도", "드레스", "원피스", "와이셔츠", "셔츠",
+            "웨딩", "한복", "아오자이", "마소재", "린넨", "바지",
+        )
+    ) or "suit" in t or ("dress" in t and "shirt" not in t) or "ao so mi" in t
+    if finish_kw and not garment_for_finish:
+        return "I_FINISHING"
 
     if any(k in raw for k in ("원피스", "드레스", "원 피스")) or "vay lien" in t or "dam " in t or "one-piece" in t or "onepiece" in t or (
         "dress" in t and "shirt" not in t and "ao so mi" not in t
@@ -1193,6 +1240,21 @@ def _infer_item_from_text(text: str) -> str:
     if any(k in raw for k in ("정장", "수트", "양복", "턱시도")) or "suit" in t or "vest" in t or "tuxedo" in t or "bo vest" in t:
         return "I_SUIT"
 
+    # Linen / 마 garment (not hotel bed linen, not linen suit)
+    if any(
+        k in raw
+        for k in ("마소재", "마 소재", "마옷", "마 옷", "마셔츠", "마바지", "마원단", "마 원단")
+    ) or (
+        ("린넨" in raw or "linen" in t or "vai lanh" in t)
+        and any(k in raw for k in ("옷", "셔츠", "바지", "치마", "블라우스", "소재", "원단", "세탁", "다림질", "구김", "방법"))
+        and "정장" not in raw
+        and "호텔" not in raw
+        and "시트" not in raw
+        and "수건" not in raw
+        and "침구" not in raw
+    ):
+        return "I_LINEN_GARMENT"
+
     # Golf kit
     if golf and glove:
         return "I_GOLF_GLOVE_LEATHER" if leather else "I_GOLF_GLOVE_SYNTH"
@@ -1213,7 +1275,14 @@ def _infer_item_from_text(text: str) -> str:
         return "I_CURTAIN_URETHANE"
     if any(k in raw for k in ("커튼",)) or "curtain" in t or "rem cua" in t or "rem vai" in t:
         return "I_CURTAIN_FABRIC"
-    if any(k in raw for k in ("구스이불", "거위털", "다운이불", "오리털이불")) or "goose" in t or "down duvet" in t or "chan long" in t:
+    # Hotel linen before generic duvet (「호텔 이불 시트」)
+    if any(k in raw for k in ("호텔", "hotel")) and any(
+        k in raw for k in ("시트", "침대", "린넨", "침구", "drap", "sheet")
+    ):
+        return "I_BED_SHEET"
+    if any(k in raw for k in ("호텔", "hotel")) and any(k in raw for k in ("수건", "타월", "towel")):
+        return "I_TOWEL"
+    if any(k in raw for k in ("구스이불", "구스이블", "거위털", "다운이불", "오리털이불")) or "goose" in t or "down duvet" in t or "chan long" in t:
         return "I_DUVET_GOOSE"
     if any(k in raw for k in ("솜이불", "폴리이불", "충전 이불")) or (
         "이불" in raw and any(k in raw for k in ("세탁", "빨래", "방법", "어떻게"))
@@ -1263,13 +1332,16 @@ def _infer_item_from_text(text: str) -> str:
     ):
         return "I_SHOE_LACES"
     white_panel = (
-        any(k in raw for k in ("흰창", "흰 창", "중창"))
+        any(k in raw for k in ("흰창", "흰 창", "중창", "고무창", "미드솔"))
         or "midsole" in t
         or "canh trang" in t
         or "de trang" in t
         or ("옆면" in raw and shoe)
     )
-    if white_panel and shoe:
+    whitening = any(
+        k in raw for k in ("하얗게", "누렇게", "황변", "화이트닝")
+    ) or "whitening" in t or "vang de" in t
+    if shoe and not leather and not suede and (white_panel or whitening):
         return "I_SNEAKER_WHITE"
     if "러닝" in raw or "running" in t or "giay chay" in t:
         return "I_RUNNING_MESH"
@@ -1302,6 +1374,14 @@ def _infer_fabric_from_text(text: str) -> str:
     # Suede / nubuck before generic leather
     if any(k in raw for k in ("스웨이드", "누벅")) or "suede" in t or "nubuck" in t or "da lon" in t:
         return "suede"
+    if (
+        any(k in raw for k in ("인조가죽", "인조 가죽", "레자", "합성가죽", "비건레더"))
+        or "faux leather" in t
+        or "synthetic leather" in t
+        or "vegan leather" in t
+        or "pu leather" in t
+    ):
+        return "polyester"
     if any(k in raw for k in ("가죽",)) or re.search(r"(^|[^a-z])da([^a-z]|$)", t) or "leather" in t:
         # avoid false hit on common VI words containing 'da' as substring inside longer tokens — use word-ish check
         if "leather" in t or "가죽" in raw or "da bong" in t or "ao da" in t or "giay da" in t or "tui da" in t or "gang da" in t or t.strip() == "da" or " vai da" in f" {t}" or t.startswith("da "):
@@ -1317,7 +1397,7 @@ def _infer_fabric_from_text(text: str) -> str:
         return "polyester"
     if "데님" in raw or "청바지" in raw or "denim" in t:
         return "denim"
-    if "린넨" in raw or "linen" in t or "vai lanh" in t:
+    if any(k in raw for k in ("마소재", "마 소재", "마원단", "마 원단")) or "린넨" in raw or "linen" in t or "vai lanh" in t:
         return "linen"
     if "레이온" in raw or "rayon" in t:
         return "rayon"
@@ -2383,6 +2463,25 @@ def _call_llm(llm_prompt: str, lang: str = "vi") -> str:
     return _scrub_internal_codes(response.choices[0].message.content.strip(), lang=lang)
 
 
+def _looks_like_item_care_question(text: str) -> bool:
+    """Owner asking how to wash a specialty item — not a stain ID quiz."""
+    if not text:
+        return False
+    raw = text
+    if any(k in raw for k in ("다림질", "에어드레서", "스팀다리미", "피니싱", "스팀 다림")):
+        return True
+    care = any(k in raw for k in ("세탁", "빨래", "세탁법", "세탁방법", "관리", "어떻게", "코스", "설정", "드라이"))
+    itemish = any(
+        k in raw
+        for k in (
+            "이불", "구스", "패딩", "다운", "모피", "가죽", "레자", "스웨이드", "수건", "시트",
+            "침구", "호텔", "운동화", "스니커", "구두", "정장", "커튼", "세탁기", "건조기",
+            "마소재", "린넨", "드레스", "와이셔츠", "흰창", "신발끈",
+        )
+    )
+    return care and itemish
+
+
 def _empty_graph_reply(entities: dict, *, image: bool = False) -> str:
     try:
         from failure_log import log_failure
@@ -2396,6 +2495,7 @@ def _empty_graph_reply(entities: dict, *, image: bool = False) -> str:
     except Exception:
         pass
     lang = entities.get("lang", "vi")
+    raw = str(entities.get("_raw") or entities.get("_user_caption") or "")
     if image:
         if lang == "ko":
             return (
@@ -2415,7 +2515,21 @@ def _empty_graph_reply(entities: dict, *, image: bool = False) -> str:
             "Toi da nhan anh nhung kho xac dinh chinh xac loai vet ban.\n\n"
             "Vui long cho biet them:\n"
             "• Loai vet ban la gi? (dau an, mau, ca phe, ...)\n"
-            "• Chat lieu vai la gi? (cotton, lua, polyester, ...)"
+            "• Chat lieu vai la gi. (cotton, lua, polyester, ...)"
+        )
+    # Item-care questions must NOT fall into stain clarification
+    if lang == "ko" and _looks_like_item_care_question(raw):
+        return (
+            "품목 일반 세탁법으로 이해했습니다. 아래 중 해당하는 것을 알려주세요:\n"
+            "• 구스·오리털 이불 / 솜·폴리 이불\n"
+            "• 다운·패딩 점퍼\n"
+            "• 호텔·흰 수건 / 시트·침구\n"
+            "• 진가죽·스웨이드 / 인조가죽(레자·PU) / 모피\n"
+            "• 마(린넨) 의류\n"
+            "• 스니커즈·흰창·신발끈 / 구두\n"
+            "• 정장·드레스·와이셔츠 다림질·스팀·에어드레서\n"
+            "• 세탁기·건조기 코스 설정\n"
+            "얼룩 제거가 필요하면 얼룩 종류(피, 커피 등)도 함께 적어 주세요."
         )
     if lang == "ko":
         return (
@@ -2722,17 +2836,40 @@ def _generate_response_core(
         entities["item_id"] = "I_CURTAIN_FABRIC"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
-    elif any(k in user_message for k in ("구스이불", "거위털이불", "다운이불", "오리털이불")) or "goose duvet" in raw_n:
+    elif any(k in user_message for k in ("구스이불", "구스이블", "거위털이불", "다운이불", "오리털이불", "구스 이불")) or "goose duvet" in raw_n:
         entities["intent"] = "treatment"
         entities["item_id"] = "I_DUVET_GOOSE"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
+    elif any(k in user_message for k in ("호텔", "hotel")) and any(
+        k in user_message for k in ("시트", "침대", "린넨", "침구")
+    ):
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_BED_SHEET"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+        if any(k in user_message for k in ("흰", "하얀", "화이트")):
+            entities["garment_color"] = "white"
+    elif any(k in user_message for k in ("호텔", "hotel")) and any(
+        k in user_message for k in ("수건", "타월")
+    ):
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_TOWEL"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+        if any(k in user_message for k in ("흰", "하얀", "화이트")):
+            entities["garment_color"] = "white"
     elif any(k in user_message for k in ("솜이불", "폴리이불")) or (
         "이불" in user_message and any(k in user_message for k in ("세탁", "빨래", "방법", "어떻게"))
-        and not any(k in user_message for k in ("구스", "거위", "다운", "오리털"))
+        and not any(k in user_message for k in ("구스", "거위", "다운", "오리털", "호텔"))
     ):
         entities["intent"] = "treatment"
         entities["item_id"] = "I_DUVET_COTTON"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("패딩", "다운 점퍼", "다운점퍼", "오리털 패딩", "거위털 패딩")) or "down jacket" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_DOWN_JACKET"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
     elif any(k in user_message for k in ("시트", "침대시트", "매트리스커버")) or "ga giuong" in raw_n or "bed sheet" in raw_n:

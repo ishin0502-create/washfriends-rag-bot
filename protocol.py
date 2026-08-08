@@ -216,6 +216,10 @@ ITEM_PRIMARY_IDS = frozenset({
     "I_FUR_REAL", "I_FUR_FAUX", "I_GOLF_GLOVE_LEATHER",
     "I_COLOR_FADE", "I_LEATHER_GARMENT", "I_LEATHER_BAG", "I_LEATHER_SHOE",
     "I_SUEDE_GARMENT", "I_SUEDE_BAG", "I_SUEDE_SHOE", "I_GLOVE_LEATHER",
+    "I_DUVET_GOOSE", "I_DUVET_COTTON", "I_DOWN_JACKET",
+    "I_MACHINE_PROFILE", "I_DRY_VS_WET",
+    "I_FAUX_LEATHER", "I_SNEAKER", "I_SNEAKER_WHITE", "I_SHOE_LACES",
+    "I_LINEN_GARMENT", "I_FINISHING", "I_SUIT_SUMMER", "I_DRESS", "I_DRESS_SHIRT",
 })
 
 
@@ -2214,6 +2218,12 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
             out = apply_leather_education(out, entities)
         except Exception:
             pass
+        try:
+            from specialty_item_care import apply_specialty_item_education
+
+            out = apply_specialty_item_education(out, entities)
+        except Exception:
+            pass
         return out
 
     out = dict(graph)
@@ -2235,6 +2245,12 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
             from leather_care import apply_leather_education
 
             out = apply_leather_education(out, entities)
+        except Exception:
+            pass
+        try:
+            from specialty_item_care import apply_specialty_item_education
+
+            out = apply_specialty_item_education(out, entities)
         except Exception:
             pass
         return out

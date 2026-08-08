@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-08-leather-care-v2",
+            "build": "2026-08-08-specialty-item-care-v2",
             "checks": checks,
         },
         status_code=200,
@@ -1895,7 +1895,31 @@ UNWIND [
    dried_path_vi:'Con lech mau: lap ngam deu (khong cham diem). Khong het → bao khach gioi han.',
    motion_vi:'Luc 0-1 — ngam deu, khong cha manh',
    water_temp_vi:'Theo nhan; cotton thuong ~40C sau xu ly',
-   aftercare_vi:'Kiem tra trang deu. Vai mau → CAM quy trinh nay (chuyen I_COLOR_FADE).'}
+   aftercare_vi:'Kiem tra trang deu. Vai mau → CAM quy trinh nay (chuyen I_COLOR_FADE).'},
+  {id:'I_FAUX_LEATHER',name:'Faux / PU / vegan leather garment',name_vi:'Ao da gia / PU / vegan leather',name_ko:'인조가죽·PU·레자·비건레더 의류',fabric_id:'F2',
+   precheck_vi:'Phan biet da that vs PU/PVC/vegan. Be mat deu + lot vai = gia. Anh neu boc lot. CAM kem da that.',
+   why_vi:'Da gia = lop nhua + vai. Nuoc nhieu/may = boc. Chi lau cuc bo D2 loang. CAM mink oil / kem da that / acetone.',
+   fresh_path_vi:'(1) Xac nhan da gia. (2) Khan am lau. (3) Vet: D2 loang Cap1 tren khan. (4) Lau kho. (5) Cham soc PU neu nhan cho. CAM may/ngam.',
+   dried_path_vi:'Da may: dung xu ly manh, bao boc. Khong kem da that.',
+   motion_vi:'Luc 1 — lau/tham',
+   water_temp_vi:'It nuoc, nhiet phong. CAM may',
+   aftercare_vi:'Kho bong mat. Treo. Tranh nhiet cao.'},
+  {id:'I_LINEN_GARMENT',name:'Linen / flax garment',name_vi:'Do linen / vai lanh (ao quan)',name_ko:'마(린넨) 소재 의류',fabric_id:'F5',
+   precheck_vi:'Doc nhan. Bao khach rut 3-8%. Tach mau. Khong nham voi ga/khach san linen.',
+   why_vi:'Linen: giat nhe, nhieu nuoc xa. De nhao — ui/steam khi am la bat buoc. May tinh te OK neu nhan cho; mong = tay.',
+   fresh_path_vi:'(1) Nhan. (2) Spotting nhe. (3) Tay hoac may tinh te ~30-40C D3/S1. (4) Xa ky. (5) Ep nhe / treo am. (6) Ui cao khi am hoac steam.',
+   dried_path_vi:'Vet: nhu cotton Cap1-2. Rut: bao truoc. Nhao: steam/airdresser + ui.',
+   motion_vi:'Luc 2 — nhe, khong cha manh',
+   water_temp_vi:'~30-40C theo nhan',
+   aftercare_vi:'Ui/steam. Treo. Bao khach nhao la dac trung.'},
+  {id:'I_FINISHING',name:'Iron / steam / air dresser finishing',name_vi:'Ui / steam / tu cham soc (airdresser)',name_ko:'다림질·스팀·에어드레서 피니싱',fabric_id:'F1',
+   precheck_vi:'Chi sau khi sach + xa het. Doc nhiet ui tren nhan. Hat/bead → steam dung, khong ep.',
+   why_vi:'Giat xong chua xong — phai finishing. Ui tiep xuc vs steam vs airdresser (LG/Samsung) theo mon. Mot so mon CAM ui — chi steam.',
+   fresh_path_vi:'(1) Xac nhan sach. (2) Chon: ui / steam / airdresser. (3) Suit: steam + press. (4) Ao so mi: co→manchette→tay→than. (5) Dam/wedding: steam dung. (6) Linen: ui am nhiet cao.',
+   dried_path_vi:'Con vet: CAM ui (khoa nhiet). Airdresser thoi khong du cho nep suit/wedding.',
+   motion_vi:'Luc 0-1 — steam; ui theo nhan',
+   water_temp_vi:'N/A — nhiet ui theo nhan',
+   aftercare_vi:'Treo moc. Bao khach gioi han airdresser.'}
 ] AS it
 MERGE (i:Item {id:it.id})
 SET i.name = it.name, i.name_vi = it.name_vi, i.name_ko = it.name_ko,
@@ -1952,8 +1976,13 @@ FOREACH (_ IN CASE WHEN i.id IN ['I_SNEAKER','I_RUNNING_MESH','I_SNEAKER_WHITE',
 FOREACH (_ IN CASE WHEN i.id = 'I_SHOE_LACES' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(mesh)
   MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_CHEMICAL]->(n1))
-FOREACH (_ IN CASE WHEN i.id IN ['I_GORETEX','I_DOWN_JACKET','I_GOLF_GLOVE_SYNTH','I_FUR_FAUX'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_GORETEX','I_DOWN_JACKET','I_GOLF_GLOVE_SYNTH','I_FUR_FAUX','I_FAUX_LEATHER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_CHEMICAL]->(d2) MERGE (i)-[:USES_TOOL]->(cloth))
+FOREACH (_ IN CASE WHEN i.id = 'I_LINEN_GARMENT' THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_TOOL]->(soft) MERGE (i)-[:USES_TOOL]->(steam)
+  MERGE (i)-[:USES_CHEMICAL]->(d3) MERGE (i)-[:USES_CHEMICAL]->(s1))
+FOREACH (_ IN CASE WHEN i.id IN ['I_FINISHING','I_SUIT','I_DRESS'] THEN [1] ELSE [] END |
+  MERGE (i)-[:USES_TOOL]->(steam) MERGE (i)-[:USES_TOOL]->(cloth))
 FOREACH (_ IN CASE WHEN i.id IN ['I_GOLF_WEAR','I_GOLF_HAT','I_HAT_CAP','I_SUIT_SUMMER','I_DRESS_SHIRT'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth) MERGE (i)-[:USES_CHEMICAL]->(d2))
 FOREACH (_ IN CASE WHEN i.id = 'I_DRESS_SHIRT' THEN [1] ELSE [] END |
@@ -2053,6 +2082,43 @@ RETURN count(i) AS items""")
             log["I_leather_ko_enrich"] = {"updated": n_leather}
         except Exception as e:
             log["I_leather_ko_enrich"] = f"ERR:{str(e)[:120]}"
+        try:
+            from specialty_item_care import SPECIALTY_CARE_IDS, education_for as _spec_edu
+            n_spec = 0
+            for iid in sorted(SPECIALTY_CARE_IDS):
+                edu = _spec_edu(iid, entities=None)
+                if not edu:
+                    continue
+                s.run(
+                    """
+                    MATCH (i:Item {id:$id})
+                    SET i.precheck_ko = $precheck_ko,
+                        i.why_ko = $why_ko,
+                        i.fresh_path_ko = $fresh_path_ko,
+                        i.dried_path_ko = $dried_path_ko,
+                        i.motion_ko = $motion_ko,
+                        i.water_temp_ko = $water_temp_ko,
+                        i.aftercare_ko = $aftercare_ko,
+                        i.sense_check_ko = coalesce($sense_check_ko, i.sense_check_ko),
+                        i.success_rate_ko = coalesce($success_rate_ko, i.success_rate_ko),
+                        i.refuse_when_ko = coalesce($refuse_when_ko, i.refuse_when_ko)
+                    """,
+                    id=iid,
+                    precheck_ko=edu.get("precheck_ko") or "",
+                    why_ko=edu.get("why_ko") or "",
+                    fresh_path_ko=edu.get("fresh_path_ko") or "",
+                    dried_path_ko=edu.get("dried_path_ko") or "",
+                    motion_ko=edu.get("motion_ko") or "",
+                    water_temp_ko=edu.get("water_temp_ko") or "",
+                    aftercare_ko=edu.get("aftercare_ko") or "",
+                    sense_check_ko=edu.get("sense_check_ko") or "",
+                    success_rate_ko=edu.get("success_rate_ko") or "",
+                    refuse_when_ko=edu.get("refuse_when_ko") or "",
+                )
+                n_spec += 1
+            log["I_specialty_ko_enrich"] = {"updated": n_spec}
+        except Exception as e:
+            log["I_specialty_ko_enrich"] = f"ERR:{str(e)[:120]}"
         _r(s, "Z15_paths_final_rich_ko", """
 UNWIND [
   {id:'S_BUTTER',
