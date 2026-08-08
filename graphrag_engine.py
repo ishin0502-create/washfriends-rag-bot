@@ -804,6 +804,20 @@ def _attach_match_diagnosis(graph: dict, entities: Optional[dict] = None) -> dic
     return out
 
 
+def _effective_stain_id(graph: dict, entities: Optional[dict] = None) -> str:
+    """Real S_* stain id only — item_care shapes put I_* into stain_context.id."""
+    entities = entities or {}
+    sc = graph.get("stain_context") or {}
+    if not isinstance(sc, dict):
+        sc = {}
+    if sc.get("group") == "item_care":
+        return ""
+    sid = str(sc.get("id") or entities.get("stain_id") or "").strip()
+    if sid.startswith("I_"):
+        return ""
+    return sid
+
+
 def _refine_tools_for_context(graph: dict, entities: Optional[dict] = None) -> dict:
     """Match tools to garment/fabric/color: drop soak/hard brushes on silk/tie; keep how-to ids."""
     if not isinstance(graph, dict):
@@ -832,11 +846,7 @@ def _refine_tools_for_context(graph: dict, entities: Optional[dict] = None) -> d
     # Curtain/bedding care (no stain): mesh/temp — not generic spotting-brush kit
     from protocol import HOME_TEXTILE_ITEM_IDS
 
-    stain_id = str(
-        (graph.get("stain_context") or {}).get("id")
-        or entities.get("stain_id")
-        or ""
-    )
+    stain_id = _effective_stain_id(graph, entities)
     if item_id in HOME_TEXTILE_ITEM_IDS and not stain_id:
         drop.add("T_BRUSH_SOFT")
         drop.add("T_BRUSH_HARD")
@@ -1057,9 +1067,14 @@ def _bind_tool_howto_to_protocol(graph: dict) -> dict:
         or "unknown"
     )
     flags = _fabric_flags(out, {})
+    real_stain = ""
+    if isinstance(sc, dict) and sc.get("group") != "item_care":
+        cand = str(sc.get("id") or "").strip()
+        if cand.startswith("S_"):
+            real_stain = cand
     out["tools"] = narrate_tools_for_context(
         bound,
-        stain_id=str(sc.get("id") or ""),
+        stain_id=real_stain,
         stain_context=sc if isinstance(sc, dict) else {},
         fabric=fabric,
         weight=weight,

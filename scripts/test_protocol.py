@@ -281,6 +281,7 @@ def test_soft_brush_howto_varies_by_stain_and_weight():
 
 def test_curtain_drops_soft_brush_and_mesh_howto():
     from protocol import apply_protocol_to_graph, narrate_tools_for_context
+    from graphrag_engine import _item_as_stain_shaped, _refine_tools_for_context
 
     tools = [
         {"id": "T_BRUSH_SOFT", "use_for_ko": "FIXED Cap2 45°"},
@@ -303,6 +304,19 @@ def test_curtain_drops_soft_brush_and_mesh_howto():
     cloth = next(t for t in out["tools"] if t["id"] == "T_CLOTH")
     assert "FIXED blot" not in cloth["use_for_ko"]
     assert "홈텍" in cloth["use_for_ko"] or "국소" in cloth["use_for_ko"]
+
+    # item_care shapes put I_* into stain_context.id — must still drop soft brush
+    shaped = _item_as_stain_shaped(
+        {
+            "item_context": {"id": "I_CURTAIN_FABRIC", "name_ko": "커튼", "why_ko": "x"},
+            "tools": tools,
+            "chemicals": [{"code": "D2"}],
+            "fabric_context": {"id": "F2", "name": "Polyester"},
+        }
+    )
+    refined = _refine_tools_for_context(shaped, entities={"item_id": "I_CURTAIN_FABRIC"})
+    assert "T_BRUSH_SOFT" not in [t["id"] for t in refined["tools"]]
+    assert any(t["id"] == "T_MESH_BAG" for t in refined["tools"])
 
     # Stain on curtain: soft brush kept but local-spot narration
     spotted = narrate_tools_for_context(

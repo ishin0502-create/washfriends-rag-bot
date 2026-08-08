@@ -2116,16 +2116,24 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
         or "unknown"
     )
 
+    sc_raw = graph.get("stain_context") or {}
+    sc_dict = sc_raw if isinstance(sc_raw, dict) else {}
+    # item_care shapes put I_* into stain_context.id — not a real stain
+    real_stain_id = ""
+    if sc_dict.get("group") != "item_care":
+        cand = str(sc_dict.get("id") or entities.get("stain_id") or "").strip()
+        if cand.startswith("S_"):
+            real_stain_id = cand
+
     proto = build_protocol(graph, entities)
     if proto is None:
         # Still rewrite brush/cloth/mesh so Neo4j global seed copy never reaches the LLM
         out = dict(graph)
         flags = _fabric_flags(out, entities)
-        sc = out.get("stain_context") or {}
         out["tools"] = narrate_tools_for_context(
             list(out.get("tools") or []),
-            stain_id=str(sc.get("id") or entities.get("stain_id") or ""),
-            stain_context=sc if isinstance(sc, dict) else {},
+            stain_id=real_stain_id,
+            stain_context=sc_dict,
             fabric=fabric,
             weight=weight,
             item_id=item_id,
@@ -2141,8 +2149,8 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
         flags = _fabric_flags(out, entities)
         out["tools"] = narrate_tools_for_context(
             list(out.get("tools") or []),
-            stain_id=str((out.get("stain_context") or {}).get("id") or ""),
-            stain_context=out.get("stain_context") or {},
+            stain_id=real_stain_id,
+            stain_context=sc_dict,
             fabric=fabric or proto.fabric,
             weight=weight,
             item_id=item_id,
