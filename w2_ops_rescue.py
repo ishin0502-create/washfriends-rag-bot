@@ -167,6 +167,35 @@ try:
 except Exception:
     pass
 
+# Remaining tip-only ops/clothing — full cards from specialty_ops_remainder_care.
+try:
+    from specialty_ops_remainder_care import OPS_REMAINDER_IDS, education_for_ops_remainder
+
+    for _rid in sorted(OPS_REMAINDER_IDS):
+        if _rid in OPS_DRILLS:
+            continue  # keep existing care/intake/water/machine drills if already present
+        _redu = education_for_ops_remainder(_rid)
+        if _redu:
+            OPS_DRILLS[_rid] = {
+                k: v
+                for k, v in _redu.items()
+                if k.startswith(
+                    (
+                        "why_",
+                        "fresh_path_",
+                        "dried_path_",
+                        "aftercare_",
+                        "sense_check_",
+                        "success_rate_",
+                        "refuse_when_",
+                        "precheck_",
+                        "must_include_",
+                    )
+                )
+            }
+except Exception:
+    pass
+
 AFTERCARE_FORCE_KO = (
     "건조·다림질 전 강광으로 잔여 확인. 얼룩·미끄럼·냄새 남은 채 열을 가하면 열고착."
 )

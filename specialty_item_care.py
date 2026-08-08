@@ -33,6 +33,11 @@ from chem_safety_care import (
     apply_chem_safety_hints,
     education_for_chem_safety,
 )
+from specialty_ops_remainder_care import (
+    OPS_REMAINDER_IDS,
+    apply_ops_remainder_hints,
+    education_for_ops_remainder,
+)
 
 
 SPECIALTY_CARE_IDS = frozenset({
@@ -62,6 +67,7 @@ SPECIALTY_CARE_IDS = frozenset({
     *CULTURAL_SPECIALTY_IDS,
     *FABRIC_CURRICULUM_IDS,
     *CHEM_SAFETY_IDS,
+    *OPS_REMAINDER_IDS,
 })
 
 
@@ -218,6 +224,8 @@ def education_for(item_id: str, *, entities: Optional[dict] = None) -> dict[str,
         return education_for_fabric(item_id)
     if item_id in CHEM_SAFETY_IDS:
         return education_for_chem_safety(item_id)
+    if item_id in OPS_REMAINDER_IDS:
+        return education_for_ops_remainder(item_id)
     if item_id in {"I_SUIT", "I_SUIT_SUMMER"} and finish:
         return _suit_finishing(summer=(item_id == "I_SUIT_SUMMER"))
     if item_id == "I_DRESS" and (finish or _is_wedding(entities)):
@@ -304,6 +312,7 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
         *CULTURAL_SPECIALTY_IDS,
         *FABRIC_CURRICULUM_IDS,
         *CHEM_SAFETY_IDS,
+        *OPS_REMAINDER_IDS,
     }
     if item_id in wash_ids:
         out["item_wash_mode"] = True
@@ -326,6 +335,10 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
         out["stain_context"] = sc2
     if item_id in CHEM_SAFETY_IDS:
         out = apply_chem_safety_hints(out, item_id)
+        sc2 = out.get("stain_context") or sc2
+        out["stain_context"] = sc2
+    if item_id in OPS_REMAINDER_IDS:
+        out = apply_ops_remainder_hints(out, item_id)
         sc2 = out.get("stain_context") or sc2
         out["stain_context"] = sc2
 
