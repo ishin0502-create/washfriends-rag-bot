@@ -293,6 +293,23 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
         out["empty_chems_ok"] = False
     elif item_id in {"I_FINISHING", "I_SUIT", "I_SUIT_SUMMER", "I_DRESS", "I_DRESS_SHIRT"}:
         out["empty_chems_ok"] = True
+        # Synthetic tool so (2)도구 always names 에어드레서 (LLM otherwise drops it)
+        tools = [t for t in (out.get("tools") or []) if isinstance(t, dict)]
+        if not any("에어드레서" in str(t.get("name_ko") or "") for t in tools):
+            tools.append(
+                {
+                    "id": "T_AIR_DRESSER",
+                    "name_ko": "에어드레서(LG 스타일러·삼성 등)",
+                    "use_for_ko": (
+                        "일상 정장·코튼·냄새·가벼운 구김. 프로그램은 섬세/표준을 라벨에 맞게. "
+                        "웨딩·구조 복잡한 수트·칼주름 필수 셔츠는 에어드레서만으로 부족 — "
+                        "수동 스팀/셔츠 프레스 병행. 가죽·스웨이드·모피·인조가죽 고온 금지."
+                    ),
+                    "use_for_en": "Air dresser / styler for light wrinkles and odor; not enough alone for wedding/crease shirts.",
+                    "use_for_vi": "Tu cham soc (airdresser): nhao nhe + mui. Dam cuoi / nep ao so mi: can steam tay.",
+                }
+            )
+            out["tools"] = tools
     elif item_id == "I_MACHINE_PROFILE":
         out["chemicals"] = []
         out["empty_chems_ok"] = True
@@ -763,31 +780,32 @@ def _finishing_matrix() -> dict[str, str]:
         "why_ko": (
             "[왜 이 순서] 세탁소=세탁+마무리. "
             "접촉 다림질 vs 스팀(비접촉) vs 에어드레서(스팀+공기)를 품목에 맞게. "
+            "에어드레서(LG 스타일러·삼성 에어드레서)=일상 구김·냄새 보조. "
             "정장·울·어깨패드=스팀 위주(판 누르기 금지). "
             "와이셔츠=순서 다림질(+풀). 마·면=고온·촉촉. 실크=저온·이면·스팀 주의."
         ),
         "fresh_path_ko": (
             "(1)강광으로 잔여 얼룩 확인 — 있으면 다리지 말 것. "
-            "(2)품목 선택 — "
-            "남성 정장·자켓·울바지: 스팀 다리미를 2–3cm 띄워 분사 + 손으로 형태. "
-            "어깨·라펠·패드에 판 직접 접촉 금지. 넓은 옷걸이에 식히기. "
-            "와이셔츠: 풀(선택)→깃→커프→소매→어깨→몸판. "
-            "여성·웨딩드레스: 장식·비즈·얇은 겹은 스팀만·이면·보호천. "
-            "판으로 비즈를 누르면 손상. 트레인은 접어 누르지 말 것. "
-            "마(린넨)·면: 촉촉할 때 고온. "
-            "(3)에어드레서(LG 스타일러·삼성 에어드레서 등): "
+            "(2)에어드레서(LG 스타일러·삼성 에어드레서 등) 사용법: "
+            "옷걸이에 걸어 넣고, 섬세/표준을 라벨에 맞게 선택. "
             "일상 정장·코튼·냄새·가벼운 구김에 적합. "
-            "프로그램은 섬세/표준을 라벨에 맞게. "
             "웨딩·구조 복잡한 수트·칼주름 필수 셔츠는 에어드레서만으로 부족 — "
             "수동 스팀/셔츠 프레스 병행. "
+            "가죽·스웨이드·모피·인조가죽은 에어드레서 고온 금지. "
+            "(3)스팀 다리미: 정장·자켓은 2–3cm 띄워 분사(어깨·라펠 판 접촉 금지). "
+            "와이셔츠: 풀(선택)→깃→커프→소매→어깨→몸판. "
+            "여성·웨딩드레스: 비즈·얇은 겹은 스팀만·이면·보호천. "
+            "마(린넨)·면: 촉촉할 때 고온 다림질. "
             "(4)실크·레이온: 저온·이면·스팀 과다=물점. "
-            "(5)가죽·스웨이드·모피·인조가죽: 일반 다리미/에어드레서 고온 금지. "
-            "(6)고객 인도 전 형태·광택(누름 자국) 확인."
+            "(5)고객 인도 전 형태·광택(누름 자국) 확인."
         ),
         "dried_path_ko": "이미 열고착 얼룩: 피니싱 중단, 재세탁 검토.",
-        "motion_ko": "정장 Cap0–1 스팀. 셔츠 Cap2–3 판. 드레스 장식 Cap0–1.",
-        "water_temp_ko": "해당 없음(스팀 온도는 라벨).",
-        "aftercare_ko": "식힌 뒤 포장. 얇은 플라스틱에 오래 가두지 말 것(습기).",
+        "motion_ko": "에어드레서 Cap0. 정장 스팀 Cap0–1. 셔츠 Cap2–3 판. 드레스 장식 Cap0–1.",
+        "water_temp_ko": "해당 없음(스팀·에어드레서 온도는 라벨).",
+        "aftercare_ko": (
+            "에어드레서 후 바로 꺼내 식히며 형태. "
+            "식힌 뒤 포장. 얇은 플라스틱에 오래 가두지 말 것(습기)."
+        ),
         "sense_check_ko": "눈: 주름·광택 손상·비즈. 손: 어깨 형태.",
         "success_rate_ko": "품목별 기법 준수: 높음. 에어드레서만으로 칼주름: 한계.",
         "refuse_when_ko": "잔여 얼룩 상태 다림질, 비즈에 판 다리미, 모피 고온 → 거절.",

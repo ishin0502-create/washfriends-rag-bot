@@ -2574,6 +2574,80 @@ def _empty_graph_reply(entities: dict, *, image: bool = False) -> str:
     )
 
 
+def _phrase_present(answer: str, phrase: str) -> bool:
+    """True if phrase (or known alias) already appears in the owner answer."""
+    if not phrase or not answer:
+        return False
+    if phrase in answer:
+        return True
+    aliases = {
+        "에어드레서": ("에어드레서", "에어 드레서", "스타일러", "airdresser", "air dresser"),
+        "테니스볼": ("테니스볼", "테니스 볼", "건조볼", "건조 볼"),
+        "추가 헹굼": ("추가 헹굼", "추가헹굼", "extra rinse"),
+        "진가죽 크림": ("진가죽 크림", "가죽 크림", "밍크오일"),
+        "100% 복원 불가": ("100%", "복원 불가", "새것"),
+    }
+    for a in aliases.get(phrase, ()):
+        if a in answer:
+            return True
+    return False
+
+
+def _enforce_must_include(answer: str, graph_context: dict, lang: str) -> str:
+    """Append missing specialty must-phrases so LLM summarization cannot drop them."""
+    if lang != "ko" or not answer:
+        return answer
+    g = graph_context.get("graph") if isinstance(graph_context, dict) else None
+    if not isinstance(g, dict):
+        return answer
+    if not (
+        g.get("specialty_item_care")
+        or (g.get("stain_context") or {}).get("group") == "item_care"
+    ):
+        return answer
+    must = str(
+        g.get("must_include_ko")
+        or (g.get("stain_context") or {}).get("must_include_ko")
+        or ""
+    ).strip()
+    if not must:
+        return answer
+    missing = [p.strip() for p in must.split(",") if p.strip() and not _phrase_present(answer, p.strip())]
+    if not missing:
+        return answer
+    tips = {
+        "에어드레서": (
+            "에어드레서(LG 스타일러·삼성 에어드레서): 일상 정장·코튼·냄새·가벼운 구김용. "
+            "섬세/표준은 라벨에 맞게. 웨딩·칼주름 필수 셔츠는 에어드레서만으로 부족 — 수동 스팀 병행."
+        ),
+        "테니스볼": "건조기 저온 + 테니스볼(또는 건조볼) 2–3개로 20–30분마다 뭉침을 풀어 준다.",
+        "대형 전면투입": "용량 부족 소형기 대신 대형 전면투입(약 7kg+)·상업용을 쓴다.",
+        "추가 헹굼": "세제 잔여·뭉침 방지를 위해 추가 헹굼을 반드시 넣는다.",
+        "스팀": "정장·장식 드레스는 판 누르기보다 스팀(비접촉)을 우선한다.",
+        "잔여 얼룩 금지": "잔여 얼룩이 있으면 다림질·에어드레서 열처리를 하지 않는다(열고착).",
+        "진가죽과 구분": "인조가죽(PU·레자)과 진가죽을 먼저 구분한다.",
+        "세탁기 금지": "인조가죽은 세탁기·통담금을 기본 금지한다.",
+        "진가죽 크림 금지": "인조가죽에 진가죽 크림·밍크오일을 쓰지 않는다.",
+        "베이킹소다": "흰 창은 중성세제+베이킹소다 페이스트로 국소 처리한다.",
+        "락스 금지": "흰 고무 창에 락스(염소) 남용 금지 — 황변·접착 손상.",
+        "100% 복원 불가": "산화 황변은 100% 하얗게 복원 약속이 어렵다 — 사전 고지.",
+        "수축 고지": "마(린넨)는 수축 3–8% 가능 — 고객에게 사전 고지한다.",
+        "30–40℃": "마 의류는 손세탁 또는 상업용 섬세 30–40℃.",
+        "다림질": "마는 약간 촉촉할 때 고온 다림질·스팀이 핵심이다.",
+        "퍼크 금지": "다운·구스에 퍼크(PERC) 드라이는 비권장 — 오일 손상.",
+        "전면투입": "패딩·다운은 전면투입기를 쓴다.",
+        "판 직접 접촉 금지": "정장 어깨·라펠에 다리미 판 직접 접촉을 피한다.",
+        "비즈 판 금지": "드레스 비즈·스팽글에 판 다리미를 누르지 않는다.",
+        "에어드레서 한계": "웨딩·칼주름은 에어드레서만으로 끝내지 말고 수동 스팀 병행.",
+        "깃→커프→소매→몸": "와이셔츠 다림질 순서: 깃→커프→소매→어깨→몸.",
+        "에어드레서 보조": "와이셔츠 납품용 칼주름은 수동/프레스가 표준, 에어드레서는 보조.",
+    }
+    lines = []
+    for m in missing:
+        lines.append(tips.get(m, f"{m} — fresh_path/must_include에 있는 핵심이므로 반드시 안내."))
+    return answer.rstrip() + "\n\n※ 필수 안내: " + " ".join(lines)
+
+
 def _answer_with_optional_cache(
     cache_question: str,
     entities: dict,
@@ -2609,6 +2683,7 @@ def _answer_with_optional_cache(
         else:
             print(f"[LANG] retry still leaks={reply_language_leaks(answer2, lang)}; keeping second attempt")
             answer = answer2
+    answer = _enforce_must_include(answer, graph_context, lang)
     cache_store(cache_question, answer, ctx_key)
     return answer
 

@@ -148,6 +148,37 @@ def test_must_include_on_goose_and_suit():
     assert "에어드레서" in suit["must_include_ko"]
 
 
+def test_finishing_injects_air_dresser_tool():
+    g = {
+        "item_context": {"id": "I_FINISHING", "name_ko": "피니싱"},
+        "stain_context": {"group": "item_care", "id": "I_FINISHING"},
+        "tools": [{"id": "T_STEAM_IRON", "name_ko": "스팀 다리미"}],
+        "chemicals": [],
+    }
+    out = apply_specialty_item_education(
+        g, entities={"item_id": "I_FINISHING", "_raw": "에어드레서 사용법"}
+    )
+    names = [str(t.get("name_ko") or "") for t in out.get("tools") or []]
+    assert any("에어드레서" in n for n in names)
+    fin = education_for("I_FINISHING")
+    assert fin["fresh_path_ko"].index("에어드레서") < fin["fresh_path_ko"].index("스팀 다리미")
+
+
+def test_enforce_must_include_appends_air():
+    from graphrag_engine import _enforce_must_include
+
+    graph_context = {
+        "graph": {
+            "specialty_item_care": True,
+            "must_include_ko": "에어드레서, 스팀, 잔여 얼룩 금지",
+            "stain_context": {"group": "item_care", "must_include_ko": "에어드레서, 스팀, 잔여 얼룩 금지"},
+        }
+    }
+    ans = _enforce_must_include("스팀만 안내하고 끝.\n잔여 얼룩 금지.", graph_context, "ko")
+    assert "에어드레서" in ans
+    assert "※ 필수 안내" in ans
+
+
 if __name__ == "__main__":
     test_goose_typo_maps()
     test_hotel_sheet_not_cotton_duvet()
@@ -162,4 +193,6 @@ if __name__ == "__main__":
     test_linen_and_finishing()
     test_apply_faux_leather_graph()
     test_must_include_on_goose_and_suit()
+    test_finishing_injects_air_dresser_tool()
+    test_enforce_must_include_appends_air()
     print("OK specialty_item_care")
