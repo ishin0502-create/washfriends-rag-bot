@@ -2658,6 +2658,9 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
         elif item_wash:
             lang_rule = (
                 "한국어만. 베트남어·영어 금지. "
+                "톤: 본사 현장 교육 — 짧고 단호한 지시. "
+                "「~하시면 됩니다」「오염 유무에 따라」「다음과 같습니다」남발 금지. "
+                "브랜드·제품명 날조 금지. "
                 "이 질문은 얼룩 제거가 아니라 품목 일반 세탁/관리다. "
                 "단계 제목은 정확히: (1)품목·라벨·용량·오염 유무 — "
                 "fresh_path_ko의 【오염 없음】/【오염 있음】 또는 품목별 분기(하드캡=국소만 등)를 먼저. "
@@ -2670,12 +2673,14 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
                 "(3)힘·방향 (4)약품(name_ko·dilution_ko) (5)수온 (6)건조·후관리. "
                 "fresh_path_ko 번호 단계·must_include_ko를 빠짐없이. "
                 "테니스볼·대형 전면투입·추가 헹굼·퍼크 금지·챙·형태 유지가 있으면 반드시. "
-                "[왜 이 순서] → [감각 체크] → [성공률·고지] → [거절·보내기]. "
+                "[왜 이 순서] → [감각 체크] → [성공률·고지] → [거절·보내기] — 각 블록 2~4문장. "
                 "마크다운 금지. 코드/id 금지. 그래프에 없는 약·도구 지어내기 금지."
             )
         else:
             lang_rule = (
             "한국어만. 베트남어·영어 금지. "
+            "톤: 본사 현장 교육 — 짧고 단호. 행동 지시 위주. "
+            "번역투·장황한 접속어·브랜드 날조 금지. "
             "단계: (1)오염·원단·두께·색상 — match_diagnosis의 chemistry·fabric_type·fabric_weight·"
             "fabric_rule을 반드시 반영(소수성 오일 vs 단백질 vs 탄닌 등). "
             "원단·두께 미상이면 weight_bands를 (1)에 반드시 넣고 "
@@ -2697,7 +2702,7 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "protocol이 없으면 fresh_path_ko의 「어디에·몇 분·어떻게」를 그대로. "
             "aftercare_ko의 강광·열고착 경고와 rescue_2nd_ko/rescue_disclose_ko가 있으면 "
             "후관리·실패 시 2차에 포함. "
-            "[왜 이 순서] → … → [감각 체크] → [성공률·고지] → [거절·보내기]. "
+            "[왜 이 순서] → … → [감각 체크] → [성공률·고지] → [거절·보내기] — 각 블록 짧게. "
             "why_ko/fresh_path_ko/sense_check_ko·color_note_ko가 있으면 그대로. "
             "없으면 contains_*·chemicals·tools 사실만으로 한국어 작성 — 외국어 원문 복사 금지. "
             "희석 dilution_ko. 마크다운 금지. 코드/id 금지. 그래프에 없는 약·분·도구 지어내기 금지. "
