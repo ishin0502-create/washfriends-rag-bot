@@ -230,8 +230,8 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
     if edu.get("must_include_en"):
         sc2["must_include_en"] = edu["must_include_en"]
         out["must_include_en"] = edu["must_include_en"]
-    if edu.get("why_ko"):
-        sc2["tip"] = edu["why_ko"]
+    # Do NOT stamp tip=why_ko — sanitize picks why_{lang} so VI/EN never see Hangul tip
+    sc2.pop("tip", None)
     sc2["group"] = "item_care"
     out["stain_context"] = sc2
     out["specialty_item_care"] = True

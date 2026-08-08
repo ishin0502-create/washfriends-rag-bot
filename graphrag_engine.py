@@ -638,7 +638,7 @@ def _item_as_stain_shaped(item_graph: dict) -> dict:
             "name": ic.get("name"),
             "name_vi": ic.get("name_vi"),
             "name_ko": ic.get("name_ko"),
-            "tip": ic.get("why_ko") or ic.get("why_vi"),
+            # tip set later by sanitize from why_{lang} — never pre-pick KO/VI
             "urgency": "care",
             "precheck_vi": ic.get("precheck_vi"),
             "why_vi": ic.get("why_vi"),
@@ -654,6 +654,13 @@ def _item_as_stain_shaped(item_graph: dict) -> dict:
             "motion_ko": ic.get("motion_ko"),
             "water_temp_ko": ic.get("water_temp_ko"),
             "aftercare_ko": ic.get("aftercare_ko"),
+            "precheck_en": ic.get("precheck_en"),
+            "why_en": ic.get("why_en"),
+            "fresh_path_en": ic.get("fresh_path_en"),
+            "dried_path_en": ic.get("dried_path_en"),
+            "motion_en": ic.get("motion_en"),
+            "water_temp_en": ic.get("water_temp_en"),
+            "aftercare_en": ic.get("aftercare_en"),
             "group": "item_care",
         },
         "fabric_context": item_graph.get("fabric_context"),
@@ -711,13 +718,15 @@ def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
         "precheck_ko", "why_ko", "fresh_path_ko", "dried_path_ko",
         "motion_ko", "water_temp_ko", "aftercare_ko",
         "sense_check_ko", "success_rate_ko", "refuse_when_ko",
+        "precheck_en", "why_en", "fresh_path_en", "dried_path_en",
+        "motion_en", "water_temp_en", "aftercare_en",
+        "sense_check_en", "success_rate_en", "refuse_when_en",
+        "sense_check_vi", "success_rate_vi", "refuse_when_vi",
     ):
         if ic.get(key):
             sc[key] = ic[key]
-    if ic.get("why_ko"):
-        sc["tip"] = ic.get("why_ko")
-    elif ic.get("why_vi"):
-        sc["tip"] = ic.get("why_vi")
+    # tip left unset — sanitize binds why_{lang}
+    sc.pop("tip", None)
     g["stain_context"] = sc
     if item_graph.get("tools") is not None:
         g["tools"] = (
@@ -1847,12 +1856,12 @@ def _sanitize_graph_for_owner(graph, lang: str):
         if lang == "ko":
             out = {
                 "name_ko": t.get("name_ko"),
-                "use_for_ko": t.get("use_for_ko") or t.get("use_for_en"),
+                "use_for_ko": t.get("use_for_ko"),
             }
         elif lang == "en":
             out = {
-                "name": _TOOL_NAME_EN.get(tid) or t.get("name_ko") or t.get("name_vi") or tid,
-                "use_for_en": t.get("use_for_en") or t.get("use_for_ko") or t.get("use_for_vi"),
+                "name": _TOOL_NAME_EN.get(tid) or t.get("name") or tid,
+                "use_for_en": t.get("use_for_en"),
             }
         else:
             out = {
@@ -2030,7 +2039,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
             code = (s.get("chem") or "").upper()
             meta = CHEM_META.get(code, {})
             step = {
-                "action": s.get(f"action_{lang}") or s.get("action_ko") or s.get("action_vi"),
+                "action": s.get(f"action_{lang}") or None,
                 "force": s.get("force"),
                 "optional": s.get("optional") or None,
             }
@@ -2039,22 +2048,26 @@ def _sanitize_graph_for_owner(graph, lang: str):
                 step["minutes"] = f"{lo}–{hi}" if hi and hi != lo else str(lo)
             if code:
                 if lang == "ko":
-                    step["chemical"] = meta.get("name_ko") or code
+                    step["chemical"] = meta.get("name_ko") or None
                     step["dilution"] = meta.get("dilution_ko")
                 elif lang == "vi":
-                    step["chemical"] = meta.get("name_vi") or code
+                    step["chemical"] = meta.get("name_vi") or None
                     step["dilution"] = meta.get("dilution_vi")
                 else:
-                    step["chemical"] = meta.get("name_en") or code
+                    step["chemical"] = meta.get("name_en") or meta.get("name") or None
                     step["dilution"] = meta.get("dilution_en")
             steps_out.append({k: v for k, v in step.items() if v})
+        def _chem_order_name(c: str) -> str | None:
+            meta = CHEM_META.get(c, {})
+            if lang == "en":
+                return meta.get("name_en") or meta.get("name")
+            return meta.get(f"name_{lang}")
+
         g["protocol"] = {
             "mode": proto.get("mode"),
             "steps": steps_out,
             "chem_order_names": [
-                (CHEM_META.get(c, {}).get(f"name_{lang}" if lang != "en" else "name_en")
-                 or CHEM_META.get(c, {}).get("name_ko") or c)
-                for c in (proto.get("chem_order") or [])
+                n for n in (_chem_order_name(c) for c in (proto.get("chem_order") or [])) if n
             ],
         }
 
@@ -2099,41 +2112,29 @@ def _sanitize_graph_for_owner(graph, lang: str):
     ic = g.get("item_context")
     if isinstance(ic, dict):
         ic2 = dict(ic)
-        for field in (
-            "why_vi", "fresh_path_vi", "dried_path_vi",
-            "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
-        ):
+        for field in VI_FIELDS:
             if ic2.get(field):
                 ic2[field] = _expand_chem_codes_in_text(str(ic2[field]), lang="vi")
-        for field in (
-            "why_ko", "fresh_path_ko", "dried_path_ko",
-            "precheck_ko", "motion_ko", "water_temp_ko", "aftercare_ko",
-        ):
+        for field in KO_FIELDS:
             if ic2.get(field):
                 ic2[field] = _expand_chem_codes_in_text(str(ic2[field]), lang="ko")
+        for field in EN_FIELDS:
+            if ic2.get(field):
+                ic2[field] = _expand_chem_codes_in_text(str(ic2[field]), lang="en")
         if lang == "ko":
-            for field in (
-                "why_vi", "fresh_path_vi", "dried_path_vi",
-                "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi", "name_vi",
-            ):
+            for field in VI_FIELDS + EN_FIELDS:
                 ic2.pop(field, None)
             if ic2.get("name_ko"):
                 ic2.pop("name", None)
         elif lang == "vi":
-            for field in (
-                "why_ko", "fresh_path_ko", "dried_path_ko",
-                "precheck_ko", "motion_ko", "water_temp_ko", "aftercare_ko", "name_ko",
-            ):
+            for field in KO_FIELDS + EN_FIELDS:
                 ic2.pop(field, None)
+            ic2.pop("name_ko", None)
         else:
-            for field in (
-                "why_vi", "fresh_path_vi", "dried_path_vi",
-                "precheck_vi", "motion_vi", "water_temp_vi", "aftercare_vi",
-                "why_ko", "fresh_path_ko", "dried_path_ko",
-                "precheck_ko", "motion_ko", "water_temp_ko", "aftercare_ko",
-                "name_vi", "name_ko",
-            ):
+            for field in VI_FIELDS + KO_FIELDS:
                 ic2.pop(field, None)
+            ic2.pop("name_ko", None)
+            ic2.pop("name_vi", None)
         ic2.pop("id", None)
         g["item_context"] = ic2
 
@@ -2155,6 +2156,33 @@ def _sanitize_graph_for_owner(graph, lang: str):
         g.pop("protocol_minutes_vi", None)
         g.pop("spray_recipe_ko", None)
         g.pop("spray_recipe_vi", None)
+
+    # Graph-level wrong-lang keys (specialty/leather often stamp KO here)
+    _TOP_KO = (
+        "must_include_ko", "chem_forbid_ko", "delicate_chem_rule_ko",
+    )
+    _TOP_VI = (
+        "must_include_vi", "chem_forbid_vi", "delicate_chem_rule_vi",
+    )
+    _TOP_EN = (
+        "must_include_en", "chem_forbid_en", "delicate_chem_rule_en",
+    )
+    if lang == "ko":
+        for k in _TOP_VI + _TOP_EN:
+            g.pop(k, None)
+        # Legacy VI-only rule string — never feed into KO prompt
+        g.pop("delicate_chem_rule", None)
+    elif lang == "vi":
+        for k in _TOP_KO + _TOP_EN:
+            g.pop(k, None)
+        # Keep delicate_chem_rule only if it looks Vietnamese/ASCII-VI (legacy key)
+        rule = g.get("delicate_chem_rule")
+        if rule and re.search(r"[가-힣]", str(rule)):
+            g.pop("delicate_chem_rule", None)
+    else:
+        for k in _TOP_KO + _TOP_VI:
+            g.pop(k, None)
+        g.pop("delicate_chem_rule", None)
 
     if g.get("tools"):
         g["tools"] = [_tool(t) for t in g["tools"] if t]
@@ -2868,21 +2896,27 @@ def _answer_with_optional_cache(
 
     base_prompt = _build_llm_prompt(cache_question, graph_context, lang=lang)
     llm_prompt = (prefix + "\n\n" + base_prompt) if prefix else base_prompt
-    item_wash = lang == "ko" and _graph_is_item_wash(graph_context)
-    answer = _call_llm(llm_prompt, lang=lang, item_wash=item_wash)
+    item_wash = _graph_is_item_wash(graph_context)
+    answer = _call_llm(llm_prompt, lang=lang, item_wash=item_wash and lang == "ko")
     leaks = reply_language_leaks(answer, lang)
     if leaks:
         print(f"[LANG] leak detected lang={lang} reasons={leaks}; retrying")
-        retry_prompt = retry_addon(lang, item_wash=item_wash) + "\n\n" + llm_prompt
-        answer2 = _call_llm(retry_prompt, lang=lang, item_wash=item_wash)
+        retry_prompt = retry_addon(lang, item_wash=item_wash and lang == "ko") + "\n\n" + llm_prompt
+        answer2 = _call_llm(retry_prompt, lang=lang, item_wash=item_wash and lang == "ko")
         if not reply_language_leaks(answer2, lang):
             answer = answer2
         else:
-            print(f"[LANG] retry still leaks={reply_language_leaks(answer2, lang)}; keeping second attempt")
+            print(f"[LANG] retry still leaks={reply_language_leaks(answer2, lang)}; not caching")
             answer = answer2
+            answer = _rewrite_item_care_step1_header(answer, graph_context, lang)
+            answer = _enforce_must_include(answer, graph_context, lang)
+            return answer
     answer = _rewrite_item_care_step1_header(answer, graph_context, lang)
     answer = _enforce_must_include(answer, graph_context, lang)
-    cache_store(cache_question, answer, ctx_key)
+    if not reply_language_leaks(answer, lang):
+        cache_store(cache_question, answer, ctx_key)
+    else:
+        print(f"[LANG] skip cache_store lang={lang} leaks={reply_language_leaks(answer, lang)}")
     return answer
 
 
@@ -2896,11 +2930,11 @@ def generate_response_from_entities(
     """
     # Ensure GraphRAG routing fields exist
     entities.setdefault("intent", "treatment")
-    # Caption Hangul → Korean; else keep existing lang from vision / default vi
-    if user_caption and re.search(r"[가-힣]", user_caption):
-        entities["lang"] = "ko"
+    # Caption language wins (same policy as text core)
+    if user_caption:
+        entities["lang"] = detect_reply_lang(user_caption)
     elif not entities.get("lang"):
-        entities["lang"] = detect_reply_lang(user_caption) if user_caption else "vi"
+        entities["lang"] = "vi"
 
     graph_context = _fetch_graph_context(entities)
     graph_data    = graph_context.get("graph")
@@ -3000,10 +3034,12 @@ def _generate_response_core(
     """Core GraphRAG answer (single-turn text)."""
     lang = detect_reply_lang(user_message)
     cq = cache_question or user_message
-    # Fast path — lang in context so KO/VI caches never mix
+    # Fast path — lang in context so KO/VI caches never mix; reject contaminated hits
     cached = cache_lookup(cq, build_context_key({"lang": lang, "compact": compact_followup}))
-    if cached:
+    if cached and not reply_language_leaks(cached, lang):
         return cached
+    if cached and reply_language_leaks(cached, lang):
+        print(f"[LANG] ignore contaminated early-cache lang={lang} leaks={reply_language_leaks(cached, lang)}")
 
     entities = extract_entities(user_message)
     entities["_raw"] = user_message

@@ -100,7 +100,7 @@ def reply_language_leaks(text: str, expected: str) -> list[str]:
             if re.search(r"(?i)^(safety|warning|why this|step\s*1|identification)\b", text.strip()):
                 reasons.append("en_only_framing")
     elif expected == "en":
-        if hangul_n >= 5:
+        if hangul_n >= 1:
             reasons.append("ko_markers")
         if vi_dia_n >= 3 or _VI_LEAK.search(text):
             reasons.append("vi_markers")
