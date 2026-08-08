@@ -191,24 +191,41 @@ def _smooth_card(item_id: str, *, mold: bool) -> dict[str, str]:
         }
 
     # Routine / general leather care (P1)
+    shoe_bit_ko = (
+        " 구두: 신문지·키친타월로 형태 유지. 끈 있으면 빼서 별도(갑피만 국소)."
+        if item_id == "I_LEATHER_SHOE"
+        else ""
+    )
+    shoe_bit_vi = (
+        " Giay: nho bao giu form. Thao day neu co."
+        if item_id == "I_LEATHER_SHOE"
+        else ""
+    )
+    shoe_bit_en = (
+        " Shoes: stuff with paper to hold shape. Remove laces if present."
+        if item_id == "I_LEATHER_SHOE"
+        else ""
+    )
     return {
         "precheck_ko": (
             f"{kind}: 평활 가죽 확인(스웨이드 아님). 라벨·장식·안감. "
             "세탁기·건조기·산소/락스 요구 시 거절."
+            f"{shoe_bit_ko}"
         ),
         "why_ko": (
             "[왜 이 순서] 평활 가죽은 물·열·표백에 약함. 관리 루프: "
             "클리너(L1)로 표면 → 완전 건조 → 크림(L2) 보습 → (선택)프로텍터(L3). "
-            "얼룩은 국소만. 곰팡이는 별도 곰팡이 SOP."
+            "얼룩은 국소만. 「일반·통세탁」 금지. 곰팡이는 별도 곰팡이 SOP."
         ),
         "fresh_path_ko": (
-            "(1)먼지는 마른 천으로. "
+            "(1)먼지는 마른 천으로."
+            f"{shoe_bit_ko} "
             "(2)가죽 전용 클리너(L1)를 천에 묻혀 Cap1로 닦기 → 젖은 천으로 잔여. "
-            "(3)그늘에서 완전 건조(형태 유지). "
+            "(3)그늘에서 완전 건조(형태 유지 — 구두면 신문지). "
             "(4)가죽 크림(L2) 얇게 → 광택·잉여 닦기. "
             "(5)비·오염 많은 환경이면 프로텍터(L3) 약분무. "
             "(6)유분·잉크 등 얼룩: 국소만(과다 용제 금지) → 다시 크림. "
-            "(7)세탁기·통담금·표백 금지."
+            "(7)세탁기·통담금·표백·고온건조 금지."
         ),
         "dried_path_ko": "이미 hardened/갈라짐: 크림 시도 1회 → 안 되면 전문. 강제 세탁 금지.",
         "motion_ko": "Cap1 — 닦기·바르기. 세게 문지르기 금지.",
@@ -217,9 +234,18 @@ def _smooth_card(item_id: str, *, mold: bool) -> dict[str, str]:
         "sense_check_ko": "눈: 얼룩·백화. 손: 건조·갈라짐. 코: 곰팡이 냄새 없는지.",
         "success_rate_ko": "일상 클리너+크림: 높음. 심한 곰팡이·침투: 전문.",
         "refuse_when_ko": "세탁기·표백·스웨이드에 물클리너 → 거절.",
-        "precheck_vi": f"{kind}: da bong (khong suede). CAM may/Javel.",
-        "why_vi": "GIAO DUC: Da bong = L1 → kho → L2 → L3. CAM may/oxy.",
-        "fresh_path_vi": "(1)Phui kho. (2)L1 Cap1. (3)Kho. (4)L2. (5)L3 tuy chon. (6)CAM may.",
+        "must_include_ko": "세탁기 금지, 가죽 크림, 최소 수분",
+        "precheck_vi": f"{kind}: da bong (khong suede). CAM may/Javel.{shoe_bit_vi}",
+        "why_vi": (
+            "[Tai sao] Da bong yeu nuoc/nhiet/tay. Vong cham soc: L1 → kho → L2 → (L3). "
+            "CAM giat may / ngam / goi la 'giat thong thuong'."
+        ),
+        "fresh_path_vi": (
+            "(1)Phui kho."
+            f"{shoe_bit_vi} "
+            "(2)L1 Cap1 tren khan → lau du. (3)Kho bong mat (giay: nho bao). "
+            "(4)L2 mong. (5)L3 tuy chon. (6)Vet: chi cuc bo. (7)CAM may/ngam/tay/say nong."
+        ),
         "dried_path_vi": "Nut/cung: 1 lan L2 → chuyen.",
         "motion_vi": "Cap1 lau/boi.",
         "water_temp_vi": "It nuoc. CAM may.",
@@ -227,6 +253,32 @@ def _smooth_card(item_id: str, *, mold: bool) -> dict[str, str]:
         "sense_check_vi": "Mat/tay/mui.",
         "success_rate_vi": "Cham soc: cao. Moc sau: thap.",
         "refuse_when_vi": "May/tay oxy/suede nuoc → tu choi.",
+        "must_include_vi": "CAM may giat, kem da, it nuoc",
+        "precheck_en": (
+            f"{kind}: confirm smooth leather (not suede). Refuse washer/dryer/bleach."
+            f"{shoe_bit_en}"
+        ),
+        "why_en": (
+            "[Why this order] Smooth leather hates water/heat/bleach. Loop: "
+            "cleaner (L1) → dry fully → cream (L2) → optional protector (L3). "
+            "Spot only — never machine-wash / soak."
+        ),
+        "fresh_path_en": (
+            "(1)Dust with dry cloth."
+            f"{shoe_bit_en} "
+            "(2)Leather cleaner (L1) on cloth Cap1 → wipe residue. "
+            "(3)Air-dry in shade (stuff shoes with paper). "
+            "(4)Thin leather cream (L2). (5)Optional protector (L3). "
+            "(6)Stains: local only. (7)No washer, soak, bleach, or hot dryer."
+        ),
+        "dried_path_en": "Hardened/cracked: one cream try → refer out. No forced wash.",
+        "motion_en": "Cap1 wipe/apply only — no scrubbing.",
+        "water_temp_en": "Minimal room-temp water. No washer/hot water.",
+        "aftercare_en": "Airy storage + periodic cream. No sun/heater.",
+        "sense_check_en": "Eyes: marks/bloom. Hand: dryness/cracks. Nose: mold.",
+        "success_rate_en": "Routine cleaner+cream: high. Deep mold: professional.",
+        "refuse_when_en": "Washer/bleach/suede wet-clean demands → refuse.",
+        "must_include_en": "no machine wash, leather cream, minimal water",
     }
 
 
@@ -430,24 +482,30 @@ def _narrate_leather_tools(tools: list, *, item_id: str, mold: bool) -> list:
                     "섬유 얼룩용 '바깥→안 블롯'만 반복하지 말 것."
                 )
                 t["use_for_vi"] = "Da bong: L1/L2 trên khăn Cap1 — không chỉ blot như vải."
+                t["use_for_en"] = "Smooth leather: apply L1/L2 on cloth Cap1 — not textile blot-only."
         elif tid == "T_BRUSH_SOFT":
             if item_id in SUEDE_IDS:
                 t["use_for_ko"] = "스웨이드: 결 따라 Cap1 마른 솔만 — 물·세게 문지르기 금지."
                 t["use_for_vi"] = "Suede: Cap1 chai khô theo chiều lông — CAM nước."
+                t["use_for_en"] = "Suede: dry Cap1 brush with nap — no water/scrubbing."
             elif mold:
                 t["use_for_ko"] = (
                     "가죽 곰팡이: 마스크 후 마른 포자만 Cap1로 살살 털기 — "
                     "문지르면 포자 확산. 그다음 천+약품."
                 )
                 t["use_for_vi"] = "Mốc da: khẩu trang; phủi bào tử khô Cap1 — không chà."
+                t["use_for_en"] = "Leather mold: mask on; dry Cap1 brush spores — then cloth+chem."
             else:
                 t["use_for_ko"] = "평활 가죽: 보통 솔보다 천 우선. 먼지 털 때만 Cap1."
                 t["use_for_vi"] = "Da bong: ưu tiên khăn; chải bụi Cap1 nếu cần."
+                t["use_for_en"] = "Smooth leather: prefer cloth; Cap1 brush dust only if needed."
         elif tid == "T_GLOVE_NITRILE":
             t["use_for_ko"] = "곰팡이·약품 전 필수. 병·포자 만지기 전 착용."
             t["use_for_vi"] = "BẮT BUỘC trước mốc/hóa chất."
+            t["use_for_en"] = "Required before mold/chemicals."
         elif tid == "T_MASK":
             t["use_for_ko"] = "곰팡이 포자 흡입 방지 — 야외·환기와 함께."
             t["use_for_vi"] = "Khẩu trang chống bào tử — ngoài trời/thoáng."
+            t["use_for_en"] = "Mask against spores — outdoors/ventilated."
         out.append(t)
     return out

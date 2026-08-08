@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from leather_care import apply_leather_education, leather_chemicals_for
+from leather_care import apply_leather_education, leather_chemicals_for, education_for
 from match_diagnosis import chemistry_layers, chemistry_summary
 from protocol import apply_protocol_to_graph
 
@@ -133,10 +133,20 @@ def test_mildew_chemistry_not_protein():
     )
 
 
+def test_leather_shoe_has_ko_vi_en_and_no_machine():
+    edu = education_for("I_LEATHER_SHOE", stain_id="", entities={"_raw": "구두 세탁"})
+    assert "세탁기" in edu["refuse_when_ko"] or "세탁기" in edu["fresh_path_ko"]
+    assert edu.get("fresh_path_vi") and "CAM may" in edu["fresh_path_vi"]
+    assert edu.get("fresh_path_en") and "washer" in edu["fresh_path_en"].lower()
+    assert "newspaper" in edu["fresh_path_en"].lower() or "paper" in edu["fresh_path_en"].lower()
+    assert edu.get("must_include_en")
+
+
 if __name__ == "__main__":
     test_leather_mold_has_cream_ppe_no_soak()
     test_leather_routine_cream_no_mold_ppe_required()
     test_suede_mold_no_water_cleaner()
     test_shoe_glove_same_framework()
     test_mildew_chemistry_not_protein()
+    test_leather_shoe_has_ko_vi_en_and_no_machine()
     print("OK leather_care tests")

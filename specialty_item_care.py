@@ -23,6 +23,8 @@ SPECIALTY_CARE_IDS = frozenset({
     "I_SNEAKER_WHITE",
     "I_SHOE_LACES",
     "I_SNEAKER",
+    "I_HAT_CAP",
+    "I_GOLF_HAT",
     "I_LINEN_GARMENT",
     "I_FINISHING",
     "I_SUIT",
@@ -88,6 +90,8 @@ def _default_must_include(item_id: str, edu: dict[str, str]) -> str:
         "I_FAUX_LEATHER": "진가죽과 구분, 세탁기 금지, 진가죽 크림 금지",
         "I_SNEAKER_WHITE": "베이킹소다, 락스 금지, 100% 복원 불가",
         "I_SHOE_LACES": "끈 분리, 그늘 건조, 교체 안내",
+        "I_HAT_CAP": "챙 국소, 형태 유지, 건조기 금지",
+        "I_GOLF_HAT": "챙 국소, 형태 유지, 건조기 금지",
         "I_LINEN_GARMENT": "수축 고지, 30–40℃, 다림질",
         "I_FINISHING": "에어드레서, 스팀, 잔여 얼룩 금지",
         "I_SUIT": "스팀, 에어드레서, 판 직접 접촉 금지",
@@ -154,6 +158,8 @@ def education_for(item_id: str, *, entities: Optional[dict] = None) -> dict[str,
         return _shoe_laces()
     if item_id == "I_SNEAKER":
         return _sneaker_general()
+    if item_id in {"I_HAT_CAP", "I_GOLF_HAT"}:
+        return _hat_cap(golf=(item_id == "I_GOLF_HAT"))
     if item_id == "I_LINEN_GARMENT":
         return _linen_garment(finish=finish)
     if item_id == "I_FINISHING":
@@ -214,14 +220,19 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
     for k, v in edu.items():
         if v:
             sc2[k] = v
-    if edu.get("why_ko"):
-        sc2["tip"] = edu["why_ko"]
-    sc2["group"] = "item_care"
-    # Force LLM to keep owner-critical phrases (tennis balls, refuse scripts, etc.)
     must = edu.get("must_include_ko") or _default_must_include(item_id, edu)
     if must:
         sc2["must_include_ko"] = must
         out["must_include_ko"] = must
+    if edu.get("must_include_vi"):
+        sc2["must_include_vi"] = edu["must_include_vi"]
+        out["must_include_vi"] = edu["must_include_vi"]
+    if edu.get("must_include_en"):
+        sc2["must_include_en"] = edu["must_include_en"]
+        out["must_include_en"] = edu["must_include_en"]
+    if edu.get("why_ko"):
+        sc2["tip"] = edu["why_ko"]
+    sc2["group"] = "item_care"
     out["stain_context"] = sc2
     out["specialty_item_care"] = True
     out["protocol_mode"] = "item_primary"
@@ -230,7 +241,8 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
         "I_DUVET_GOOSE", "I_DUVET_COTTON", "I_DOWN_JACKET",
         "I_MACHINE_PROFILE", "I_DRY_VS_WET", "I_FINISHING",
         "I_LINEN_GARMENT", "I_FAUX_LEATHER", "I_SNEAKER", "I_SNEAKER_WHITE",
-        "I_SHOE_LACES", "I_SUIT", "I_SUIT_SUMMER", "I_DRESS", "I_DRESS_SHIRT",
+        "I_SHOE_LACES", "I_HAT_CAP", "I_GOLF_HAT",
+        "I_SUIT", "I_SUIT_SUMMER", "I_DRESS", "I_DRESS_SHIRT",
         "I_FUR_REAL", "I_FUR_FAUX", "I_TOWEL", "I_BED_SHEET",
     }
     if item_id in wash_ids:
@@ -346,6 +358,48 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
             },
         ]
         out["empty_chems_ok"] = False
+    elif item_id in {"I_HAT_CAP", "I_GOLF_HAT"}:
+        out["chemicals"] = [
+            {
+                "code": "D2",
+                "name_ko": "주방세제(중성) — 땀띠·챙 국소",
+                "name_vi": "Nuoc rua chen trung tinh — vanh mo hoi",
+                "name": "Mild dish soap — sweatband spot only",
+                "dilution_ko": "약희석. 하드캡은 통담금·세탁기 금지.",
+                "dilution_vi": "Pha loang. Mu cung: CAM ngam/may.",
+                "dilution_en": "Light dilution. Structured caps: no soak/washer.",
+            },
+            {
+                "code": "S1",
+                "name_ko": "워시프렌즈 중성세제(선택)",
+                "name_vi": "Chat giat trung tinh (tuy chon)",
+                "name": "Mild detergent (optional)",
+                "dilution_ko": "소프트캡 손세탁 시 소량.",
+                "dilution_vi": "Mu mem: tay, it.",
+                "dilution_en": "Soft caps: hand-wash, small amount.",
+            },
+        ]
+        out["empty_chems_ok"] = False
+        out["tools"] = [
+            {
+                "id": "T_BRUSH_SOFT",
+                "name_ko": "연질 스포팅 솔",
+                "name_vi": "Ban chai mem",
+                "name": "Soft spotting brush",
+                "use_for_ko": "땀띠·챙만 Cap1–2 원형으로. 챙 꺾기·비즈/로고 세게 금지.",
+                "use_for_vi": "Chi vanh mo hoi Cap1–2. CAM gap vanh / cha logo manh.",
+                "use_for_en": "Sweatband/brim only Cap1–2 circles. Do not bend brim or scrub logos.",
+            },
+            {
+                "id": "T_CLOTH",
+                "name_ko": "흰 천·흡수지",
+                "name_vi": "Khan trang",
+                "name": "White cloth / blotter",
+                "use_for_ko": "세제 잔여 닦기·형태 유지용 속채움. 운동화 밑창 솔과 혼용 금지.",
+                "use_for_vi": "Lau du xa phong + nho giu form. CAM dung chai de giay.",
+                "use_for_en": "Wipe soap residue; stuff crown for shape. Never use shoe-sole brushes.",
+            },
+        ]
     elif item_id == "I_LINEN_GARMENT":
         out["chemicals"] = [
             {
@@ -801,12 +855,15 @@ def _shoe_laces() -> dict[str, str]:
 
 def _sneaker_general() -> dict[str, str]:
     return {
-        "precheck_ko": "소재 구분(천·메쉬·가죽·스웨이드)·끈·깔창 분리. 흰창 황변이면 흰창 경로.",
+        "precheck_ko": "소재 구분(천·메쉬·가죽·스웨이드)·끈·깔창 분리. 흰창 황변이면 흰창 경로. 구두(가죽)와 혼동 금지.",
         "why_ko": "[왜 이 순서] 갑피/밑창 솔·세제 분리. 고온건조=접착·형태 손상.",
         "fresh_path_ko": (
-            "(1)끈·깔창 분리, 마른 흙. (2)갑피 연질+중성, 밑창 경질. "
-            "(3)손세탁 또는 망+30℃ 약코스(가죽/스웨이드면 해당 SOP). "
-            "(4)헹굼. (5)신문지 채워 그늘 건조 — 고온건조 금지. "
+            "(1)끈·깔창 분리, 마른 흙. "
+            "【오염 없음】→손세탁 또는 망+≤30℃ 약코스(천·캔버스). "
+            "【오염 있음】→갑피 연질+중성 국소 후 동일. "
+            "(2)갑피 연질+중성, 밑창 경질(고무만). "
+            "(3)헹굼. (4)신문지 채워 그늘 건조 — 고온건조 금지. "
+            "(5)가죽/스웨이드 갑피면 해당 가죽 SOP로 전환. "
             "(6)흰창·끈은 별도 미백 경로."
         ),
         "dried_path_ko": "재스팟팅. 접착 분리 위험 고지.",
@@ -816,6 +873,122 @@ def _sneaker_general() -> dict[str, str]:
         "sense_check_ko": "눈: 잔여. 손: 미끄럼 없음.",
         "success_rate_ko": "천·캔버스: 양호. 가죽/스웨이드: 별도.",
         "refuse_when_ko": "스웨이드 물세탁·고온건조 강제 → 거절.",
+        "must_include_ko": "끈·깔창 분리, 그늘 건조, 고온건조 금지",
+        "precheck_vi": "Phan loai vai/mesh/da/suede. Thao day+lot. CAM nham voi giay da tay.",
+        "why_vi": "[Tai sao] Tach than/de. Say nong = hong keo.",
+        "fresh_path_vi": (
+            "(1)Thao day+lot, chai kho. Khong vet → tay/may tui luoi <=30C. "
+            "Co vet → spot than sol mem + D2 roi giat. "
+            "(2)Than sol mem; de cao su sol cung. (3)Xa. (4)Nhet bao phoi bong mat — CAM say nong. "
+            "(5)Da/suede → SOP da. (6)Canh trang → SOP trang."
+        ),
+        "dried_path_vi": "Spot lai. Bao rui ro keo.",
+        "motion_vi": "Than Cap1–2; de Cap2–3.",
+        "water_temp_vi": "<=30C.",
+        "aftercare_vi": "Kho han moi mang.",
+        "sense_check_vi": "Mat: con du. Tay: khong tron.",
+        "success_rate_vi": "Vai/canvas: tot. Da/suede: khac.",
+        "refuse_when_vi": "Suede ngam nuoc / say nong → tu choi.",
+        "must_include_vi": "thao day+lot, phoi bong mat, CAM say nong",
+        "precheck_en": "Sort fabric/mesh/leather/suede; remove laces+insoles. Do not treat as leather dress shoes.",
+        "why_en": "[Why] Separate upper vs outsole tools. Hot dryer damages glue/shape.",
+        "fresh_path_en": (
+            "(1)Remove laces/insoles; brush dry soil. "
+            "No stain → hand or mesh bag ≤30°C gentle. "
+            "With stain → soft brush + mild soap on upper first. "
+            "(2)Soft brush upper; hard brush rubber outsole only. "
+            "(3)Rinse. (4)Stuff with paper; air-dry shade — no hot dryer. "
+            "(5)Leather/suede upper → leather SOP. (6)White midsole → whitening SOP."
+        ),
+        "dried_path_en": "Re-spot. Disclose glue/separation risk.",
+        "motion_en": "Upper Cap1–2 soft; outsole Cap2–3 hard.",
+        "water_temp_en": "≤30°C.",
+        "aftercare_en": "Wear only when fully dry.",
+        "sense_check_en": "Eyes: residue. Hand: no slipperiness.",
+        "success_rate_en": "Canvas/fabric: good. Leather/suede: separate path.",
+        "refuse_when_en": "Forced suede wet-wash or hot dryer → refuse.",
+        "must_include_en": "remove laces/insoles, shade dry, no hot dryer",
+    }
+
+
+def _hat_cap(*, golf: bool = False) -> dict[str, str]:
+    label_ko = "골프모자·캡" if golf else "야구모자·캡·일반 모자"
+    label_vi = "Mu golf / mu luoi trai" if golf else "Mu luoi trai / baseball / fashion cap"
+    label_en = "Golf / sports cap" if golf else "Baseball / fashion cap"
+    return {
+        "precheck_ko": (
+            f"{label_ko}: (A)하드·피티드(버클럼/판지 챙)=국소만 — 세탁기·식기세척기·건조기 금지. "
+            "(B)소프트·대드캡=찬물 손세탁 가능(라벨 허용+망만 예외). "
+            "가죽·스웨이드 챙→전문. 운동화 SOP와 혼동 금지."
+        ),
+        "why_ko": (
+            "[왜 이 순서] 땀띠=피지·염·단백질. 구조 모자=형태가 상품. "
+            "통세탁·고온·건조기=챙 붕괴. New Era식: 중성 국소 → 형태 유지 자연건조."
+        ),
+        "fresh_path_ko": (
+            "(1)하드 vs 소프트 구분. "
+            "【하드캡】→ 통세탁·세탁기·식기세척기 금지 — 땀띠·챙만 국소. "
+            "【소프트캡】→ 찬물 손세탁 짧게(라벨). "
+            "(2)땀띠: 중성 약희석+연질 솔 Cap1–2 원형. "
+            "(3)패널·자수: 약한 국소만(이염·로고 손상 주의). "
+            "(4)잔여 세제 천으로. (5)크라운에 수건/볼 넣어 형태 → 그늘 자연건조. "
+            "(6)건조기·다리미·식기세척기 금지."
+        ),
+        "dried_path_ko": "땀띠 황변: 산소(흰 천만·테스트) 또는 효소 약하게 1회. 안 되면 고지.",
+        "motion_ko": "Cap1–2 연질. 챙 꺾기·강타 금지.",
+        "water_temp_ko": "찬물. 하드=국소만.",
+        "aftercare_ko": "완전 건조까지 형태 유지. 챙 눌러 보관 금지.",
+        "sense_check_ko": "눈: 땀띠·형태. 손: 잔여 세제 없음.",
+        "success_rate_ko": "조기 국소: 양호. 이미 챙 변형: 복원 한계.",
+        "refuse_when_ko": "세탁기·식기세척기·건조기 강요 → 거절.",
+        "must_include_ko": "챙 국소, 형태 유지, 건조기 금지",
+        "precheck_vi": (
+            f"{label_vi}: (A)Mu CUNG/fitted = CHI spot — CAM may/dishwasher/say. "
+            "(B)Mu MEM = tay lanh neu nhan cho. Da/suede vanh → chuyen. CAM nham SOP giay."
+        ),
+        "why_vi": (
+            "[Tai sao] Vanh mo hoi = dau+muoi+protein. Mu cau truc = giu form. "
+            "May/say = hong vanh. Spot trung tinh → kho tu nhien giu form."
+        ),
+        "fresh_path_vi": (
+            "(1)Phan loai cung/mem. Mu cung: CAM may/dishwasher — chi spot vanh. "
+            "Mu mem: tay lanh ngan. "
+            "(2)Vanh: D2/S1 loang + chai mem Cap1–2. "
+            "(3)Panel/theu: spot nhe. (4)Lau du. "
+            "(5)Nhet khan/bat giu crown + chinh vanh. (6)Phoi bong mat — CAM say/ui/dishwasher."
+        ),
+        "dried_path_vi": "Vanh vang: A3/enzyme nhe 1 lan (test). Khong het → bao khach.",
+        "motion_vi": "Cap1–2 chai mem; CAM gap vanh.",
+        "water_temp_vi": "Lanh. Mu cung = spot.",
+        "aftercare_vi": "Giu form den kho. CAM dep vanh.",
+        "sense_check_vi": "Mat: vanh/form. Tay: het xa phong.",
+        "success_rate_vi": "Spot som: tot. Vanh bien dang: gioi han.",
+        "refuse_when_vi": "Bat may/dishwasher/say → tu choi.",
+        "must_include_vi": "spot vanh, giu form, CAM say",
+        "precheck_en": (
+            f"{label_en}: (A)Structured/fitted = spot-clean only — no washer/dishwasher/dryer. "
+            "(B)Soft/dad cap = cool hand wash if label allows. Leather/suede brim → pro. Not a sneaker SOP."
+        ),
+        "why_en": (
+            "[Why] Sweatband = oil+salt+protein. Structured crown = product value. "
+            "Machine/heat collapses brim. Mild spot → air-dry holding shape."
+        ),
+        "fresh_path_en": (
+            "(1)Hard vs soft. Structured: no washer/dishwasher — sweatband/brim spot only. "
+            "Soft: short cool hand wash if labeled. "
+            "(2)Sweatband: diluted mild soap + soft brush Cap1–2 circles. "
+            "(3)Panels/embroidery: light spot only. (4)Wipe residue. "
+            "(5)Stuff crown with towel/ball; reshape brim; shade air-dry. "
+            "(6)No dryer, iron, or dishwasher."
+        ),
+        "dried_path_en": "Yellow sweatband: one careful oxygen/enzyme try on white fabric only — then disclose.",
+        "motion_en": "Cap1–2 soft brush; do not bend/crush brim.",
+        "water_temp_en": "Cold. Structured = spot only.",
+        "aftercare_en": "Keep shape until dry. Do not store with crushed brim.",
+        "sense_check_en": "Eyes: sweatband/shape. Hand: no soap film.",
+        "success_rate_en": "Early spot: good. Already warped brim: limited restore.",
+        "refuse_when_en": "Forced washer/dishwasher/dryer → refuse.",
+        "must_include_en": "brim spot-clean, hold shape, no dryer",
     }
 
 

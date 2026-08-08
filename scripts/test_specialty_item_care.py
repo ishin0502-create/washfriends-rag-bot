@@ -229,6 +229,43 @@ def test_rewrite_item_care_step1_header():
     assert "오염·원단·두께·색상" not in out
 
 
+def test_gudu_maps_leather_not_sneaker():
+    from graphrag_engine import _infer_item_from_text
+
+    assert _infer_item_from_text("구두세탁을 어떻게 하나요?") == "I_LEATHER_SHOE"
+    assert _infer_item_from_text("구두 세탁 어떻게 해?") == "I_LEATHER_SHOE"
+    assert _infer_item_from_text("스니커즈 어떻게 세탁하나요?") == "I_SNEAKER"
+    assert _infer_item_from_text("운동화 세탁") == "I_SNEAKER"
+    assert _infer_item_from_text("모자세탁을 어떻게 하나요?") == "I_HAT_CAP"
+
+
+def test_hat_specialty_ko_vi_en():
+    edu = education_for("I_HAT_CAP", entities={"_raw": "모자 세탁"})
+    assert "챙" in edu["fresh_path_ko"] or "땀띠" in edu["fresh_path_ko"]
+    assert "건조기" in edu["must_include_ko"]
+    assert "vanh" in edu["fresh_path_vi"].lower() or "spot" in edu["fresh_path_vi"].lower()
+    assert "brim" in edu["fresh_path_en"].lower() or "sweatband" in edu["fresh_path_en"].lower()
+    assert "dishwasher" in edu["refuse_when_en"].lower() or "dryer" in edu["must_include_en"].lower()
+
+    g = {
+        "item_context": {"id": "I_HAT_CAP", "name_ko": "야구모자·캡"},
+        "stain_context": {"group": "item_care"},
+        "tools": [{"id": "T_BRUSH_SHOE", "name_ko": "운동화 밑창용 경질 솔"}],
+    }
+    out = apply_specialty_item_education(g, entities={"item_id": "I_HAT_CAP", "_raw": "모자 세탁"})
+    assert out.get("specialty_item_care") is True
+    ids = [t.get("id") for t in out.get("tools") or []]
+    assert "T_BRUSH_SHOE" not in ids
+    assert out.get("must_include_vi")
+    assert out.get("must_include_en")
+
+
+def test_sneaker_has_vi_en():
+    edu = education_for("I_SNEAKER", entities={"_raw": "How to wash sneakers?"})
+    assert edu.get("fresh_path_vi") and edu.get("fresh_path_en")
+    assert "CAM say" in edu["must_include_vi"] or "say nong" in edu["fresh_path_vi"]
+
+
 if __name__ == "__main__":
     test_goose_typo_maps()
     test_hotel_sheet_not_cotton_duvet()
@@ -247,4 +284,7 @@ if __name__ == "__main__":
     test_enforce_must_include_appends_air()
     test_goose_general_wash_not_stain_frame()
     test_rewrite_item_care_step1_header()
+    test_gudu_maps_leather_not_sneaker()
+    test_hat_specialty_ko_vi_en()
+    test_sneaker_has_vi_en()
     print("OK specialty_item_care")

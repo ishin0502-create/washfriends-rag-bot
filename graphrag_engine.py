@@ -1107,7 +1107,24 @@ def _infer_item_from_text(text: str) -> str:
     suede = any(k in raw for k in ("스웨이드", "누벅")) or "suede" in t or "nubuck" in t or "da lon" in t
     leather = any(k in raw for k in ("가죽",)) or "leather" in t or "ao da" in t or "giay da" in t or "tui da" in t
     bag = any(k in raw for k in ("가방", "지갑")) or "tui xach" in t or "tui da" in t or "handbag" in t or "vi da" in t
-    shoe = any(k in raw for k in ("구두", "신발", "운동화", "스니커", "등산화", "골프화")) or "giay" in t or "shoe" in t or "sneaker" in t
+    # 구두 = dress/leather shoe in KO — do NOT collapse into sneaker
+    dress_shoe = (
+        "구두" in raw
+        or "leather shoe" in t
+        or "dress shoe" in t
+        or "giay tay" in t
+        or "giay da" in t
+    )
+    athletic_shoe = any(
+        k in raw for k in ("운동화", "스니커", "스니커즈", "러닝화", "등산화", "골프화")
+    ) or "sneaker" in t or "giay the thao" in t or "running shoe" in t
+    shoe = (
+        dress_shoe
+        or athletic_shoe
+        or any(k in raw for k in ("신발",))
+        or "giay" in t
+        or "shoe" in t
+    )
     glove = any(k in raw for k in ("장갑",)) or "gang tay" in t or "glove" in t
     golf = "골프" in raw or "golf" in t
     fur = any(k in raw for k in ("모피", "퍼코트", "모피코트")) or "fur" in t or "ao long" in t or "long thu" in t
@@ -1149,7 +1166,8 @@ def _infer_item_from_text(text: str) -> str:
         return "I_SUEDE_GARMENT"
     if leather and bag:
         return "I_LEATHER_BAG"
-    if leather and shoe and not golf:
+    # 구두 alone (KO) = leather dress shoe — never wait for the word 가죽
+    if (leather or dress_shoe) and shoe and not golf and not athletic_shoe and not suede:
         return "I_LEATHER_SHOE"
     if leather and glove:
         return "I_GOLF_GLOVE_LEATHER" if golf else "I_GLOVE_LEATHER"
@@ -1341,13 +1359,18 @@ def _infer_item_from_text(text: str) -> str:
     whitening = any(
         k in raw for k in ("하얗게", "누렇게", "황변", "화이트닝")
     ) or "whitening" in t or "vang de" in t
-    if shoe and not leather and not suede and (white_panel or whitening):
+    if shoe and not leather and not suede and not dress_shoe and (white_panel or whitening):
         return "I_SNEAKER_WHITE"
     if "러닝" in raw or "running" in t or "giay chay" in t:
         return "I_RUNNING_MESH"
     if shoe and (any(k in raw for k in ("망사",)) or "mesh" in t or "luoi" in t):
         return "I_RUNNING_MESH"
-    if "스니커" in raw or "운동화" in raw or "sneaker" in t or "giay the thao" in t or (shoe and not leather and not suede):
+    # Bare 구두 already returned I_LEATHER_SHOE above; never map 구두→sneaker
+    if dress_shoe and not athletic_shoe and not suede:
+        return "I_LEATHER_SHOE"
+    if "스니커" in raw or "운동화" in raw or "sneaker" in t or "giay the thao" in t or athletic_shoe:
+        return "I_SNEAKER"
+    if shoe and not leather and not suede and not dress_shoe:
         return "I_SNEAKER"
     # Dress shirt care — skip when yellowing / collar / armpit (those are stain SOPs)
     yellow_shirt = any(
@@ -1897,6 +1920,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
         "refuse_when_vi", "group_care_order_vi", "name_vi",
         "item_name_vi",
         "rescue_2nd_vi", "rescue_disclose_vi",
+        "must_include_vi",
     )
     KO_FIELDS = (
         "why_ko", "fresh_path_ko", "dried_path_ko",
@@ -1906,6 +1930,12 @@ def _sanitize_graph_for_owner(graph, lang: str):
         "item_name_ko",
         "rescue_2nd_ko", "rescue_disclose_ko",
         "must_include_ko",
+    )
+    EN_FIELDS = (
+        "why_en", "fresh_path_en", "dried_path_en",
+        "precheck_en", "motion_en", "water_temp_en", "aftercare_en",
+        "sense_check_en", "success_rate_en", "refuse_when_en",
+        "must_include_en", "item_name_en",
     )
 
     sc = g.get("stain_context")
@@ -1918,6 +1948,9 @@ def _sanitize_graph_for_owner(graph, lang: str):
         for field in KO_FIELDS:
             if sc2.get(field):
                 sc2[field] = _expand_chem_codes_in_text(str(sc2[field]), lang="ko")
+        for field in EN_FIELDS:
+            if sc2.get(field):
+                sc2[field] = _expand_chem_codes_in_text(str(sc2[field]), lang="en")
         if sc2.get("tip"):
             tip_s = str(sc2["tip"])
             tip_lang = "ko" if re.search(r"[가-힣]", tip_s) else (
@@ -1930,7 +1963,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
             sc2["tip"] = _expand_chem_codes_in_text(tip_s, lang=tip_lang if tip_lang != "en" else "en")
 
         if lang == "ko":
-            for k in VI_FIELDS:
+            for k in VI_FIELDS + EN_FIELDS:
                 sc2.pop(k, None)
             # Never feed English/VI tip into KO prompt
             tip = sc2.get("tip")
@@ -1942,7 +1975,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
             if sc2.get("name_ko"):
                 sc2.pop("name", None)
         elif lang == "vi":
-            for k in KO_FIELDS:
+            for k in KO_FIELDS + EN_FIELDS:
                 sc2.pop(k, None)
             tip = sc2.get("tip")
             if tip and re.search(r"[가-힣]", str(tip)):
@@ -1961,7 +1994,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
         else:  # en
             for k in VI_FIELDS + KO_FIELDS:
                 sc2.pop(k, None)
-            # Keep English name + tip; strip GIAO DUC Vietnamese tips
+            # Prefer dedicated English narratives; strip KO/VI tips
             tip = sc2.get("tip")
             if tip and (
                 re.search(r"[가-힣]", str(tip))
@@ -1973,8 +2006,14 @@ def _sanitize_graph_for_owner(graph, lang: str):
                 )
             ):
                 sc2.pop("tip", None)
-            if sc2.get("tip"):
+            if sc2.get("why_en"):
+                sc2["tip"] = sc2["why_en"]
+            elif sc2.get("tip"):
                 sc2["tip"] = _expand_chem_codes_in_text(str(sc2["tip"]), lang="en")
+            if sc2.get("name"):
+                pass  # keep English name
+            sc2.pop("name_ko", None)
+            sc2.pop("name_vi", None)
 
         # Never expose internal ids to owner LLM
         sc2.pop("id", None)
@@ -2375,25 +2414,37 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     graph_json = json.dumps(safe_graph, ensure_ascii=False, indent=2, default=str)
     query_type = graph_context.get("query_type", "unknown")
     if lang == "ko":
+        leather_ko = isinstance(safe_graph, dict) and safe_graph.get("leather_care")
         item_wash = isinstance(safe_graph, dict) and (
             safe_graph.get("item_wash_mode")
             or (safe_graph.get("stain_context") or {}).get("item_wash_mode")
             or safe_graph.get("specialty_item_care")
-        )
-        if item_wash:
+        ) and not leather_ko
+        if leather_ko:
+            lang_rule = (
+                "한국어만. 베트남어·영어 금지. "
+                "가죽·스웨이드 관리 — 얼룩 섬유 SOP·일반 통세탁 템플릿 금지. "
+                "단계: (1)품목·평활/스웨이드 구분 (2)도구 use_for_ko (3)Cap1 "
+                "(4)chemicals[]의 가죽 클리너·크림·프로텍터 (5)최소 수분 (6)건조·크림 후관리. "
+                "fresh_path_ko·must_include_ko 준수. 세탁기·통담금·표백 지어내기 금지. "
+                "[왜 이 순서] → [감각 체크] → [성공률·고지] → [거절·보내기]. "
+                "마크다운·코드/id 금지."
+            )
+        elif item_wash:
             lang_rule = (
                 "한국어만. 베트남어·영어 금지. "
                 "이 질문은 얼룩 제거가 아니라 품목 일반 세탁/관리다. "
                 "단계 제목은 정확히: (1)품목·라벨·용량·오염 유무 — "
-                "「오염 없음→일반 세탁 / 오염 있음→겉만 국소 전처리 후 일반 세탁」을 먼저 구분. "
-                "금지: '(1)오염·원단·두께·색상' 제목 — 얼룩 식별 템플릿 사용 금지. "
+                "fresh_path_ko의 【오염 없음】/【오염 있음】 또는 품목별 분기(하드캡=국소만 등)를 먼저. "
+                "금지: '(1)오염·원단·두께·색상' 제목. "
+                "「일반 세탁」은 fresh_path가 통세탁을 허용할 때만 — "
+                "가죽·하드캡·형태유지 품목에 세탁기·통담금을 지어내지 말 것. "
                 "소수성 오일·단백질 등 얼룩 chemistry를 (1)의 주제로 끌어오지 말 것. "
                 "(2)도구 — tools[]의 name_ko: use_for_ko만. "
                 "일반 세탁에 옥살산·락스·아세톤용 니트릴 장갑 PPE를 끌어오지 말 것(해당 얼룩 SOP가 아닐 때). "
                 "(3)힘·방향 (4)약품(name_ko·dilution_ko) (5)수온 (6)건조·후관리. "
-                "fresh_path_ko 번호 단계·【오염 없음】/【오염 있음】 구분을 빠짐없이. "
-                "must_include_ko가 있으면 그 단어·구를 답에 모두 포함. "
-                "테니스볼·대형 전면투입·추가 헹굼·퍼크 금지가 있으면 반드시. "
+                "fresh_path_ko 번호 단계·must_include_ko를 빠짐없이. "
+                "테니스볼·대형 전면투입·추가 헹굼·퍼크 금지·챙·형태 유지가 있으면 반드시. "
                 "[왜 이 순서] → [감각 체크] → [성공률·고지] → [거절·보내기]. "
                 "마크다운 금지. 코드/id 금지. 그래프에 없는 약·도구 지어내기 금지."
             )
@@ -2455,15 +2506,40 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
                     f"【필수 포함 — 생략 금지】 {must}\n\n" + wrapper
                 )
     elif lang == "en":
-        lang_rule = (
-            "English ONLY. No Korean or Vietnamese words/headers. "
-            "Steps: (1) Identify stain/fabric/color (2) Tools — each tools[] as 'name: use_for_en' "
-            "(how-to required; do not invent) "
-            "(3) Force+direction Cap (4) Chemicals (5) Temp (6) Aftercare. "
-            "Blocks: [Why this order] [Sense check] [Success rate / disclose] [Refuse / refer]. "
-            "Use English name/tip, color_note_en, and chemical name fields. Do not copy foreign text. "
-            "No markdown. No internal codes."
-        )
+        item_wash_en = isinstance(safe_graph, dict) and (
+            safe_graph.get("item_wash_mode")
+            or safe_graph.get("specialty_item_care")
+            or (safe_graph.get("stain_context") or {}).get("group") == "item_care"
+        ) and not safe_graph.get("leather_care")
+        leather_en = isinstance(safe_graph, dict) and safe_graph.get("leather_care")
+        if leather_en:
+            lang_rule = (
+                "English ONLY. No Korean or Vietnamese. "
+                "This is leather/suede care — NOT textile stain spotting and NOT machine wash. "
+                "Steps: (1) Item + smooth vs suede (2) Tools use_for_en (3) Cap1 only "
+                "(4) L1/L2/L3 from chemicals[] (5) Minimal water (6) Aftercare cream. "
+                "Follow fresh_path_en/why_en. Never invent washer/soak/bleach. "
+                "Blocks: [Why this order] [Sense check] [Success rate / disclose] [Refuse / refer]. "
+                "No markdown. No internal codes."
+            )
+        elif item_wash_en:
+            lang_rule = (
+                "English ONLY. No Korean or Vietnamese. "
+                "Item care (not stain ID): (1) item/label/load/stain-present "
+                "(2) tools use_for_en (3) force (4) chemicals (5) temp (6) dry/aftercare. "
+                "Follow fresh_path_en — structured caps = spot only; sneakers ≠ leather shoes. "
+                "Include must_include_en phrases. No markdown. No internal codes."
+            )
+        else:
+            lang_rule = (
+                "English ONLY. No Korean or Vietnamese words/headers. "
+                "Steps: (1) Identify stain/fabric/color (2) Tools — each tools[] as 'name: use_for_en' "
+                "(how-to required; do not invent) "
+                "(3) Force+direction Cap (4) Chemicals (5) Temp (6) Aftercare. "
+                "Blocks: [Why this order] [Sense check] [Success rate / disclose] [Refuse / refer]. "
+                "Use English name/tip, color_note_en, and chemical name fields. Do not copy foreign text. "
+                "No markdown. No internal codes."
+            )
         wrapper = f"""Owner question: {user_message}
 
 [GRAPH DATA — query type: {query_type}]
@@ -2471,25 +2547,62 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
 
 {lang_rule}
 Answer from this data only. Do not mix languages."""
+        if isinstance(safe_graph, dict):
+            must_en = str(
+                safe_graph.get("must_include_en")
+                or (safe_graph.get("stain_context") or {}).get("must_include_en")
+                or ""
+            ).strip()
+            if must_en and (
+                safe_graph.get("specialty_item_care")
+                or safe_graph.get("leather_care")
+                or (safe_graph.get("stain_context") or {}).get("group") == "item_care"
+            ):
+                wrapper = f"【MUST INCLUDE】 {must_en}\n\n" + wrapper
     else:
-        lang_rule = (
-            "CHỈ tiếng Việt. CẤM Hàn/Anh. "
-            "Bước: (1) Nhận diện (vet/vai/độ dày/màu) — bắt buộc dùng match_diagnosis "
-            "(chemistry, fabric_type, fabric_weight, fabric_rule). "
-            "Nếu chưa rõ vải/độ dày: nêu weight_bands_vi và hoàn tất SOP mức vừa — "
-            "không chỉ hỏi rồi dừng. ask_if_needed chỉ là gợi ý tùy chọn. "
-            "Chưa rõ màu / màu: CẤM bịa tẩy oxy trong (4) nếu không có trong chemicals[]. "
-            "Nếu _compact_followup=true: xác nhận vải/độ dày ngắn, chỉ nêu điểm đổi — không lặp SOP dài. "
-            "(2) Dụng cụ — mỗi tools[] dạng 'name_vi: use_for_vi' "
-            "(bắt buộc cách dùng; CẤM bịa; rỗng→không cần). "
-            "Đồng hồ/chau ngâm: nói đúng số phút trong use_for_vi. "
-            "Bình xịt: nói đúng thuốc + tỷ lệ + vì sao ghi nhãn theo use_for_vi. "
-            "(3) Lực+hướng Cap — vải mỏng chỉ Cap1–2. "
-            "(4) Hóa chất (5) Nhiệt độ (6) Sau xử lý — theo fresh_path_vi (đâu/phút/cách). "
-            "[Tại sao thứ tự này] → … → [Kiểm tra giác quan] → [Tỷ lệ & báo khách] → [Từ chối / chuyển]. "
-            "Dùng why_vi/fresh_path_vi/color_note_vi nếu có. Không copy name_ko/Hangul. "
-            "Pha loãng dilution_vi. Không markdown. Không mã nội bộ. CẤM bịa phút/thuốc."
-        )
+        item_wash_vi = isinstance(safe_graph, dict) and (
+            safe_graph.get("item_wash_mode")
+            or safe_graph.get("specialty_item_care")
+            or (safe_graph.get("stain_context") or {}).get("group") == "item_care"
+        ) and not safe_graph.get("leather_care")
+        leather_vi = isinstance(safe_graph, dict) and safe_graph.get("leather_care")
+        if leather_vi:
+            lang_rule = (
+                "CHỈ tiếng Việt. CẤM Hàn/Anh. "
+                "Đây là chăm sóc da/suede — KHÔNG phải SOP vết vải, CẤM giặt máy/ngâm. "
+                "Bước: (1) Món + da bong vs suede (2) Dụng cụ use_for_vi (3) Cap1 "
+                "(4) L1/L2/L3 trong chemicals[] (5) Ít nước (6) Kem dưỡng. "
+                "Theo fresh_path_vi/why_vi. CẤM bịa máy/ngâm/tẩy. "
+                "[Tại sao thứ tự này] [Kiểm tra giác quan] [Tỷ lệ & báo khách] [Từ chối / chuyển]. "
+                "Không markdown. Không mã nội bộ."
+            )
+        elif item_wash_vi:
+            lang_rule = (
+                "CHỈ tiếng Việt. CẤM Hàn/Anh. "
+                "Chăm sóc món (không nhận diện vết): (1) món/nhãn/tải/có vết? "
+                "(2) dụng cụ use_for_vi (3) lực (4) hóa chất (5) nhiệt (6) sấy/sau. "
+                "Theo fresh_path_vi — mu cứng = chỉ spot; sneaker ≠ giày da. "
+                "Gồm must_include_vi. Không markdown. Không mã."
+            )
+        else:
+            lang_rule = (
+                "CHỈ tiếng Việt. CẤM Hàn/Anh. "
+                "Bước: (1) Nhận diện (vet/vai/độ dày/màu) — bắt buộc dùng match_diagnosis "
+                "(chemistry, fabric_type, fabric_weight, fabric_rule). "
+                "Nếu chưa rõ vải/độ dày: nêu weight_bands_vi và hoàn tất SOP mức vừa — "
+                "không chỉ hỏi rồi dừng. ask_if_needed chỉ là gợi ý tùy chọn. "
+                "Chưa rõ màu / màu: CẤM bịa tẩy oxy trong (4) nếu không có trong chemicals[]. "
+                "Nếu _compact_followup=true: xác nhận vải/độ dày ngắn, chỉ nêu điểm đổi — không lặp SOP dài. "
+                "(2) Dụng cụ — mỗi tools[] dạng 'name_vi: use_for_vi' "
+                "(bắt buộc cách dùng; CẤM bịa; rỗng→không cần). "
+                "Đồng hồ/chau ngâm: nói đúng số phút trong use_for_vi. "
+                "Bình xịt: nói đúng thuốc + tỷ lệ + vì sao ghi nhãn theo use_for_vi. "
+                "(3) Lực+hướng Cap — vải mỏng chỉ Cap1–2. "
+                "(4) Hóa chất (5) Nhiệt độ (6) Sau xử lý — theo fresh_path_vi (đâu/phút/cách). "
+                "[Tại sao thứ tự này] → … → [Kiểm tra giác quan] → [Tỷ lệ & báo khách] → [Từ chối / chuyển]. "
+                "Dùng why_vi/fresh_path_vi/color_note_vi nếu có. Không copy name_ko/Hangul. "
+                "Pha loãng dilution_vi. Không markdown. Không mã nội bộ. CẤM bịa phút/thuốc."
+            )
         wrapper = f"""Câu hỏi từ chủ cửa hàng: {user_message}
 
 [DỮ LIỆU ĐỒ THỊ — loại truy vấn: {query_type}]
@@ -2497,6 +2610,18 @@ Answer from this data only. Do not mix languages."""
 
 {lang_rule}
 Chỉ trả lời từ dữ liệu trên. Không trộn ngôn ngữ."""
+        if isinstance(safe_graph, dict):
+            must_vi = str(
+                safe_graph.get("must_include_vi")
+                or (safe_graph.get("stain_context") or {}).get("must_include_vi")
+                or ""
+            ).strip()
+            if must_vi and (
+                safe_graph.get("specialty_item_care")
+                or safe_graph.get("leather_care")
+                or (safe_graph.get("stain_context") or {}).get("group") == "item_care"
+            ):
+                wrapper = f"【BẮT BUỘC GỒM】 {must_vi}\n\n" + wrapper
     return wrapper
 
 
@@ -2524,8 +2649,9 @@ def _looks_like_item_care_question(text: str) -> bool:
         k in raw
         for k in (
             "이불", "구스", "패딩", "다운", "모피", "가죽", "레자", "스웨이드", "수건", "시트",
-            "침구", "호텔", "운동화", "스니커", "구두", "정장", "커튼", "세탁기", "건조기",
+            "침구", "호텔", "운동화", "스니커", "구두", "모자", "캡", "정장", "커튼", "세탁기", "건조기",
             "마소재", "린넨", "드레스", "와이셔츠", "흰창", "신발끈",
+            "sneaker", "hat", "cap", "giay", "mu ",
         )
     )
     return care and itemish
@@ -2575,7 +2701,8 @@ def _empty_graph_reply(entities: dict, *, image: bool = False) -> str:
             "• 호텔·흰 수건 / 시트·침구\n"
             "• 진가죽·스웨이드 / 인조가죽(레자·PU) / 모피\n"
             "• 마(린넨) 의류\n"
-            "• 스니커즈·흰창·신발끈 / 구두\n"
+            "• 스니커즈·흰창·신발끈 / 구두(가죽)\n"
+            "• 야구모자·캡\n"
             "• 정장·드레스·와이셔츠 다림질·스팀·에어드레서\n"
             "• 세탁기·건조기 코스 설정\n"
             "얼룩 제거가 필요하면 얼룩 종류(피, 커피 등)도 함께 적어 주세요."
@@ -2634,6 +2761,9 @@ _ITEM_STEP1 = "(1)품목·라벨·용량·오염 유무 —"
 def _graph_is_item_wash(graph_context: dict) -> bool:
     g = graph_context.get("graph") if isinstance(graph_context, dict) else None
     if not isinstance(g, dict):
+        return False
+    # Leather/suede: never use "일반 세탁" item-wash template (wet machine framing is unsafe)
+    if g.get("leather_care"):
         return False
     sc = g.get("stain_context") or {}
     return bool(
@@ -2701,6 +2831,12 @@ def _enforce_must_include(answer: str, graph_context: dict, lang: str) -> str:
         "에어드레서 한계": "웨딩·칼주름은 에어드레서만으로 끝내지 말고 수동 스팀 병행.",
         "깃→커프→소매→몸": "와이셔츠 다림질 순서: 깃→커프→소매→어깨→몸.",
         "에어드레서 보조": "와이셔츠 납품용 칼주름은 수동/프레스가 표준, 에어드레서는 보조.",
+        "챙 국소": "하드캡은 통세탁 금지 — 땀띠·챙만 국소 스포팅.",
+        "형태 유지": "크라운에 수건·볼을 넣어 형태를 유지한 채 그늘 건조.",
+        "건조기 금지": "모자·캡은 건조기·식기세척기·강한 열을 금지한다.",
+        "세탁기 금지": "가죽 구두·하드캡은 세탁기·통담금을 기본 금지한다.",
+        "가죽 크림": "평활 가죽은 클리너 후 완전 건조 → 가죽 크림 보습이 필수.",
+        "최소 수분": "가죽은 물을 최소로 — 흠뻑·통세탁 금지.",
     }
     lines = []
     for m in missing:
@@ -3099,6 +3235,15 @@ def _generate_response_core(
     ):
         entities["intent"] = "treatment"
         entities["item_id"] = "I_HAT_CAP"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif (
+        "구두" in user_message
+        and not any(k in user_message for k in ("운동화", "스니커", "스니커즈", "등산화", "골프화", "구두약"))
+        and any(k in user_message for k in ("세탁", "빨래", "관리", "방법", "어떻게", "청소"))
+    ):
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_LEATHER_SHOE"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
     elif any(k in user_message for k in ("목때", "칼라때", "깃때")) or "vong co" in raw_n or "collar stain" in raw_n:
