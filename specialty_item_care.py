@@ -13,6 +13,11 @@ from process_stage_care import (
     apply_process_stage_hints,
     education_for_process,
 )
+from specialty_garment_care import (
+    GARMENT_SPECIALTY_IDS,
+    apply_garment_specialty_hints,
+    education_for_garment,
+)
 
 
 SPECIALTY_CARE_IDS = frozenset({
@@ -38,6 +43,7 @@ SPECIALTY_CARE_IDS = frozenset({
     "I_DRESS",
     "I_DRESS_SHIRT",
     *PROCESS_STAGE_IDS,
+    *GARMENT_SPECIALTY_IDS,
 })
 
 
@@ -108,6 +114,16 @@ def _default_must_include(item_id: str, edu: dict[str, str]) -> str:
         "I_SORT": "흰/유색/섬세 분리, 수건·바이오해저드 별도, 이염 예방",
         "I_RINSE": "추가 헹굼, 잔여 세제 제거, 경수 시 보정, 유연제 대체 금지",
         "I_QC_HANDOVER": "강광 잔여 확인, 접수 사진 대조, 한계 고지, 출고 체크리스트",
+        "I_CURTAIN_FABRIC": "치수 기록, ~30℃, 축축할 때 걸기, 유색 락스 금지",
+        "I_CURTAIN_URETHANE": "코팅 구분, 국소 중성, 기계·건조기·아세톤 주의",
+        "I_DENIM": "뒤집기, 찬물, 흰옷 분리, 첫 물빠짐 정상",
+        "I_GORETEX": "세제 소량, 유연제 금지, 추가 헹굼, DWR",
+        "I_BABY_WEAR": "성인 분리, 찬물 단백질, 추가 헹굼, 무향",
+        "I_SWIMWEAR": "즉시 찬물 헹굼, 찬물만, 건조기 금지",
+        "I_GOLF_WEAR": "≤30℃, 유연제 금지, 뒤집기",
+        "I_GOLF_SHOE": "끈·깔창 분리, 그늘 건조, 고온건조 금지",
+        "I_HIKING_SHOE": "끈·깔창 분리, ≤30℃, 고온건조 금지, DWR 선택",
+        "I_RUNNING_MESH": "세탁망, 연질만, ≤30℃, 고온건조 금지",
     }
     if item_id in presets:
         return presets[item_id]
@@ -176,6 +192,8 @@ def education_for(item_id: str, *, entities: Optional[dict] = None) -> dict[str,
         return _finishing_matrix()
     if item_id in PROCESS_STAGE_IDS:
         return education_for_process(item_id)
+    if item_id in GARMENT_SPECIALTY_IDS:
+        return education_for_garment(item_id)
     if item_id in {"I_SUIT", "I_SUIT_SUMMER"} and finish:
         return _suit_finishing(summer=(item_id == "I_SUIT_SUMMER"))
     if item_id == "I_DRESS" and (finish or _is_wedding(entities)):
@@ -258,12 +276,17 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
         "I_SUIT", "I_SUIT_SUMMER", "I_DRESS", "I_DRESS_SHIRT",
         "I_FUR_REAL", "I_FUR_FAUX", "I_TOWEL", "I_BED_SHEET",
         *PROCESS_STAGE_IDS,
+        *GARMENT_SPECIALTY_IDS,
     }
     if item_id in wash_ids:
         out["item_wash_mode"] = True
         sc2["item_wash_mode"] = True
     if item_id in PROCESS_STAGE_IDS:
         out = apply_process_stage_hints(out, item_id)
+        sc2 = out.get("stain_context") or sc2
+        out["stain_context"] = sc2
+    if item_id in GARMENT_SPECIALTY_IDS:
+        out = apply_garment_specialty_hints(out, item_id)
         sc2 = out.get("stain_context") or sc2
         out["stain_context"] = sc2
 
