@@ -820,7 +820,10 @@ def _suit_finishing(*, summer: bool = False) -> dict[str, str]:
         "dried_path_ko": "이미 가정 세탁기: 형태 손상 고지, 추가 강처리 금지.",
         "motion_ko": "스팀 Cap0–1. 판 직접 접촉 최소화.",
         "water_temp_ko": "물세탁 시 라벨·섬세만.",
-        "aftercare_ko": "통풍 옷장. 비닐 장기 밀봉 금지.",
+        "aftercare_ko": (
+            "통풍 옷장. 비닐 장기 밀봉 금지. "
+            "에어드레서로 냄새·가벼운 구김 보완 가능 — 칼주름·행사 직전은 수동 스팀 병행."
+        ),
         "sense_check_ko": "눈: 어깨·라펠·광택. 손: 패드.",
         "success_rate_ko": "스팀 피니싱: 높음. 에어드레서만: 중간. 가정기 세탁 후: 낮음.",
         "refuse_when_ko": "가정 세탁기 강요·100% 형태 복원 → 거절.",

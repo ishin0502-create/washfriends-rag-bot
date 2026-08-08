@@ -2410,6 +2410,19 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
 
 {lang_rule}
 위 데이터만 사용. 다른 얼룩/언어 섞지 말 것."""
+        # Hard banner so specialty must-phrases survive LLM summarization
+        if isinstance(safe_graph, dict):
+            must = (
+                str(safe_graph.get("must_include_ko") or "")
+                or str((safe_graph.get("stain_context") or {}).get("must_include_ko") or "")
+            ).strip()
+            if must and (
+                safe_graph.get("specialty_item_care")
+                or (safe_graph.get("stain_context") or {}).get("group") == "item_care"
+            ):
+                wrapper = (
+                    f"【필수 포함 — 생략 금지】 {must}\n\n" + wrapper
+                )
     elif lang == "en":
         lang_rule = (
             "English ONLY. No Korean or Vietnamese words/headers. "
