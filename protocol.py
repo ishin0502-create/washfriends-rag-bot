@@ -1534,6 +1534,29 @@ def _fabric_label(fabric: str, weight: str) -> tuple[str, str]:
     return ko, vi
 
 
+def _cap_plain_ko(cap: str) -> str:
+    """Owner-facing force metaphor — bare Cap# is jargon."""
+    c = (cap or "Cap1–2").replace("–", "-").replace(" ", "")
+    if c in {"Cap1", "1"}:
+        return "힘 Cap1=안경 닦듯 아주 약하게(찍기·두드림, 문지르기 아님)"
+    if c in {"Cap2", "2"}:
+        return "힘 Cap2=칫솔로 거품 내듯 가볍게 한 방향(세게 문지르기 아님)"
+    if c in {"Cap3", "3", "Cap2-3"}:
+        return "힘 Cap2–3=짧은 구간만 조금 더 세게(데님·마른 흙 등)"
+    return "힘 Cap1–2=안경 닦듯~칫솔 거품 내듯 약하게(왕복 문지르기 금지)"
+
+
+def _cap_plain_vi(cap: str) -> str:
+    c = (cap or "Cap1-2").replace("–", "-").replace(" ", "")
+    if c in {"Cap1", "1"}:
+        return "Lực Cap1=lau kính (chấm/đập, không chà)"
+    if c in {"Cap2", "2"}:
+        return "Lực Cap2=chải nhẹ 1 chiều như đánh răng (không chà mạnh)"
+    if c in {"Cap3", "3", "Cap2-3"}:
+        return "Lực Cap2-3=mạnh hơn một chút trên đoạn ngắn (denim/đất khô)"
+    return "Lực Cap1-2=lau kính → chải nhẹ (không chà qua lại)"
+
+
 def _narrate_soft_brush(
     *,
     family: str,
@@ -1547,121 +1570,125 @@ def _narrate_soft_brush(
     fab_ko, fab_vi = _fabric_label(fabric, weight)
     w = (weight or "unknown").lower()
     cap = force or "Cap1–2"
+    cap_ko = _cap_plain_ko(cap)
+    cap_vi = _cap_plain_vi(cap)
     spot = "국소 얼룩만 — " if local_spot_only or item_id in HOME_TEXTILE_ITEM_IDS else ""
     spot_vi = "chỉ vết cục bộ — " if local_spot_only or item_id in HOME_TEXTILE_ITEM_IDS else ""
 
     if delicate:
         return (
-            f"{spot}이 원단({fab_ko}): 연질 솔 금지 → 초연질·흰 천 Cap1 두드림·흡수만.",
-            f"{spot_vi}{fab_vi}: CẤM bàn chải mềm thường → siêu mềm/khăn Cap1 chỉ đập/thấm.",
+            f"{spot}이 원단({fab_ko}): 연질 솔 금지 → 초연질·흰 천만. {_cap_plain_ko('Cap1')}.",
+            f"{spot_vi}{fab_vi}: CẤM bàn chải mềm thường → siêu mềm/khăn. {_cap_plain_vi('Cap1')}.",
             f"{spot}Delicate ({fab_ko}): no soft spotting brush — ultra/cloth Cap1 dab only.",
         )
 
     if family == "tannin":
         if w == "thin":
             ko = (
-                f"{spot}탄닌·색소 + {fab_ko}: 솔보다 흰 천 블롯 우선. 필요 시만 Cap1로 가볍게 두드리듯, "
-                f"바깥→안 — 왕복 문지르면 색소 번짐."
+                f"{spot}탄닌·색소 + {fab_ko}: ①흰 천으로 찍어 흡수(솔보다 우선). "
+                f"②그래도 남은 자국만 연질솔 — {_cap_plain_ko('Cap1')}, 바깥→안. "
+                f"왕복 문지르면 색소 번짐."
             )
             vi = (
-                f"{spot_vi}Tannin/màu + {fab_vi}: ưu tiên khăn thấm. Nếu cần Cap1 đập nhẹ NGOÀI→TRONG — "
-                f"không chà qua lại (loang màu)."
+                f"{spot_vi}Tannin/màu + {fab_vi}: ①ưu tiên khăn thấm. "
+                f"②còn vết mới chải — {_cap_plain_vi('Cap1')}, NGOÀI→TRONG. Không chà qua lại."
             )
         elif w == "thick":
             ko = (
-                f"{spot}탄닌·색소 + {fab_ko}: 식초(또는 해당 산) 도포 후 {cap} 바깥→안 한 방향. "
-                f"천이 물들면 즉시 중단·흰 천으로 흡수."
+                f"{spot}탄닌·색소 + {fab_ko}: 식초(또는 해당 산) 도포 후 남은 자국만 연질솔 — "
+                f"{cap_ko}, 바깥→안 한 방향. 천이 물들면 즉시 중단·흰 천으로 흡수."
             )
             vi = (
-                f"{spot_vi}Tannin + {fab_vi}: sau giấm, {cap} 1 chiều NGOÀI→TRONG. "
-                f"Khăn nhuốm → dừng, thấm khăn mới."
+                f"{spot_vi}Tannin + {fab_vi}: sau giấm, chải vết còn — {cap_vi}, "
+                f"1 chiều NGOÀI→TRONG. Khăn nhuốm → dừng."
             )
         else:
             ko = (
-                f"{spot}탄닌·색소 + {fab_ko}: 먼저 흰 천으로 흡수 → 남은 자국만 연질솔 {cap} "
-                f"바깥→안 한 방향(45°). 왕복 문지르기 금지."
+                f"{spot}탄닌·색소 + {fab_ko}: ①먼저 흰 천으로 흡수. "
+                f"②남은 자국(=아직 보이는 얼룩)만 연질솔 — {cap_ko}, 바깥→안 한 방향(45°). "
+                f"왕복 문지르기 금지."
             )
             vi = (
-                f"{spot_vi}Tannin + {fab_vi}: thấm khăn trước → còn lại mới chải {cap} "
-                f"NGOÀI→TRONG 1 chiều (45°). Không chà qua lại."
+                f"{spot_vi}Tannin + {fab_vi}: ①thấm khăn trước. "
+                f"②chỉ vết còn lại — chải {cap_vi}, NGOÀI→TRONG 1 chiều (45°). Không chà qua lại."
             )
         return ko, vi, ko
 
     if family == "oil":
         ko = (
-            f"{spot}유성 + {fab_ko}: 마른 천으로 기름 과잉 흡수 → 주방세제와 함께 {cap} "
-            f"바깥→안. 온수·세게 문지르면 더 퍼짐."
+            f"{spot}유성 + {fab_ko}: 마른 천으로 기름 과잉 흡수 → 주방세제와 함께 연질솔 — "
+            f"{cap_ko}, 바깥→안. 온수·세게 문지르면 더 퍼짐."
         )
         vi = (
-            f"{spot_vi}Dầu + {fab_vi}: thấm dầu thừa bằng khăn khô → D2 + {cap} NGOÀI→TRONG. "
+            f"{spot_vi}Dầu + {fab_vi}: thấm dầu thừa khăn khô → D2 + chải {cap_vi} NGOÀI→TRONG. "
             f"Không nước nóng/chà mạnh."
         )
         return ko, vi, ko
 
     if family == "oil_tannin":
         ko = (
-            f"{spot}기름+색소 + {fab_ko}: 고형 제거 후 주방세제와 {cap} 바깥→안 → "
-            f"색소는 식초 단계. 번지면 Cap 낮추고 흰 천."
+            f"{spot}기름+색소 + {fab_ko}: 고형 제거 후 주방세제와 연질솔 — {cap_ko}, 바깥→안 → "
+            f"색소는 식초 단계. 번지면 힘 낮추고 흰 천."
         )
         vi = (
-            f"{spot_vi}Dầu+màu + {fab_vi}: cạo đặc → D2 {cap} NGOÀI→TRONG → giấm cho màu. "
+            f"{spot_vi}Dầu+màu + {fab_vi}: cạo đặc → D2 chải {cap_vi} NGOÀI→TRONG → giấm cho màu. "
             f"Loang → giảm lực, dùng khăn."
         )
         return ko, vi, ko
 
     if family == "protein":
         ko = (
-            f"{spot}단백질 + {fab_ko}: 찬물만. 연질솔은 {cap}로 두드리듯 — "
+            f"{spot}단백질 + {fab_ko}: 찬물만. 연질솔은 {_cap_plain_ko('Cap1')} — "
             f"온수·강하게 문지르면 갈색 고착. 섬세면 초연질."
         )
         vi = (
-            f"{spot_vi}Protein + {fab_vi}: CHỈ lạnh. Chải {cap} kiểu đập — "
+            f"{spot_vi}Protein + {fab_vi}: CHỈ lạnh. Chải {_cap_plain_vi('Cap1')} — "
             f"nóng/chà mạnh = cố định. Đồ mỏng: siêu mềm."
         )
         return ko, vi, ko
 
     if family == "mud":
         ko = (
-            f"{spot}흙·진흙 + {fab_ko}: 마른 흙은 경질로 먼저 털고, 원단면은 연질 {cap} "
-            f"바깥→안. 젖은 채 문지르면 더 박힘."
+            f"{spot}흙·진흙 + {fab_ko}: 마른 흙은 경질로 먼저 털고, 원단면은 연질솔 — "
+            f"{cap_ko}, 바깥→안. 젖은 채 문지르면 더 박힘."
         )
         vi = (
-            f"{spot_vi}Bùn + {fab_vi}: chải khô đất (cứng) trước; mặt vải bàn chải mềm {cap} "
+            f"{spot_vi}Bùn + {fab_vi}: chải khô đất (cứng) trước; mặt vải mềm {cap_vi} "
             f"NGOÀI→TRONG. Ướt mà chà = ngấm sâu."
         )
         return ko, vi, ko
 
     if family == "mildew":
         ko = (
-            f"{spot}곰팡이 + {fab_ko}: 마스크 후 마른 포자만 Cap1로 살살 털기 — "
+            f"{spot}곰팡이 + {fab_ko}: 마스크 후 마른 포자만 — {_cap_plain_ko('Cap1')}로 살살 털기. "
             f"세게 문지르면 포자 확산. 그다음 약품."
         )
         vi = (
-            f"{spot_vi}Mốc + {fab_vi}: khẩu trang; phủi bào tử khô Cap1 — "
-            f"không chà mạnh (lan bào tử). Rồi hóa chất."
+            f"{spot_vi}Mốc + {fab_vi}: khẩu trang; phủi bào tử khô — {_cap_plain_vi('Cap1')}. "
+            f"Không chà mạnh. Rồi hóa chất."
         )
         return ko, vi, ko
 
     if family == "ink":
         ko = (
             f"{spot}잉크·염료 + {fab_ko}: 솔보다 흰 천+약품 블롯 우선. "
-            f"연질솔은 Cap1 두드림만 — 문지르면 번짐."
+            f"연질솔은 {_cap_plain_ko('Cap1')}만 — 문지르면 번짐."
         )
         vi = (
             f"{spot_vi}Mực + {fab_vi}: ưu tiên khăn+hóa chất thấm. "
-            f"Bàn chải mềm chỉ Cap1 đập — không chà."
+            f"Bàn chải mềm chỉ {_cap_plain_vi('Cap1')} — không chà."
         )
         return ko, vi, ko
 
     if w == "thin":
-        ko = f"{spot}{fab_ko}: Cap1만 바깥→안 가볍게. 마찰 큰 솔질 금지 — 흰 천·초연질 우선."
-        vi = f"{spot_vi}{fab_vi}: chỉ Cap1 NGOÀI→TRONG nhẹ. Ưu tiên khăn/siêu mềm."
+        ko = f"{spot}{fab_ko}: {_cap_plain_ko('Cap1')}, 바깥→안. 마찰 큰 솔질 금지 — 흰 천·초연질 우선."
+        vi = f"{spot_vi}{fab_vi}: {_cap_plain_vi('Cap1')} NGOÀI→TRONG. Ưu tiên khăn/siêu mềm."
     elif w == "thick":
-        ko = f"{spot}{fab_ko}: {cap}(짧은 구간 Cap2–3 가능) 바깥→안 한 방향. 넓게 문지르지 말 것."
-        vi = f"{spot_vi}{fab_vi}: {cap} (đoạn ngắn Cap2–3) 1 chiều NGOÀI→TRONG — không chà diện rộng."
+        ko = f"{spot}{fab_ko}: {cap_ko}, 바깥→안 한 방향. 넓게 문지르지 말 것."
+        vi = f"{spot_vi}{fab_vi}: {cap_vi} 1 chiều NGOÀI→TRONG — không chà diện rộng."
     else:
-        ko = f"{spot}{fab_ko}: {cap} 바깥→안 한 방향(45°). 실크·울이면 초연질로 교체."
-        vi = f"{spot_vi}{fab_vi}: {cap} NGOÀI→TRONG 1 chiều (45°). Lụa/len → siêu mềm."
+        ko = f"{spot}{fab_ko}: {cap_ko}, 바깥→안 한 방향(45°). 실크·울이면 초연질로 교체."
+        vi = f"{spot_vi}{fab_vi}: {cap_vi} NGOÀI→TRONG 1 chiều (45°). Lụa/len → siêu mềm."
     return ko, vi, ko
 
 
@@ -2021,19 +2048,36 @@ def bind_tools_from_protocol(proto: Protocol, tools: list, *, item_id: str = "")
         elif tid == "T_SOAK_BIN":
             if delicate_s1:
                 t["use_for_ko"] = (
-                    "실크·울: 통담금보다 국소·찬물 헹굼 우선. 담그면 중성세제만·짧게, "
+                    f"실크·울: 통담금보다 국소·찬물 헹굼 우선. 담그면 「{spray_name_ko}」만·짧게, "
                     f"타이머 {min_ko}. 식초·효소 담금 금지."
                 )
                 t["use_for_vi"] = (
-                    f"Len/lụa: ưu tiên chấm/xả lạnh. Nếu ngâm: chỉ S1 ngắn ({min_vi}). CAM giấm/enzyme."
+                    f"Len/lụa: ưu tiên chấm/xả lạnh. Nếu ngâm: chỉ 「{spray_name_vi}」 ngắn ({min_vi}). "
+                    f"CAM giấm/enzyme."
                 )
-            else:
+            elif spray_chem:
                 t["use_for_ko"] = (
-                    f"희석액을 통에 만들어 {min_ko}만 담근다. 통에 약 이름을 적는다. "
+                    f"분무기와 같은 약: 「{spray_name_ko}」을 「{spray_dil_ko}」로 통에 만들어 "
+                    f"{min_ko}만 담근다(분무·담금 중 하나 또는 병행). "
+                    f"통 겉에 「{spray_name_ko} / {spray_dil_ko}」라고 적는다. "
                     f"정장·넥타이·얇은 실크는 SOP에서 금하면 통담금 하지 말 것."
                 )
                 t["use_for_vi"] = (
-                    f"Pha dung dịch, ngâm đúng {min_vi}. Dán tên thuốc. "
+                    f"Cùng thuốc với bình xịt: pha 「{spray_name_vi}」 theo 「{spray_dil_vi}」 vào chậu, "
+                    f"ngâm đúng {min_vi} (xịt hoặc ngâm). Dán 「{spray_name_vi} / {spray_dil_vi}」. "
+                    f"Cấm ngâm suit/cà vạt/lụa mỏng nếu SOP cấm."
+                )
+                t["use_for_en"] = (
+                    f"Same chem as spray: mix 「{spray_name_ko}」 at 「{spray_dil_ko}」 in the bin, "
+                    f"soak only {min_ko}. Label the bin. Skip full soak if SOP forbids."
+                )
+            else:
+                t["use_for_ko"] = (
+                    f"(4)약품의 희석액을 통에 만들어 {min_ko}만 담근다. 통에 약 이름을 적는다. "
+                    f"정장·넥타이·얇은 실크는 SOP에서 금하면 통담금 하지 말 것."
+                )
+                t["use_for_vi"] = (
+                    f"Pha dung dịch (4) vào chậu, ngâm đúng {min_vi}. Dán tên thuốc. "
                     f"Cấm ngâm suit/cà vạt/lụa mỏng nếu SOP cấm."
                 )
         bound.append(t)

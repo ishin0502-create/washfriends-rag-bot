@@ -347,6 +347,23 @@ def test_protocol_rewrites_brush_not_seed():
     assert "탄닌" in soft["use_for_ko"] or "색소" in soft["use_for_ko"]
 
 
+def test_soak_bin_names_same_chem_as_spray():
+    proto = build_protocol(_wine_graph(), entities={"fabric_type": "cotton"})
+    tools = bind_tools_from_protocol(
+        proto,
+        [
+            {"id": "T_SPRAY", "use_for_ko": "x"},
+            {"id": "T_SOAK_BIN", "use_for_ko": "희석액만"},
+            {"id": "T_BRUSH_SOFT", "use_for_ko": "Cap1–2만"},
+        ],
+    )
+    by = {t["id"]: t for t in tools}
+    assert "식초" in by["T_SOAK_BIN"]["use_for_ko"]
+    assert "식초 1" in by["T_SOAK_BIN"]["use_for_ko"] or "물 4" in by["T_SOAK_BIN"]["use_for_ko"]
+    assert "분무기와 같은" in by["T_SOAK_BIN"]["use_for_ko"]
+    assert "안경" in by["T_BRUSH_SOFT"]["use_for_ko"] or "남은 자국" in by["T_BRUSH_SOFT"]["use_for_ko"]
+
+
 if __name__ == "__main__":
     failed = 0
     for fn in [v for k, v in list(globals().items()) if k.startswith("test_")]:
