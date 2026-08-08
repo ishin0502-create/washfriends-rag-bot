@@ -123,6 +123,31 @@ def test_apply_faux_leather_graph():
     assert "D2" in codes
 
 
+def test_must_include_on_goose_and_suit():
+    goose = education_for("I_DUVET_GOOSE")
+    assert "테니스볼" in goose["must_include_ko"]
+    assert "테니스볼" in goose["aftercare_ko"]
+    g = {
+        "item_context": {"id": "I_DUVET_GOOSE", "name_ko": "구스이불"},
+        "stain_context": {"group": "item_care", "id": "I_DUVET_GOOSE"},
+        "tools": [],
+        "chemicals": [],
+    }
+    out = apply_specialty_item_education(
+        g, entities={"item_id": "I_DUVET_GOOSE", "_raw": "구스이불 세탁"}
+    )
+    assert "테니스볼" in (out.get("must_include_ko") or "")
+    assert "테니스볼" in ((out.get("stain_context") or {}).get("must_include_ko") or "")
+
+    faux = education_for("I_FAUX_LEATHER")
+    assert "체크리스트" in faux["precheck_ko"] or "뒷면" in faux["precheck_ko"]
+    white = education_for("I_SNEAKER_WHITE")
+    assert "100%" in white["precheck_ko"]
+    suit = education_for("I_SUIT", entities={"_raw": "정장 다림질"})
+    assert "에어드레서" in suit["fresh_path_ko"]
+    assert "에어드레서" in suit["must_include_ko"]
+
+
 if __name__ == "__main__":
     test_goose_typo_maps()
     test_hotel_sheet_not_cotton_duvet()
@@ -136,4 +161,5 @@ if __name__ == "__main__":
     test_sneaker_whitening_and_laces()
     test_linen_and_finishing()
     test_apply_faux_leather_graph()
+    test_must_include_on_goose_and_suit()
     print("OK specialty_item_care")

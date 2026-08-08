@@ -1905,6 +1905,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
         "precheck_ko", "motion_ko", "water_temp_ko", "aftercare_ko",
         "item_name_ko",
         "rescue_2nd_ko", "rescue_disclose_ko",
+        "must_include_ko",
     )
 
     sc = g.get("stain_context")
@@ -2396,7 +2397,11 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "empty_chems_ok 또는 chem_forbid_ko가 있으면 chemicals[]가 비어 있어도 (4)에 "
             "식초·표백·기타 약을 지어내지 말 것 — chem_forbid_ko를 그대로 따를 것. "
             "leather_care면 (4)에 chemicals[]의 가죽 클리너·크림·프로텍터를 빠짐없이 쓰고 "
-            "섬유용 식초 통담금 경로를 쓰지 말 것."
+            "섬유용 식초 통담금 경로를 쓰지 말 것. "
+            "specialty_item_care면 fresh_path_ko 번호 단계의 핵심을 (1)~(6)에 빠짐없이 옮길 것 — "
+            "요약으로 생략 금지. must_include_ko가 있으면 그 단어·구를 답에 모두 포함. "
+            "특히 테니스볼·건조볼·대형 전면투입·추가 헹굼·에어드레서·인조가죽 구분·수축 고지·"
+            "락스 금지·100% 복원 불가 멘트가 fresh_path/must_include에 있으면 반드시 말할 것."
         )
         wrapper = f"""점주 질문: {user_message}
 
