@@ -18,6 +18,21 @@ from specialty_garment_care import (
     apply_garment_specialty_hints,
     education_for_garment,
 )
+from specialty_cultural_care import (
+    CULTURAL_SPECIALTY_IDS,
+    apply_cultural_specialty_hints,
+    education_for_cultural,
+)
+from fabric_care import (
+    FABRIC_CURRICULUM_IDS,
+    apply_fabric_curriculum_hints,
+    education_for_fabric,
+)
+from chem_safety_care import (
+    CHEM_SAFETY_IDS,
+    apply_chem_safety_hints,
+    education_for_chem_safety,
+)
 
 
 SPECIALTY_CARE_IDS = frozenset({
@@ -44,6 +59,9 @@ SPECIALTY_CARE_IDS = frozenset({
     "I_DRESS_SHIRT",
     *PROCESS_STAGE_IDS,
     *GARMENT_SPECIALTY_IDS,
+    *CULTURAL_SPECIALTY_IDS,
+    *FABRIC_CURRICULUM_IDS,
+    *CHEM_SAFETY_IDS,
 })
 
 
@@ -194,6 +212,12 @@ def education_for(item_id: str, *, entities: Optional[dict] = None) -> dict[str,
         return education_for_process(item_id)
     if item_id in GARMENT_SPECIALTY_IDS:
         return education_for_garment(item_id)
+    if item_id in CULTURAL_SPECIALTY_IDS:
+        return education_for_cultural(item_id)
+    if item_id in FABRIC_CURRICULUM_IDS:
+        return education_for_fabric(item_id)
+    if item_id in CHEM_SAFETY_IDS:
+        return education_for_chem_safety(item_id)
     if item_id in {"I_SUIT", "I_SUIT_SUMMER"} and finish:
         return _suit_finishing(summer=(item_id == "I_SUIT_SUMMER"))
     if item_id == "I_DRESS" and (finish or _is_wedding(entities)):
@@ -277,6 +301,9 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
         "I_FUR_REAL", "I_FUR_FAUX", "I_TOWEL", "I_BED_SHEET",
         *PROCESS_STAGE_IDS,
         *GARMENT_SPECIALTY_IDS,
+        *CULTURAL_SPECIALTY_IDS,
+        *FABRIC_CURRICULUM_IDS,
+        *CHEM_SAFETY_IDS,
     }
     if item_id in wash_ids:
         out["item_wash_mode"] = True
@@ -287,6 +314,18 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
         out["stain_context"] = sc2
     if item_id in GARMENT_SPECIALTY_IDS:
         out = apply_garment_specialty_hints(out, item_id)
+        sc2 = out.get("stain_context") or sc2
+        out["stain_context"] = sc2
+    if item_id in CULTURAL_SPECIALTY_IDS:
+        out = apply_cultural_specialty_hints(out, item_id)
+        sc2 = out.get("stain_context") or sc2
+        out["stain_context"] = sc2
+    if item_id in FABRIC_CURRICULUM_IDS:
+        out = apply_fabric_curriculum_hints(out, item_id)
+        sc2 = out.get("stain_context") or sc2
+        out["stain_context"] = sc2
+    if item_id in CHEM_SAFETY_IDS:
+        out = apply_chem_safety_hints(out, item_id)
         sc2 = out.get("stain_context") or sc2
         out["stain_context"] = sc2
 

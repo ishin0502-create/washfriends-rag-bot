@@ -1192,6 +1192,99 @@ def _wants_qc_handover(raw: str, t: str) -> bool:
     ) or ("qc" in raw.lower() and any(k in raw for k in ("점검", "체크", "인도", "출고")))
 
 
+def _curriculum_blocked(raw: str, t: str) -> bool:
+    """True when a named garment/stain should win over fabric/chem curriculum."""
+    return _process_stage_blocked(raw, t) or any(
+        k in raw
+        for k in (
+            "넥타이", "아오자이", "한복", "유니폼", "교복", "근무복",
+            "커튼", "청바지", "고어텍스", "수영복", "아기옷", "골프",
+        )
+    ) or any(
+        k in t
+        for k in (
+            "necktie", "ao dai", "aodai", "hanbok", "uniform", "curtain",
+            "denim jeans", "gore-tex", "goretex", "swimwear", "baby",
+        )
+    )
+
+
+def _infer_chem_safety_item(raw: str, t: str) -> str:
+    if _curriculum_blocked(raw, t):
+        return ""
+    if any(
+        k in raw
+        for k in (
+            "혼합 금지", "약품 혼합", "락스 암모니아", "암모니아 락스", "섞으면 안",
+            "가스 위험", "절대 섞",
+        )
+    ) or any(
+        k in t
+        for k in (
+            "never mix", "do not mix", "bleach and ammonia", "pha tron",
+            "cam tron", "javel ammonia", "toxic gas",
+        )
+    ):
+        return "I_CHEM_NEVER_MIX"
+    if any(
+        k in raw
+        for k in ("표백 안전", "락스 사용", "산소표백", "염소표백", "제이블", "자벨")
+    ) or any(
+        k in t
+        for k in (
+            "bleach safety", "chlorine bleach", "oxygen bleach", "javel",
+            "nuoc tay", "tay oxy", "how to bleach",
+        )
+    ):
+        return "I_CHEM_BLEACH"
+    if any(
+        k in raw
+        for k in ("솔벤트", "아세톤 주의", "환기 용제", "시너 세탁")
+    ) or any(
+        k in t
+        for k in (
+            "solvent safety", "acetone safety", "ventilation solvent",
+            "dung moi", "acetone cam",
+        )
+    ):
+        return "I_CHEM_SOLVENT"
+    if any(
+        k in raw
+        for k in ("약품 장갑", "산 취급", "알칼리 PPE", "옥살산 안전", "니트릴 장갑 약품")
+    ) or any(
+        k in t
+        for k in (
+            "acid ppe", "chemical gloves", "oxalic safety", "ammonia gloves",
+            "gang tay hoa chat", "ppe acid",
+        )
+    ):
+        return "I_CHEM_ACID_PPE"
+    return ""
+
+
+def _infer_fabric_curriculum_item(raw: str, t: str) -> str:
+    """Fabric-only curriculum when care intent + fabric word, no garment/stain."""
+    if _curriculum_blocked(raw, t):
+        return ""
+    care = any(
+        k in raw
+        for k in (
+            "세탁", "관리", "주의", "취급", "원단", "소재", "어떻게", "방법",
+        )
+    ) or any(
+        k in t
+        for k in (
+            "wash", "care", "how to", "giat", "cham soc", "vai ", "fabric",
+        )
+    )
+    if not care:
+        return ""
+    from fabric_care import FABRIC_TOKEN_TO_ITEM
+
+    token = _infer_fabric_from_text(raw)
+    return FABRIC_TOKEN_TO_ITEM.get(token or "", "")
+
+
 def _infer_item_from_text(text: str) -> str:
     """Detect franchise item types from KO/VI/EN — KB-backed Item ids only."""
     if not text:
@@ -1492,6 +1585,12 @@ def _infer_item_from_text(text: str) -> str:
         or "dress shirt" in t
     ):
         return "I_DRESS_SHIRT"
+    chem_id = _infer_chem_safety_item(raw, t)
+    if chem_id:
+        return chem_id
+    fabric_id = _infer_fabric_curriculum_item(raw, t)
+    if fabric_id:
+        return fabric_id
     return ""
 
 
@@ -3360,6 +3459,16 @@ def _generate_response_core(
     elif (not _process_stage_blocked(user_message, raw_n)) and _wants_qc_handover(user_message, raw_n):
         entities["intent"] = "treatment"
         entities["item_id"] = "I_QC_HANDOVER"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif _infer_chem_safety_item(user_message, raw_n):
+        entities["intent"] = "treatment"
+        entities["item_id"] = _infer_chem_safety_item(user_message, raw_n)
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif _infer_fabric_curriculum_item(user_message, raw_n):
+        entities["intent"] = "treatment"
+        entities["item_id"] = _infer_fabric_curriculum_item(user_message, raw_n)
         entities["stain_id"] = ""
         entities["stain_type"] = ""
     elif any(k in user_message for k in ("선크림", "자외선차단", "자외선 차단")) or "kem chong nang" in raw_n or "sunscreen" in raw_n:

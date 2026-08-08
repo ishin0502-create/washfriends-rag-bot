@@ -52,6 +52,7 @@ KB_FILES = [
     ("items_clothing",     KB_DIR / "laundry_kb_v3_items_clothing.md",     "items"),
     ("items_home",         KB_DIR / "laundry_kb_v3_items_home.md",         "items"),
     ("items_ironing",      KB_DIR / "laundry_kb_v3_items_ironing.md",      "items"),
+    ("items_machine",      KB_DIR / "laundry_kb_v3_items_machine.md",      "items"),
     ("items_business",     KB_DIR / "laundry_kb_v3_items_business.md",     "business"),
     # Layer 3: Context & localization + advanced field cases
     ("localization",       KB_DIR / "laundry_kb_v3_localization.md",       "context"),

@@ -202,7 +202,7 @@ laundry_kb_v3_stains_tannin.md     ← Nhóm tannin — full protocol
 laundry_kb_v3_stains_protein.md    ← Nhóm protein — full protocol
 laundry_kb_v3_stains_dye.md        ← Nhóm thuốc nhuộm — full protocol
 laundry_kb_v3_stains_special.md    ← Nhóm đặc biệt — full protocol
-laundry_kb_v3_ironing.md           ← Protocol ủi chuyên nghiệp
-laundry_kb_v3_machine.md           ← Protocol máy giặt/sấy
+laundry_kb_v3_items_ironing.md     ← Protocol ủi chuyên nghiệp (alias: ironing)
+laundry_kb_v3_items_machine.md     ← Protocol máy giặt/sấy (alias: machine)
 laundry_kb_v3_viewer.html          ← Interactive training app
 ```

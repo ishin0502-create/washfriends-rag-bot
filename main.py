@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-08-garment-specialty-v1",
+            "build": "2026-08-08-cultural-fabric-chem-v1",
             "checks": checks,
         },
         status_code=200,
@@ -2110,6 +2110,45 @@ RETURN count(i) AS items""")
             log["I_leather_ko_enrich"] = {"updated": n_leather}
         except Exception as e:
             log["I_leather_ko_enrich"] = f"ERR:{str(e)[:120]}"
+        # Fabric curriculum + chem safety Item nodes (MERGE before specialty enrich)
+        try:
+            from fabric_care import fabric_seed_rows as _fab_rows
+            from chem_safety_care import chem_seed_rows as _chem_rows
+            _fc_rows = _fab_rows() + _chem_rows()
+            res_fc = s.run(
+                """
+UNWIND $rows AS it
+MERGE (i:Item {id:it.id})
+SET i.name = it.name, i.name_vi = it.name_vi, i.name_ko = it.name_ko,
+    i.fabric_id = it.fabric_id,
+    i.precheck_ko = coalesce(it.precheck_ko, i.precheck_ko),
+    i.why_ko = coalesce(it.why_ko, i.why_ko),
+    i.fresh_path_ko = coalesce(it.fresh_path_ko, i.fresh_path_ko),
+    i.dried_path_ko = coalesce(it.dried_path_ko, i.dried_path_ko),
+    i.motion_ko = coalesce(it.motion_ko, i.motion_ko),
+    i.water_temp_ko = coalesce(it.water_temp_ko, i.water_temp_ko),
+    i.aftercare_ko = coalesce(it.aftercare_ko, i.aftercare_ko),
+    i.sense_check_ko = coalesce(it.sense_check_ko, i.sense_check_ko),
+    i.success_rate_ko = coalesce(it.success_rate_ko, i.success_rate_ko),
+    i.refuse_when_ko = coalesce(it.refuse_when_ko, i.refuse_when_ko),
+    i.precheck_vi = coalesce(it.precheck_vi, i.precheck_vi),
+    i.why_vi = coalesce(it.why_vi, i.why_vi),
+    i.fresh_path_vi = coalesce(it.fresh_path_vi, i.fresh_path_vi),
+    i.dried_path_vi = coalesce(it.dried_path_vi, i.dried_path_vi),
+    i.aftercare_vi = coalesce(it.aftercare_vi, i.aftercare_vi),
+    i.precheck_en = coalesce(it.precheck_en, i.precheck_en),
+    i.why_en = coalesce(it.why_en, i.why_en),
+    i.fresh_path_en = coalesce(it.fresh_path_en, i.fresh_path_en),
+    i.dried_path_en = coalesce(it.dried_path_en, i.dried_path_en),
+    i.aftercare_en = coalesce(it.aftercare_en, i.aftercare_en)
+RETURN count(i) AS updated
+""",
+                rows=_fc_rows,
+            )
+            d_fc = res_fc.data()
+            log["Z18c_fabric_chem_items"] = d_fc[0] if d_fc else {"updated": 0, "rows": len(_fc_rows)}
+        except Exception as e:
+            log["Z18c_fabric_chem_items"] = f"ERR:{str(e)[:120]}"
         try:
             from specialty_item_care import SPECIALTY_CARE_IDS, education_for as _spec_edu
             n_spec = 0
