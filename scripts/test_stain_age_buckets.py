@@ -1,0 +1,112 @@
+# -*- coding: utf-8 -*-
+"""Unit tests for stain age buckets (fresh / dried / hard framing)."""
+from stain_age_buckets import (
+    DRIED_PATH_KO,
+    apply_stain_age_buckets,
+    detect_stain_age,
+    seed_dried_path_rows,
+)
+
+
+def test_detect_fresh():
+    assert detect_stain_age("방금 와인 묻었어") == "fresh"
+    assert detect_stain_age("just spilled coffee") == "fresh"
+
+
+def test_detect_dried():
+    assert detect_stain_age("마른 와인 얼룩 지우는 법") == "dried"
+    assert detect_stain_age("이미 마른 케첩") == "dried"
+    assert detect_stain_age("dried wine stain") == "dried"
+
+
+def test_detect_hard():
+    assert detect_stain_age("몇달 전 와인 열고착") == "hard"
+    assert detect_stain_age("한달 전에 묻은 커피") == "hard"
+
+
+def test_detect_unknown():
+    assert detect_stain_age("와인 묻은 옷 어떻게 세탁해") == "unknown"
+
+
+def test_apply_unknown_dual_frame():
+    g = {
+        "stain_context": {
+            "id": "S_RED_WINE",
+            "fresh_path_ko": "신선 경로",
+            "dried_path_ko": "짧음",
+            "group": "G3",
+        }
+    }
+    out = apply_stain_age_buckets(g, "와인 묻은 옷 어떻게", {"stain_age": "unknown"})
+    sc = out["stain_context"]
+    assert sc["age_bucket"] == "unknown"
+    assert "dried_path_ko" in sc["age_frame_ko"]
+    assert "(1)" in sc["dried_path_ko"]
+    assert "limit_path_ko" in sc
+    assert "100%" in sc["limit_path_ko"]
+
+
+def test_apply_dried_priority():
+    g = {
+        "stain_context": {
+            "id": "S_KETCHUP",
+            "fresh_path_ko": "신선",
+            "dried_path_ko": "짧음",
+        }
+    }
+    out = apply_stain_age_buckets(g, "마른 케첩", {"stain_age": "dried"})
+    sc = out["stain_context"]
+    assert sc["path_priority"] == "dried_path"
+    assert sc["active_path_ko"] == sc["dried_path_ko"]
+    assert "주방세제" in sc["dried_path_ko"]
+
+
+def test_item_care_skipped():
+    g = {
+        "specialty_item_care": True,
+        "stain_context": {"id": "I_CURTAIN", "group": "item_care", "dried_path_ko": "x"},
+    }
+    out = apply_stain_age_buckets(g, "마른 커튼", {})
+    assert "age_bucket" not in (out.get("stain_context") or {})
+
+
+def test_seed_rows():
+    rows = seed_dried_path_rows()
+    assert len(rows) >= 20
+    wine = next(r for r in rows if r["id"] == "S_RED_WINE")
+    assert "(1)" in wine["dried_path_ko"]
+    assert "(1)" in wine["dried_path_vi"]
+
+
+def test_priority_covers_high_freq():
+    for sid in (
+        "S_RED_WINE",
+        "S_BLACK_COFFEE",
+        "S_KETCHUP",
+        "S_KIMCHI",
+        "S_COOKING_OIL",
+    ):
+        assert sid in DRIED_PATH_KO
+        assert DRIED_PATH_KO[sid].startswith("(1)")
+
+
+def test_ko_edu_seed_syncs_dried():
+    from ko_stain_education import seed_rows
+
+    rows = {r["id"]: r for r in seed_rows()}
+    assert "(1)" in rows["S_RED_WINE"]["dried_path_ko"]
+    assert "장침지" in rows["S_RED_WINE"]["dried_path_ko"] or "식초" in rows["S_RED_WINE"]["dried_path_ko"]
+
+
+if __name__ == "__main__":
+    failed = 0
+    for name, fn in list(globals().items()):
+        if not name.startswith("test_"):
+            continue
+        try:
+            fn()
+            print("OK", name)
+        except Exception as e:
+            failed += 1
+            print("FAIL", name, e)
+    raise SystemExit(1 if failed else 0)

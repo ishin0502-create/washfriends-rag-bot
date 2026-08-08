@@ -152,6 +152,11 @@ _SYSTEM_KO = """당신은 워시프렌즈(Wash Friends) 베트남 프랜차이�
 - 약품은 name_ko. 도구는 name_ko+use_for_ko. 희석은 dilution_ko. color_note_ko가 있으면 (1)에 반영.
 - Cap1–4 + 바깥→안. 얇은 원단은 Cap1–2만. 민간요법 금지. 최대 900자 수준으로 군더더기 금지, 교육 블록은 생략 금지.
 - aftercare의 강광·열고착 경고 생략 금지. 실패·마른 얼룩이면 rescue_2nd·rescue_disclose 반영.
+- 얼룩 SOP(품목 세탁 아님): age_frame_ko·age_bucket을 따를 것.
+  · unknown: (1)에서 신선/마름 한 줄 → 본문은 fresh_path(+protocol) → 「마른·고착이면」dried_path 단계 → limit_path·rescue로 한계.
+  · dried: 본문 축=dried_path. 신선은 한 줄. rescue·limit 포함.
+  · hard: limit_path를 먼저 고지 → dried 1회만. 100% 약속 금지.
+  · fresh: 본문=fresh_path. 마름은 (6)/성공률에 한 줄.
 - 실크/울/가죽 안전·never_mix 준수."""
 
 
@@ -209,6 +214,11 @@ Nội dung:
 - Không markdown. Không mã A3/B1/T_CLOTH. Hóa chất: shop_name_vi/name_vi. Dụng cụ: name_vi + use_for_vi.
 - Cap1–4 + ngoài→trong. Vải mỏng chỉ Cap1–2. Không mẹo dân gian. Tối đa ~900 từ; không bỏ khối giáo dục.
 - Không bỏ cảnh báo ánh sáng mạnh / cố định nhiệt trong aftercare. Nếu thất bại/vết khô: dùng rescue_2nd + rescue_disclose.
+- SOP vết (không phải giặt món): theo age_frame_vi / age_bucket.
+  · unknown: (1) tách tươi/khô → body fresh_path(+protocol) → 「nếu khô」 dried_path → limit_path + rescue.
+  · dried: body = dried_path; fresh một dòng; kèm rescue/limit.
+  · hard: limit_path trước → dried 1 lần. CẤM hứa 100%.
+  · fresh: body = fresh_path; khô một dòng ở sau xử lý.
 - Tuân thủ an toàn lụa/len/da và never_mix. Dùng color_note_vi nếu có."""
 
 
@@ -230,7 +240,12 @@ LANGUAGE — STRICT:
 Content:
 - No markdown. No internal codes (A3, B1, T_CLOTH). Cap1–4 + outside→inside.
 - No folk remedies. Keep education blocks. Respect silk/wool/leather safety and never_mix.
-- Include color_note_en in (1) when present. Max ~900 words."""
+- Include color_note_en in (1) when present. Max ~900 words.
+- Stain SOP (not item wash): follow age_frame_en / age_bucket.
+  · unknown: (1) split fresh/dried → body fresh_path(+protocol) → then dried_path steps → limit_path + rescue.
+  · dried: body = dried_path; fresh one line; include rescue/limit.
+  · hard: lead with limit_path → one dried attempt. Never promise 100%.
+  · fresh: body = fresh_path; dried one line in aftercare."""
 
 
 def retry_addon(lang: str, *, item_wash: bool = False) -> str:

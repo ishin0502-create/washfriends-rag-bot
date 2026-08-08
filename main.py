@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-08-ops-remainder-specialty-v1",
+            "build": "2026-08-08-stain-age-buckets-v1",
             "checks": checks,
         },
         status_code=200,
@@ -2298,6 +2298,25 @@ RETURN count(s) AS updated
             log["Z16_ko_stain_education"] = d_ko[0] if d_ko else {"updated": 0, "rows": len(_ko_rows)}
         except Exception as e:
             log["Z16_ko_stain_education"] = f"ERR:{str(e)[:120]}"
+        # Stain age buckets: step-level dried_path KO/VI for priority stains
+        try:
+            from stain_age_buckets import seed_dried_path_rows as _age_rows
+
+            _ar = _age_rows()
+            res_age = s.run(
+                """
+UNWIND $rows AS o
+MATCH (s:Stain {id:o.id})
+SET s.dried_path_ko = coalesce(o.dried_path_ko, s.dried_path_ko),
+    s.dried_path_vi = coalesce(o.dried_path_vi, s.dried_path_vi)
+RETURN count(s) AS updated
+""",
+                rows=_ar,
+            )
+            d_age = res_age.data()
+            log["Z16b_stain_age_dried"] = d_age[0] if d_age else {"updated": 0, "rows": len(_ar)}
+        except Exception as e:
+            log["Z16b_stain_age_dried"] = f"ERR:{str(e)[:120]}"
         # W2: ops drills (care/intake/water/machine) + dilution already in V_chem
         try:
             from w2_ops_rescue import ops_seed_rows as _ops_rows

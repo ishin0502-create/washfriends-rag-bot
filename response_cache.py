@@ -69,7 +69,7 @@ def max_entries() -> int:
 
 def cache_version() -> str:
     # v3: shop names + WF supply products in answers
-    return os.getenv("ANSWER_CACHE_VERSION", "v81")
+    return os.getenv("ANSWER_CACHE_VERSION", "v82")
 
 
 def _normalize_key(text: str) -> str:
@@ -311,6 +311,7 @@ def build_context_key(entities: dict) -> str:
         str(entities.get("stain_id") or ""),
         str(entities.get("stain_type") or ""),
         str(entities.get("fabric_type") or ""),
+        str(entities.get("stain_age") or ""),
     ]
     return "|".join(parts).lower()
 

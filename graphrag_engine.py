@@ -2127,6 +2127,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
         "item_name_vi",
         "rescue_2nd_vi", "rescue_disclose_vi",
         "must_include_vi",
+        "limit_path_vi", "age_frame_vi", "active_path_vi",
     )
     KO_FIELDS = (
         "why_ko", "fresh_path_ko", "dried_path_ko",
@@ -2136,12 +2137,14 @@ def _sanitize_graph_for_owner(graph, lang: str):
         "item_name_ko",
         "rescue_2nd_ko", "rescue_disclose_ko",
         "must_include_ko",
+        "limit_path_ko", "age_frame_ko", "active_path_ko",
     )
     EN_FIELDS = (
         "why_en", "fresh_path_en", "dried_path_en",
         "precheck_en", "motion_en", "water_temp_en", "aftercare_en",
         "sense_check_en", "success_rate_en", "refuse_when_en",
         "must_include_en", "item_name_en",
+        "limit_path_en", "age_frame_en", "active_path_en",
     )
 
     sc = g.get("stain_context")
@@ -2635,6 +2638,13 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
     raw_graph = graph_context.get("graph")
     if isinstance(raw_graph, dict):
         raw_graph = _enrich_teach_slots(raw_graph)
+        try:
+            from stain_age_buckets import apply_stain_age_buckets
+
+            ents = getattr(_generate_response_core, "last_entities", None) or {}
+            raw_graph = apply_stain_age_buckets(raw_graph, user_message, ents)
+        except Exception:
+            pass
     safe_graph = _sanitize_graph_for_owner(raw_graph, lang) if isinstance(raw_graph, dict) else raw_graph
     graph_json = json.dumps(safe_graph, ensure_ascii=False, indent=2, default=str)
     query_type = graph_context.get("query_type", "unknown")
@@ -2702,6 +2712,12 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "protocol이 없으면 fresh_path_ko의 「어디에·몇 분·어떻게」를 그대로. "
             "aftercare_ko의 강광·열고착 경고와 rescue_2nd_ko/rescue_disclose_ko가 있으면 "
             "후관리·실패 시 2차에 포함. "
+            "age_frame_ko·age_bucket을 따를 것: "
+            "unknown이면 (1) 신선/마름 한 줄 → 본문 fresh_path(+protocol) → "
+            "「마른·고착이면」dried_path_ko 단계 → limit_path_ko·rescue로 한계. "
+            "dried면 본문=dried_path_ko, fresh는 한 줄. "
+            "hard면 limit_path_ko 먼저 → dried 1회만·100% 금지. "
+            "fresh면 본문=fresh_path, 마름은 (6)/성공률에 한 줄. "
             "[왜 이 순서] → … → [감각 체크] → [성공률·고지] → [거절·보내기] — 각 블록 짧게. "
             "why_ko/fresh_path_ko/sense_check_ko·color_note_ko가 있으면 그대로. "
             "없으면 contains_*·chemicals·tools 사실만으로 한국어 작성 — 외국어 원문 복사 금지. "
@@ -2829,6 +2845,9 @@ Answer from this data only. Do not mix languages."""
                 "Bình xịt: nói đúng thuốc + tỷ lệ + vì sao ghi nhãn theo use_for_vi. "
                 "(3) Lực+hướng Cap — vải mỏng chỉ Cap1–2. "
                 "(4) Hóa chất (5) Nhiệt độ (6) Sau xử lý — theo fresh_path_vi (đâu/phút/cách). "
+                "Theo age_frame_vi/age_bucket: "
+                "unknown → (1) tách tươi/khô → body fresh(+protocol) → neu kho: dried_path_vi → limit+rescue; "
+                "dried → body dried_path; hard → limit trước + dried 1 lần; fresh → body fresh. "
                 "[Tại sao thứ tự này] → … → [Kiểm tra giác quan] → [Tỷ lệ & báo khách] → [Từ chối / chuyển]. "
                 "Dùng why_vi/fresh_path_vi/color_note_vi nếu có. Không copy name_ko/Hangul. "
                 "Pha loãng dilution_vi. Không markdown. Không mã nội bộ. CẤM bịa phút/thuốc."
@@ -3137,6 +3156,14 @@ def generate_response_from_entities(
         entities["lang"] = detect_reply_lang(user_caption)
     elif not entities.get("lang"):
         entities["lang"] = "vi"
+    try:
+        from stain_age_buckets import detect_stain_age
+
+        if not entities.get("stain_age"):
+            entities["stain_age"] = detect_stain_age(user_caption or "")
+    except Exception:
+        entities.setdefault("stain_age", "unknown")
+    _generate_response_core.last_entities = dict(entities)  # type: ignore[attr-defined]
 
     graph_context = _fetch_graph_context(entities)
     graph_data    = graph_context.get("graph")
@@ -3578,7 +3605,7 @@ def _generate_response_core(
     ):
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_BLOOD_DRY" if any(
-            k in user_message for k in ("마른", "굳은", "오래된")
+            k in user_message for k in ("마른", "굳은", "오래된", "고착", "말랐")
         ) or "mau kho" in raw_n or "dried" in raw_n else "S_BLOOD_FRESH"
         entities["stain_type"] = "mau"
     elif any(k in user_message for k in ("엔진오일", "기계유", "모터오일")) or "engine oil" in raw_n or "dau dong co" in raw_n:
@@ -3750,6 +3777,12 @@ def _generate_response_core(
         ft = _infer_fabric_from_text(user_message)
         if ft:
             entities["fabric_type"] = ft
+    try:
+        from stain_age_buckets import detect_stain_age
+
+        entities["stain_age"] = detect_stain_age(user_message)
+    except Exception:
+        entities["stain_age"] = "unknown"
     _generate_response_core.last_entities = dict(entities)  # type: ignore[attr-defined]
     graph_context = _fetch_graph_context(entities)
     graph_data = graph_context.get("graph")
