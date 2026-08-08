@@ -65,11 +65,22 @@ def test_leather_mold_has_cream_ppe_no_soak():
 
 def test_leather_routine_cream_no_mold_ppe_required():
     g = _base_graph("I_LEATHER_BAG")
+    # Seed wrongly includes PPE — routine must drop it
+    g["tools"] = [
+        {"id": "T_CLOTH"},
+        {"id": "T_GLOVE_NITRILE"},
+        {"id": "T_MASK"},
+        {"id": "T_SOAK_BIN"},
+    ]
     out = apply_leather_education(
         g, entities={"item_id": "I_LEATHER_BAG", "_raw": "가죽가방 관리 방법"}
     )
     codes = [c.get("code") for c in out.get("chemicals") or []]
     assert codes == ["L1", "L2", "L3"] or set(codes) >= {"L1", "L2", "L3"}
+    tool_ids = [t.get("id") for t in out.get("tools") or []]
+    assert "T_GLOVE_NITRILE" not in tool_ids
+    assert "T_MASK" not in tool_ids
+    assert "T_SOAK_BIN" not in tool_ids
     path = (out.get("stain_context") or {}).get("fresh_path_ko") or ""
     assert "L2" in path or "크림" in path
     assert "곰팡이" not in path or "관리" in path
@@ -77,6 +88,11 @@ def test_leather_routine_cream_no_mold_ppe_required():
 
 def test_suede_mold_no_water_cleaner():
     g = _base_graph("I_SUEDE_GARMENT", stain_id="S_MILDEW")
+    g["chemicals"] = [
+        {"code": "A3", "name_ko": "흰 식초"},
+        {"code": "B1", "name_ko": "산소표백"},
+        {"code": "B2", "name_ko": "락스"},
+    ]
     out = apply_protocol_to_graph(
         g,
         entities={
@@ -86,13 +102,15 @@ def test_suede_mold_no_water_cleaner():
         },
     )
     codes = [c.get("code") for c in out.get("chemicals") or []]
-    assert "L1" not in codes
-    assert "A3" not in codes
+    assert codes == []
+    assert out.get("empty_chems_ok") is True
+    assert "식초" in (out.get("chem_forbid_ko") or "")
     path = (out.get("stain_context") or {}).get("fresh_path_ko") or ""
     assert "물" in path or "금지" in path
     tool_ids = [t.get("id") for t in out.get("tools") or []]
     assert "T_BRUSH_SOFT" in tool_ids
     assert "T_SOAK_BIN" not in tool_ids
+    assert "T_GLOVE_NITRILE" in tool_ids  # mold PPE ok
 
 
 def test_shoe_glove_same_framework():

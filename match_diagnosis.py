@@ -88,21 +88,21 @@ def chemistry_summary(sc: dict, lang: str = "ko") -> str:
             "protein": "단백질 → 찬물+효소(실크·울은 효소 금지·중성세제)",
             "tannin": "탄닌·식물성 색소 → 찬물+약한 산(식초) 후 필요 시 산소표백",
             "dye_pigment": "염료·안료 → 찍기(블롯)·용제; 문지르면 번짐",
-            "mold_spore": "곰팡이 포자·색소(단백질 아님) → 섬유=식초/산소 경로, 가죽=L1/L2·통담금 금지",
+            "mold_spore": "곰팡이 포자·색소(단백질 아님). chemicals[]에 없는 식초·표백을 (4)에 넣지 말 것(가죽·스웨이드 특히)",
         },
         "vi": {
             "oil_hydrophobic": "Dầu/mỡ (kỵ nước) → hút bột + surfactant trước",
             "protein": "Protein → nước lạnh + enzyme (lụa/len: không enzyme, S1)",
             "tannin": "Tannin → lạnh + giấm loãng rồi oxy nếu cần",
             "dye_pigment": "Nhuộm/pigment → blot/dung môi; không chà lan",
-            "mold_spore": "Bào tử mốc (không protein) → vải=giấm/oxy; da=L1/L2, cấm ngâm",
+            "mold_spore": "Bào tử mốc (không protein). CẤM bịa giấm/oxy vào (4) nếu không có trong chemicals[]",
         },
         "en": {
             "oil_hydrophobic": "Oil/grease (hydrophobic) → absorb + surfactant first",
             "protein": "Protein → cold + enzyme (silk/wool: no enzyme, neutral)",
             "tannin": "Tannin → cold + mild acid then oxygen if needed",
             "dye_pigment": "Dye/pigment → blot/solvent; never rub-spread",
-            "mold_spore": "Mold spores (not protein) → textile vinegar/oxy; leather L1/L2 no soak",
+            "mold_spore": "Mold spores (not protein). Do not invent vinegar/bleach in (4) unless in chemicals[]",
         },
     }
     lab = labels.get(lang) or labels["ko"]

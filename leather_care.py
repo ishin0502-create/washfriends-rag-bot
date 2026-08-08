@@ -309,7 +309,7 @@ def leather_chemicals_for(item_id: str, *, mold: bool = False) -> list[dict]:
     out = []
     by = {c["code"]: c for c in LEATHER_CHEM_SEED}
     if mold:
-        # Spot sanitize + mandatory cream after
+        # Spot sanitize + mandatory cream after — cream listed early so (4) does not drop it
         a1 = {
             "code": "A1",
             "name_ko": "이소프로필 알코올(소독용)",
@@ -321,8 +321,8 @@ def leather_chemicals_for(item_id: str, *, mold: bool = False) -> list[dict]:
             "buy_where_ko": "약국·마트",
             "when_use_ko": "평활 가죽 곰팡이 국소만. 스웨이드 금지.",
         }
-        out.append(a1)
         out.append(dict(by["L1"]))
+        out.append(a1)
         out.append(dict(by["L2"]))
         out.append(dict(by["L3"]))
     else:
@@ -377,32 +377,31 @@ def apply_leather_education(graph: dict, entities: Optional[dict] = None) -> dic
     # Replace textile soak chem kits with leather L1/L2/L3 (+A1 if mold)
     out["chemicals"] = leather_chemicals_for(item_id, mold=mold)
     out["washfriends_supply"] = []
-    out["empty_chems_ok"] = item_id in SUEDE_IDS and not mold
+    # Suede: intentionally empty shop chems — never invent vinegar/bleach in (4)
+    out["empty_chems_ok"] = item_id in SUEDE_IDS or not out["chemicals"]
+    if item_id in SUEDE_IDS:
+        out["chem_forbid_ko"] = (
+            "스웨이드: chemicals[] 비어 있음이 정상. (4)에 식초·산소/염소표백·가죽클리너·물약품을 "
+            "지어내지 말 것. 마른 솔·전문만."
+        )
+        out["chem_forbid_vi"] = (
+            "Suede: chemicals[] rỗng là đúng. CẤM bịa giấm/oxy/Javel/L1 vào (4). Chỉ chai khô / chuyên."
+        )
 
-    # Ensure tools include PPE on mold
-    want = set(leather_tool_ids(item_id, mold=mold))
-    have = {str(t.get("id") or ""): t for t in (out.get("tools") or []) if t}
-    # Drop textile soak/spray/timer that mislead on leather
-    drop = {"T_SOAK_BIN", "T_TIMER", "T_SPRAY", "T_BRUSH_HARD", "T_MESH_BAG"}
-    tools = [t for tid, t in have.items() if tid and tid not in drop]
-    # Add missing stubs (names filled by seed if present; else minimal)
+    # Tools: only leather kit (do not keep seed PPE on routine care)
+    want = leather_tool_ids(item_id, mold=mold)
     stubs = {
         "T_CLOTH": {"id": "T_CLOTH", "name_ko": "흰 천·흡수지", "name_vi": "Khăn trắng"},
         "T_BRUSH_SOFT": {"id": "T_BRUSH_SOFT", "name_ko": "연질 솔", "name_vi": "Bàn chải mềm"},
         "T_GLOVE_NITRILE": {"id": "T_GLOVE_NITRILE", "name_ko": "니트릴 장갑(PPE)", "name_vi": "Găng nitrile"},
         "T_MASK": {"id": "T_MASK", "name_ko": "마스크", "name_vi": "Khẩu trang"},
     }
-    have2 = {str(t.get("id") or ""): t for t in tools}
+    have = {str(t.get("id") or ""): t for t in (out.get("tools") or []) if t}
+    tools = []
     for tid in want:
-        if tid not in have2:
-            tools.append(dict(stubs.get(tid, {"id": tid})))
-    # Order: PPE first
-    order = ["T_GLOVE_NITRILE", "T_MASK", "T_BRUSH_SOFT", "T_CLOTH"]
-    tools.sort(key=lambda t: order.index(t["id"]) if t.get("id") in order else 99)
-    out["tools"] = tools
-
-    # Narrate leather-specific howto
-    out["tools"] = _narrate_leather_tools(out["tools"], item_id=item_id, mold=mold)
+        base = have.get(tid) or stubs.get(tid) or {"id": tid}
+        tools.append(dict(base))
+    out["tools"] = _narrate_leather_tools(tools, item_id=item_id, mold=mold)
     out["leather_care"] = True
     out["protocol_mode"] = "item_primary"
     return out

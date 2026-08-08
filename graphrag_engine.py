@@ -2312,7 +2312,11 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "[왜 이 순서] → … → [감각 체크] → [성공률·고지] → [거절·보내기]. "
             "why_ko/fresh_path_ko/sense_check_ko·color_note_ko가 있으면 그대로. "
             "없으면 contains_*·chemicals·tools 사실만으로 한국어 작성 — 외국어 원문 복사 금지. "
-            "희석 dilution_ko. 마크다운 금지. 코드/id 금지. 그래프에 없는 약·분·도구 지어내기 금지."
+            "희석 dilution_ko. 마크다운 금지. 코드/id 금지. 그래프에 없는 약·분·도구 지어내기 금지. "
+            "empty_chems_ok 또는 chem_forbid_ko가 있으면 chemicals[]가 비어 있어도 (4)에 "
+            "식초·표백·기타 약을 지어내지 말 것 — chem_forbid_ko를 그대로 따를 것. "
+            "leather_care면 (4)에 chemicals[]의 가죽 클리너·크림·프로텍터를 빠짐없이 쓰고 "
+            "섬유용 식초 통담금 경로를 쓰지 말 것."
         )
         wrapper = f"""점주 질문: {user_message}
 
