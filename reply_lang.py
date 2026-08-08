@@ -111,9 +111,9 @@ def reply_language_leaks(text: str, expected: str) -> list[str]:
     return reasons
 
 
-def system_prompt_for(lang: str) -> str:
+def system_prompt_for(lang: str, *, item_wash: bool = False) -> str:
     if lang == "ko":
-        return _SYSTEM_KO
+        return _SYSTEM_KO_ITEM_WASH if item_wash else _SYSTEM_KO
     if lang == "en":
         return _SYSTEM_EN
     return _SYSTEM_VI
@@ -147,6 +147,24 @@ _SYSTEM_KO = """당신은 워시프렌즈(Wash Friends) 베트남 프랜차이�
 - aftercare의 강광·열고착 경고 생략 금지. 실패·마른 얼룩이면 rescue_2nd·rescue_disclose 반영.
 - 실크/울/가죽 안전·never_mix 준수."""
 
+
+_SYSTEM_KO_ITEM_WASH = """당신은 워시프렌즈(Wash Friends) 베트남 프랜차이즈 세탁 전문가입니다.
+수신자: 가맹 점주(동료). 고객 응대 톤 금지.
+
+이 질문은 얼룩 제거 SOP가 아니라 특수 품목 일반 세탁/관리다.
+
+정확 매칭(최우선):
+- (1)은 품목·케어라벨·용량·오염 유무만. chemistry·소수성 오일·단백질·탄닌을 (1) 주제로 쓰지 말 것.
+- 「오염 없음→일반 세탁 / 오염 있음→겉만 국소 전처리 후 일반 세탁」을 (1)에서 먼저 구분.
+- fresh_path_ko·【오염 없음】/【오염 있음】·must_include_ko를 빠짐없이. 그래프에 없는 약·도구 지어내기 금지.
+
+절대 규칙 — 언어:
+- 한국어만. 베트남어·영어 금지.
+- 단계 제목은 반드시: (1)품목·라벨·용량·오염 유무 (2)도구 (3)힘·방향 (4)약품 (5)수온 (6)건조·후관리
+- 금지 제목: (1)오염·원단·두께·색상 — 이 질문은 얼룩 식별 템플릿을 쓰지 않는다.
+- (2)도구: tools[]를 「name_ko: use_for_ko」로. 일반 세탁에 옥살산·니트릴 PPE를 끌어오지 말 것(해당 얼룩 SOP가 아닐 때).
+- 교육 블록: [왜 이 순서] [감각 체크] [성공률·고지] [거절·보내기]
+- 마크다운·약품 코드·도구 id 금지. 최대 900자 수준, 교육 블록 생략 금지."""
 
 _SYSTEM_VI = """Bạn là chuyên gia giặt ủi của Wash Friends Vietnam.
 Đối tượng: chủ cửa hàng nhượng quyền (đồng nghiệp).
@@ -192,8 +210,15 @@ Content:
 - Include color_note_en in (1) when present. Max ~900 words."""
 
 
-def retry_addon(lang: str) -> str:
+def retry_addon(lang: str, *, item_wash: bool = False) -> str:
     if lang == "ko":
+        if item_wash:
+            return (
+                "CRITICAL RETRY: 이전 답이 다른 언어와 섞였습니다. "
+                "이번에는 한국어만. 품목 일반 세탁 모드. "
+                "단계: (1)품목·라벨·용량·오염 유무 (2)도구 (3)힘·방향 (4)약품 (5)수온 (6)건조·후관리. "
+                "(1)오염·원단·두께·색상 제목 금지. [왜 이 순서]로 시작하세요."
+            )
         return (
             "CRITICAL RETRY: 이전 답이 다른 언어와 섞였습니다. "
             "이번에는 한국어만 쓰세요. 베트남어·영어 단어/제목 금지. "

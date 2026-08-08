@@ -210,6 +210,25 @@ def test_goose_general_wash_not_stain_frame():
     assert "테니스" in names or "건조볼" in names
 
 
+def test_rewrite_item_care_step1_header():
+    from graphrag_engine import _rewrite_item_care_step1_header
+
+    ctx = {
+        "graph": {
+            "item_wash_mode": True,
+            "specialty_item_care": True,
+            "stain_context": {"group": "item_care"},
+        }
+    }
+    raw = (
+        "(1)오염·원단·두께·색상: 구스이불, 오염 없음.\n"
+        "(2)도구: 대형 전면투입 세탁기\n"
+    )
+    out = _rewrite_item_care_step1_header(raw, ctx, "ko")
+    assert "품목·라벨·용량·오염 유무" in out
+    assert "오염·원단·두께·색상" not in out
+
+
 if __name__ == "__main__":
     test_goose_typo_maps()
     test_hotel_sheet_not_cotton_duvet()
@@ -227,4 +246,5 @@ if __name__ == "__main__":
     test_finishing_injects_air_dresser_tool()
     test_enforce_must_include_appends_air()
     test_goose_general_wash_not_stain_frame()
+    test_rewrite_item_care_step1_header()
     print("OK specialty_item_care")

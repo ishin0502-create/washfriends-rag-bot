@@ -2384,8 +2384,9 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             lang_rule = (
                 "한국어만. 베트남어·영어 금지. "
                 "이 질문은 얼룩 제거가 아니라 품목 일반 세탁/관리다. "
-                "단계: (1)품목·라벨·용량·오염 유무 — "
+                "단계 제목은 정확히: (1)품목·라벨·용량·오염 유무 — "
                 "「오염 없음→일반 세탁 / 오염 있음→겉만 국소 전처리 후 일반 세탁」을 먼저 구분. "
+                "금지: '(1)오염·원단·두께·색상' 제목 — 얼룩 식별 템플릿 사용 금지. "
                 "소수성 오일·단백질 등 얼룩 chemistry를 (1)의 주제로 끌어오지 말 것. "
                 "(2)도구 — tools[]의 name_ko: use_for_ko만. "
                 "일반 세탁에 옥살산·락스·아세톤용 니트릴 장갑 PPE를 끌어오지 말 것(해당 얼룩 SOP가 아닐 때). "
@@ -2499,12 +2500,12 @@ Chỉ trả lời từ dữ liệu trên. Không trộn ngôn ngữ."""
     return wrapper
 
 
-def _call_llm(llm_prompt: str, lang: str = "vi") -> str:
+def _call_llm(llm_prompt: str, lang: str = "vi", *, item_wash: bool = False) -> str:
     response = _openai.chat.completions.create(
         model="gpt-4o-mini",
         max_tokens=1024,
         messages=[
-            {"role": "system", "content": system_prompt_for(lang)},
+            {"role": "system", "content": system_prompt_for(lang, item_wash=item_wash)},
             {"role": "user", "content": llm_prompt},
         ],
     )
@@ -2623,6 +2624,35 @@ def _phrase_present(answer: str, phrase: str) -> bool:
     return False
 
 
+_STAIN_STEP1_RE = re.compile(
+    r"\(1\)\s*오염[·\s]*원단[·\s]*두께[·\s]*색상\s*[—\-:]?",
+    re.UNICODE,
+)
+_ITEM_STEP1 = "(1)품목·라벨·용량·오염 유무 —"
+
+
+def _graph_is_item_wash(graph_context: dict) -> bool:
+    g = graph_context.get("graph") if isinstance(graph_context, dict) else None
+    if not isinstance(g, dict):
+        return False
+    sc = g.get("stain_context") or {}
+    return bool(
+        g.get("item_wash_mode")
+        or g.get("specialty_item_care")
+        or sc.get("item_wash_mode")
+        or sc.get("group") == "item_care"
+    )
+
+
+def _rewrite_item_care_step1_header(answer: str, graph_context: dict, lang: str) -> str:
+    """Force item-wash (1) label — system habit often keeps stain header."""
+    if lang != "ko" or not answer or not _graph_is_item_wash(graph_context):
+        return answer
+    if not _STAIN_STEP1_RE.search(answer):
+        return answer
+    return _STAIN_STEP1_RE.sub(_ITEM_STEP1, answer, count=1)
+
+
 def _enforce_must_include(answer: str, graph_context: dict, lang: str) -> str:
     """Append missing specialty must-phrases so LLM summarization cannot drop them."""
     if lang != "ko" or not answer:
@@ -2702,17 +2732,19 @@ def _answer_with_optional_cache(
 
     base_prompt = _build_llm_prompt(cache_question, graph_context, lang=lang)
     llm_prompt = (prefix + "\n\n" + base_prompt) if prefix else base_prompt
-    answer = _call_llm(llm_prompt, lang=lang)
+    item_wash = lang == "ko" and _graph_is_item_wash(graph_context)
+    answer = _call_llm(llm_prompt, lang=lang, item_wash=item_wash)
     leaks = reply_language_leaks(answer, lang)
     if leaks:
         print(f"[LANG] leak detected lang={lang} reasons={leaks}; retrying")
-        retry_prompt = retry_addon(lang) + "\n\n" + llm_prompt
-        answer2 = _call_llm(retry_prompt, lang=lang)
+        retry_prompt = retry_addon(lang, item_wash=item_wash) + "\n\n" + llm_prompt
+        answer2 = _call_llm(retry_prompt, lang=lang, item_wash=item_wash)
         if not reply_language_leaks(answer2, lang):
             answer = answer2
         else:
             print(f"[LANG] retry still leaks={reply_language_leaks(answer2, lang)}; keeping second attempt")
             answer = answer2
+    answer = _rewrite_item_care_step1_header(answer, graph_context, lang)
     answer = _enforce_must_include(answer, graph_context, lang)
     cache_store(cache_question, answer, ctx_key)
     return answer
