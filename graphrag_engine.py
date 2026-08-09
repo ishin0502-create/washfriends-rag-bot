@@ -1634,6 +1634,15 @@ def _infer_fabric_from_text(text: str) -> str:
         return "acetate"
     if "나일론" in raw or "nylon" in t:
         return "nylon"
+    if (
+        "혼방" in raw
+        or "혼용" in raw
+        or "blend" in t
+        or "vai pha" in t
+        or "poly cotton" in t
+        or "cotton poly" in t
+    ):
+        return "blend"
     # Wool: never bare "울" substring (false hits: 지울, 나을, 채울…)
     if (
         "양모" in raw
@@ -3714,12 +3723,22 @@ def _generate_response_core(
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_NAIL_POLISH"
         entities["stain_type"] = "son mong"
+    elif any(k in user_message for k in ("유성페인트", "유성 페인트", "오일페인트", "오일 페인트")) or "son dau" in raw_n or "oil paint" in raw_n or (
+        "paint" in raw_n and ("oil" in raw_n or "alkyd" in raw_n)
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_PAINT_OIL"
+        entities["stain_type"] = "son dau"
     elif any(k in user_message for k in ("페인트", "수성페인트", "수성 페인트")) or "son nuoc" in raw_n or "latex paint" in raw_n or (
-        "paint" in raw_n and "nail" not in raw_n
+        "paint" in raw_n and "nail" not in raw_n and "oil" not in raw_n
     ):
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_PAINT_LATEX"
         entities["stain_type"] = "son nuoc"
+    elif any(k in user_message for k in ("빈랑", "빈랑즙", "빈랑 얼룩", "투라우", "찌아")) or "trau" in raw_n or "betel" in raw_n or "areca" in raw_n or "trầu" in user_message.lower():
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_BETEL"
+        entities["stain_type"] = "trau cau"
     elif any(k in user_message for k in ("잔디", "풀물", "풀 얼룩")) or "co xanh" in raw_n or "grass stain" in raw_n or (
         "grass" in raw_n and "grease" not in raw_n
     ):

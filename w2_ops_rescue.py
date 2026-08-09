@@ -200,42 +200,64 @@ AFTERCARE_FORCE_KO = (
     "건조·다림질 전 강광으로 잔여 확인. 얼룩·미끄럼·냄새 남은 채 열을 가하면 열고착."
 )
 AFTERCARE_FORCE_VI = (
-    "Anh sang manh TRUOC say/ui. Con vet/nhon/mui ma say = khoa vet."
+    "Ánh sáng mạnh TRƯỚC sấy/ủi. Còn vết/nhờn/mùi mà sấy = khóa vết."
 )
 AFTERCARE_FORCE_EN = (
     "Strong-light check BEFORE dry/iron. Heat with residue sets the stain."
 )
 
+# Overlay unsigned VI ops drills with diacritic canon (education_parity_v5).
+try:
+    from education_parity_v5 import OPS_VI_CANON
+
+    for _oid, _fields in OPS_VI_CANON.items():
+        if _oid in OPS_DRILLS:
+            OPS_DRILLS[_oid].update(_fields)
+except Exception:
+    pass
+
 RESCUE_BY_GROUP = {
     "G1": {
         "ko": "2차: 찬물 재확인 → 효소 농도·시간↑(원단 허용 시, 실크·울 금지) → 흰 면만 과산화/산소 검토. 고객에 성공률↓ 고지.",
-        "vi": "Lan 2: xa lanh lai → tang enzyme (khong len/lua) → oxy/A4 chi cotton trang. Bao ty le thap.",
+        "vi": "Lần 2: xả lạnh lại → tăng enzyme (không len/lụa) → oxy/A4 chỉ cotton trắng. Báo tỷ lệ thấp.",
         "en": "2nd: re-rinse cold → longer enzyme if fabric allows → oxygen only on white cotton. Disclose lower odds.",
     },
     "G2": {
         "ko": "2차: 전분 흡착 재실시 → 주방세제/용제(환기) 반복 → 미끄럼 없어진 뒤에만 건조. 이미 열고착이면 성공률 낮음 고지.",
-        "vi": "Lan 2: N3 lai → D2/D1 (thong gio) lap → het nhon moi say. Da khoa nhiet: bao thap.",
+        "vi": "Lần 2: N3 lại → D2/D1 (thông gió) lặp → hết nhờn mới sấy. Đã khóa nhiệt: báo thấp.",
         "en": "2nd: re-absorb powder → repeat surfactant/solvent (ventilate) → dry only when not greasy. Heat-set = low odds.",
     },
     "G3": {
         "ko": "2차: 식초 1:4 재침지 → 흰/면만 산소표백(실크·울 금지) → 건조 전 강광. 이미 건조·고착 색소면 100% 비보장.",
-        "vi": "Lan 2: A3 1:4 lai → B1 chi trang/cotton → anh sang truoc say. Da khoa: khong 100%.",
+        "vi": "Lần 2: A3 1:4 lại → B1 chỉ trắng/cotton → ánh sáng trước sấy. Đã khóa: không 100%.",
         "en": "2nd: vinegar 1:4 again → oxygen on white cotton only → strong light before dry. Set dye = no 100%.",
     },
     "G4": {
         "ko": "2차: 안쪽 블롯만 반복(문지르기 금지) → 구석 테스트 후 용제 → 실패 시 중단·전문. 100% 비보장.",
-        "vi": "Lan 2: blot mat trai lap → dung moi sau test → fail thi dung/chuyen. Khong 100%.",
+        "vi": "Lần 2: blot mặt trái lặp → dung môi sau test → fail thì dừng/chuyên. Không 100%.",
         "en": "2nd: blot reverse only → solvent after corner test → stop/refer if failing. No 100%.",
     },
     "G5": {
-        "ko": "2차: fresh_path 성분별 순서를 한 바퀴 더(단계마다 헹굼) → 안 되면 전문·배상 논의. 혼합 칵테일 금지.",
-        "vi": "Lan 2: lap tung lop theo fresh_path, xa giua buoc → khong duoc thi chuyen. CAM pha cocktail.",
+        "ko": "2차: fresh_path 성분별 순서를 한 바퀴 더(단계마다 헹굼) → 안 되면 전문 의. 혼합 칵테일 금지.",
+        "vi": "Lần 2: lặp từng lớp theo fresh_path, xả giữa bước → không được thì chuyên. CẤM pha cocktail.",
         "en": "2nd: one more pass per fresh_path layer with rinses → else refer. No chemical cocktails.",
     },
 }
 
 
 def rescue_card_for_stain(sc: dict) -> dict:
+    sid = str(sc.get("id") or "").strip()
+    stain_card = None
+    try:
+        from education_parity_v5 import RESCUE_BY_STAIN, RESCUE_DISCLOSE_VI_CANON
+
+        stain_card = RESCUE_BY_STAIN.get(sid)
+        disclose_vi = RESCUE_DISCLOSE_VI_CANON
+    except Exception:
+        disclose_vi = (
+            "Lan 1 that bai/vet kho: bao ty le thap truoc khi lam lan 2. CAM hua 100%."
+        )
+
     gid = ""
     grp = sc.get("group_id") or sc.get("group")
     if isinstance(grp, dict):
@@ -253,7 +275,8 @@ def rescue_card_for_stain(sc: dict) -> dict:
             gid = "G4"
         else:
             gid = "G5"
-    card = RESCUE_BY_GROUP[gid]
+    group_card = RESCUE_BY_GROUP[gid]
+    card = stain_card or group_card
     dried_ko = (sc.get("dried_path_ko") or "").strip()
     dried_vi = (sc.get("dried_path_vi") or "").strip()
     return {
@@ -261,7 +284,7 @@ def rescue_card_for_stain(sc: dict) -> dict:
         "rescue_2nd_vi": (dried_vi + " / " if dried_vi else "") + card["vi"],
         "rescue_2nd_en": card["en"],
         "rescue_disclose_ko": "1차 실패·마른 얼룩: 성공률 하락·잔여 가능을 고지한 뒤에만 2차 진행. 100% 약속 금지.",
-        "rescue_disclose_vi": "Lan 1 that bai/vet kho: bao ty le thap truoc khi lam lan 2. CAM hua 100%.",
+        "rescue_disclose_vi": disclose_vi,
         "rescue_disclose_en": "After 1st fail/dried stain: disclose lower odds before 2nd pass. Never promise 100%.",
     }
 

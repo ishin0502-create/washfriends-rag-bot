@@ -19,6 +19,9 @@ FABRIC_CURRICULUM_IDS = frozenset({
     "I_FABRIC_LEATHER",
     "I_FABRIC_SUEDE",
     "I_FABRIC_FUR",
+    "I_FABRIC_ACETATE",
+    "I_FABRIC_NYLON",
+    "I_FABRIC_BLEND",
 })
 
 # token from _infer_fabric_from_text → curriculum item
@@ -33,6 +36,9 @@ FABRIC_TOKEN_TO_ITEM = {
     "leather": "I_FABRIC_LEATHER",
     "suede": "I_FABRIC_SUEDE",
     "fur": "I_FABRIC_FUR",
+    "acetate": "I_FABRIC_ACETATE",
+    "nylon": "I_FABRIC_NYLON",
+    "blend": "I_FABRIC_BLEND",
 }
 
 
@@ -48,6 +54,9 @@ def education_for_fabric(item_id: str) -> dict[str, str]:
         "I_FABRIC_LEATHER": _leather,
         "I_FABRIC_SUEDE": _suede,
         "I_FABRIC_FUR": _fur,
+        "I_FABRIC_ACETATE": _acetate,
+        "I_FABRIC_NYLON": _nylon,
+        "I_FABRIC_BLEND": _blend,
     }.get(item_id, lambda: {})()
 
 
@@ -431,6 +440,120 @@ def _fur() -> dict[str, str]:
     }
 
 
+def _acetate() -> dict[str, str]:
+    return {
+        "precheck_ko": "아세테이트/트리아세테이트: 아세톤·네일리무버·강한 용제 절대 금지. 라벨 우선.",
+        "why_ko": "[왜] 아세테이트=아세톤에 녹음. 매니큐어·시너 처리 시 원단 구멍·광택 손상.",
+        "fresh_path_ko": "(1)라벨 확인. (2)중성·찬물·Cap1. (3)얼룩은 아세톤 없는 SOP만. (4)건조기·고온 다리미 금지.",
+        "dried_path_ko": "이미 아세톤 접촉: 추가 용제 중단·손상 고지·전문.",
+        "motion_ko": "Cap1만",
+        "water_temp_ko": "찬물·미온(라벨)",
+        "aftercare_ko": "그늘 건조. 저온 다리미(천 대고).",
+        "sense_check_ko": "눈: 광택·녹음 흔적. 손: 약해진 부분.",
+        "success_rate_ko": "중성 손세탁: 중간. 아세톤 사고: 손상 확정.",
+        "refuse_when_ko": "아세톤·매니큐어 리무버 강제 → 거절.",
+        "must_include_ko": "아세톤 금지, Cap1, 라벨 우선",
+        "precheck_vi": "Acetate/triacetate: CẤM acetone/tẩy móng/dung môi mạnh. Ưu tiên nhãn.",
+        "why_vi": "[Tại sao] Acetate tan trong acetone. Sơn móng/thinner → lỗ/hỏng bóng.",
+        "fresh_path_vi": "(1)Nhãn. (2)Trung tính+lạnh Cap1. (3)Vết: SOP không acetone. (4)CẤM sấy/ủi nóng.",
+        "dried_path_vi": "Đã dính acetone: dừng dung môi, báo hỏng, chuyên.",
+        "motion_vi": "Chỉ Cap1",
+        "water_temp_vi": "Lạnh/ấm nhẹ (nhãn)",
+        "aftercare_vi": "Phơi bóng. Ủi thấp có khăn.",
+        "sense_check_vi": "Mắt: bóng/lỗ. Tay: chỗ yếu.",
+        "success_rate_vi": "Giặt tay trung tính: TB. Sự cố acetone: hỏng.",
+        "refuse_when_vi": "Bắt dùng acetone → từ chối.",
+        "must_include_vi": "CẤM acetone, Cap1, theo nhãn",
+        "precheck_en": "Acetate/triacetate: NEVER acetone/nail remover/harsh solvent. Label first.",
+        "why_en": "[Why] Acetate dissolves in acetone. Nail polish/thinner → holes/shine loss.",
+        "fresh_path_en": "(1)Label. (2)Mild cold Cap1. (3)Stains: acetone-free SOPs only. (4)No dryer/hot iron.",
+        "dried_path_en": "Already acetone-exposed: stop solvents; disclose damage; refer.",
+        "motion_en": "Cap1 only",
+        "water_temp_en": "Cold/lukewarm per label",
+        "aftercare_en": "Shade dry. Cool iron with cloth.",
+        "sense_check_en": "Eyes: shine/melt marks. Hand: weakened areas.",
+        "success_rate_en": "Mild hand wash: fair. Acetone incident: damage.",
+        "refuse_when_en": "Forced acetone → refuse.",
+        "must_include_en": "no acetone, Cap1, label first",
+    }
+
+
+def _nylon() -> dict[str, str]:
+    return {
+        "precheck_ko": "나일론: 열·강한 솔벤트 주의. 마찰·필링. 라벨 ≤30–40℃.",
+        "why_ko": "[왜] 나일론=열에 약해 수축·광택. 염소 표백 비권장. 기름 얼룩은 전처리 후 저온.",
+        "fresh_path_ko": "(1)라벨. (2)≤40℃·세제 소량. (3)얼룩 SOP는 저온·Cap1–2. (4)저온 건조/그늘.",
+        "dried_path_ko": "열고착 기름: 용제 테스트 후 신중. 고온 건조 금지.",
+        "motion_ko": "Cap1–2",
+        "water_temp_ko": "≤40℃",
+        "aftercare_ko": "저온 건조. 다리미 저온.",
+        "sense_check_ko": "눈: 필링·광택. 손: 수축.",
+        "success_rate_ko": "저온 관리: 양호. 고온: 손상↑.",
+        "refuse_when_ko": "고온·염소 강제 → 거절.",
+        "must_include_ko": "≤40℃, 고온·염소 금지",
+        "precheck_vi": "Nylon: tránh nhiệt/dung môi mạnh. ≤30–40°C theo nhãn.",
+        "why_vi": "[Tại sao] Nylon yếu nhiệt → rút/bóng. Không khuyến cáo clo. Dầu: tiền xử lý + lạnh.",
+        "fresh_path_vi": "(1)Nhãn. (2)≤40°C bột ít. (3)SOP vết lạnh Cap1–2. (4)Sấy thấp/phơi.",
+        "dried_path_vi": "Dầu khóa nhiệt: test dung môi thận trọng. CẤM sấy nóng.",
+        "motion_vi": "Cap1–2",
+        "water_temp_vi": "≤40°C",
+        "aftercare_vi": "Sấy thấp. Ủi thấp.",
+        "sense_check_vi": "Mắt: xù/bóng. Tay: rút.",
+        "success_rate_vi": "Giữ lạnh: tốt. Nóng: hỏng↑.",
+        "refuse_when_vi": "Bắt nóng/clo → từ chối.",
+        "must_include_vi": "≤40°C, CẤM nóng/clo",
+        "precheck_en": "Nylon: watch heat/harsh solvents. Label often ≤30–40°C.",
+        "why_en": "[Why] Heat-sensitive → shrink/shine. Chlorine not recommended. Oils: pretreat cold.",
+        "fresh_path_en": "(1)Label. (2)≤40°C light detergent. (3)Stain SOPs cold Cap1–2. (4)Low dry/shade.",
+        "dried_path_en": "Heat-set oil: cautious solvent test. No hot dryer.",
+        "motion_en": "Cap1–2",
+        "water_temp_en": "≤40°C",
+        "aftercare_en": "Low dryer. Cool iron.",
+        "sense_check_en": "Eyes: pills/shine. Hand: shrink.",
+        "success_rate_en": "Cold care: good. Hot: damage↑.",
+        "refuse_when_en": "Forced hot/chlorine → refuse.",
+        "must_include_en": "≤40°C, no hot/chlorine",
+    }
+
+
+def _blend() -> dict[str, str]:
+    return {
+        "precheck_ko": "혼방(면/폴리·울/아크릴 등): 가장 약한 섬유 기준으로. 라벨·혼용률 확인.",
+        "why_ko": "[왜] 혼방은 성분마다 내열·표백·효소 한계가 다름. 보수=약한 쪽 규칙.",
+        "fresh_path_ko": "(1)혼용률·라벨. (2)실크/울/아세테이트 포함 시 그 규칙 우선. (3)얼룩 SOP도 약한 원단 기준. (4)불확실=찬물·표백 금지.",
+        "dried_path_ko": "이미 손상: 추가 강처리 중단·고지.",
+        "motion_ko": "Cap1–2(약한 쪽)",
+        "water_temp_ko": "라벨; 불확실 시 ≤30℃",
+        "aftercare_ko": "약한 쪽 건조 규칙. 강광 후 열.",
+        "sense_check_ko": "눈: 이염·수축. 라벨: 혼용률.",
+        "success_rate_ko": "라벨 준수: 양호. 추측 처리: 위험.",
+        "refuse_when_ko": "혼용률 모르고 염소/고온 강제 → 거절.",
+        "must_include_ko": "약한 섬유 기준, 라벨·혼용률",
+        "precheck_vi": "Vải pha: theo thành phần yếu nhất. Đọc nhãn/%.",
+        "why_vi": "[Tại sao] Mỗi sợi khác chịu nhiệt/tẩy/enzyme. An toàn = theo sợi yếu.",
+        "fresh_path_vi": "(1)% + nhãn. (2)Có lụa/len/acetate → ưu tiên rule đó. (3)SOP vết theo sợi yếu. (4)Không chắc: lạnh, CẤM tẩy.",
+        "dried_path_vi": "Đã hỏng: dừng xử lý mạnh, báo.",
+        "motion_vi": "Cap1–2 (sợi yếu)",
+        "water_temp_vi": "Nhãn; không chắc ≤30°C",
+        "aftercare_vi": "Sấy theo sợi yếu. Ánh sáng trước nhiệt.",
+        "sense_check_vi": "Mắt: loang/rút. Nhãn: %.",
+        "success_rate_vi": "Theo nhãn: tốt. Đoán: rủi ro.",
+        "refuse_when_vi": "Không biết % mà bắt clo/nóng → từ chối.",
+        "must_include_vi": "theo sợi yếu, nhãn/%",
+        "precheck_en": "Blends: follow weakest fiber. Read label/%.",
+        "why_en": "[Why] Each fiber has different heat/bleach/enzyme limits. Safe = weakest rule.",
+        "fresh_path_en": "(1)% + label. (2)If silk/wool/acetate present → those rules win. (3)Stain SOP by weakest. (4)Unsure: cold, no bleach.",
+        "dried_path_en": "Already damaged: stop aggressive treatment; disclose.",
+        "motion_en": "Cap1–2 (weakest)",
+        "water_temp_en": "Label; if unsure ≤30°C",
+        "aftercare_en": "Dry by weakest fiber. Strong light before heat.",
+        "sense_check_en": "Eyes: bleed/shrink. Label: %.",
+        "success_rate_en": "Label followed: good. Guessing: risky.",
+        "refuse_when_en": "Unknown % + forced chlorine/hot → refuse.",
+        "must_include_en": "weakest-fiber rule, label/%",
+    }
+
+
 def apply_fabric_curriculum_hints(graph: dict[str, Any], item_id: str) -> dict[str, Any]:
     if item_id not in FABRIC_CURRICULUM_IDS:
         return graph
@@ -440,16 +563,19 @@ def apply_fabric_curriculum_hints(graph: dict[str, Any], item_id: str) -> dict[s
 
 
 _FABRIC_META = {
-    "I_FABRIC_COTTON": ("Cotton fabric care", "Cham soc vai cotton", "면 원단 관리", "F1"),
-    "I_FABRIC_POLY": ("Polyester fabric care", "Cham soc vai polyester", "폴리에스터 원단 관리", "F2"),
-    "I_FABRIC_WOOL": ("Wool fabric care", "Cham soc vai len", "울 원단 관리", "F3"),
-    "I_FABRIC_SILK": ("Silk fabric care", "Cham soc vai lua", "실크 원단 관리", "F4"),
-    "I_FABRIC_LINEN": ("Linen fabric care", "Cham soc vai linen", "린넨·마 원단 관리", "F5"),
-    "I_FABRIC_DENIM": ("Denim fabric care", "Cham soc vai denim", "데님 원단 관리", "F6"),
-    "I_FABRIC_RAYON": ("Rayon fabric care", "Cham soc vai rayon", "레이온 원단 관리", "F7"),
-    "I_FABRIC_LEATHER": ("Leather material care", "Cham soc da", "가죽 소재 관리", "F8"),
-    "I_FABRIC_SUEDE": ("Suede material care", "Cham soc suede", "스웨이드 소재 관리", "F9"),
-    "I_FABRIC_FUR": ("Fur material care", "Cham soc long thu", "모피 소재 관리", "F10"),
+    "I_FABRIC_COTTON": ("Cotton fabric care", "Chăm sóc vải cotton", "면 원단 관리", "F1"),
+    "I_FABRIC_POLY": ("Polyester fabric care", "Chăm sóc vải polyester", "폴리에스터 원단 관리", "F2"),
+    "I_FABRIC_WOOL": ("Wool fabric care", "Chăm sóc vải len", "울 원단 관리", "F3"),
+    "I_FABRIC_SILK": ("Silk fabric care", "Chăm sóc vải lụa", "실크 원단 관리", "F4"),
+    "I_FABRIC_LINEN": ("Linen fabric care", "Chăm sóc vải linen", "린넨·마 원단 관리", "F5"),
+    "I_FABRIC_DENIM": ("Denim fabric care", "Chăm sóc vải denim", "데님 원단 관리", "F6"),
+    "I_FABRIC_RAYON": ("Rayon fabric care", "Chăm sóc vải rayon", "레이온 원단 관리", "F7"),
+    "I_FABRIC_LEATHER": ("Leather material care", "Chăm sóc da", "가죽 소재 관리", "F8"),
+    "I_FABRIC_SUEDE": ("Suede material care", "Chăm sóc suede", "스웨이드 소재 관리", "F9"),
+    "I_FABRIC_FUR": ("Fur material care", "Chăm sóc lông thú", "모피 소재 관리", "F10"),
+    "I_FABRIC_ACETATE": ("Acetate fabric care", "Chăm sóc vải acetate", "아세테이트 원단 관리", "F11"),
+    "I_FABRIC_NYLON": ("Nylon fabric care", "Chăm sóc vải nylon", "나일론 원단 관리", "F12"),
+    "I_FABRIC_BLEND": ("Blend fabric care", "Chăm sóc vải pha", "혼방 원단 관리", "F13"),
 }
 
 

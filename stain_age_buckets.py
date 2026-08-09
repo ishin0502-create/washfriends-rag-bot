@@ -250,6 +250,21 @@ DRIED_PATH_VI: dict[str, str] = {
     ),
 }
 
+# Merge education parity v5 (remaining stains + VI diacritic upgrades + VN specialty).
+try:
+    from education_parity_v5 import (
+        CANON_DRIED_PATH_VI,
+        EXTRA_DRIED_PATH_KO,
+        EXTRA_DRIED_PATH_VI,
+    )
+
+    DRIED_PATH_KO.update(EXTRA_DRIED_PATH_KO)
+    DRIED_PATH_VI.update(CANON_DRIED_PATH_VI)
+    DRIED_PATH_VI.update(EXTRA_DRIED_PATH_VI)
+except Exception:
+    pass
+
+
 LIMIT_KO = (
     "한계(수개월·열고착·이미 다림질/건조기·얇은 실크·가정 강처리 실패): "
     "같은 약 무한 반복 금지. dried 경로 1회+rescue 후 잔색·전문·클레임 고지. 100% 약속 금지."

@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-09-stain-age-buckets-v4",
+            "build": "2026-08-09-education-parity-v5",
             "checks": checks,
         },
         status_code=200,
@@ -2317,6 +2317,57 @@ RETURN count(s) AS updated
             log["Z16b_stain_age_dried"] = d_age[0] if d_age else {"updated": 0, "rows": len(_ar)}
         except Exception as e:
             log["Z16b_stain_age_dried"] = f"ERR:{str(e)[:120]}"
+        # v5: VN specialty stains (oil paint, betel) + VI ops diacritic overlay
+        try:
+            from education_parity_v5 import (
+                seed_ops_vi_canon_rows as _vi_ops_rows,
+                vn_specialty_stain_seed_rows as _vn_stain_rows,
+            )
+
+            _vn = _vn_stain_rows()
+            res_vn = s.run(
+                """
+UNWIND $rows AS o
+MERGE (st:Stain {id:o.id})
+SET st.name = o.name, st.name_vi = o.name_vi, st.name_ko = o.name_ko,
+    st.water_spreads = o.water_spreads,
+    st.contains_protein = o.contains_protein,
+    st.contains_tannin = o.contains_tannin,
+    st.contains_oil = o.contains_oil,
+    st.contains_dye = o.contains_dye,
+    st.urgency = o.urgency, st.tip = o.tip,
+    st.why_ko = o.why_ko, st.why_vi = o.why_vi,
+    st.fresh_path_ko = o.fresh_path_ko, st.fresh_path_vi = o.fresh_path_vi,
+    st.dried_path_ko = o.dried_path_ko, st.dried_path_vi = o.dried_path_vi,
+    st.success_rate_ko = o.success_rate_ko, st.success_rate_vi = o.success_rate_vi,
+    st.refuse_when_ko = o.refuse_when_ko, st.refuse_when_vi = o.refuse_when_vi
+WITH st, o
+MATCH (g:Group {id:o.group_id})
+MERGE (st)-[:BELONGS_TO]->(g)
+RETURN count(st) AS upserted
+""",
+                rows=_vn,
+            )
+            log["Z16c_vn_specialty_stains"] = res_vn.data()[0] if res_vn else {"upserted": 0}
+
+            _vo = _vi_ops_rows()
+            res_vo = s.run(
+                """
+UNWIND $rows AS o
+MATCH (i:Item {id:o.id})
+SET i.why_vi = coalesce(o.why_vi, i.why_vi),
+    i.fresh_path_vi = coalesce(o.fresh_path_vi, i.fresh_path_vi),
+    i.aftercare_vi = coalesce(o.aftercare_vi, i.aftercare_vi),
+    i.sense_check_vi = coalesce(o.sense_check_vi, i.sense_check_vi),
+    i.success_rate_vi = coalesce(o.success_rate_vi, i.success_rate_vi),
+    i.refuse_when_vi = coalesce(o.refuse_when_vi, i.refuse_when_vi)
+RETURN count(i) AS updated
+""",
+                rows=_vo,
+            )
+            log["Z16d_ops_vi_canon"] = res_vo.data()[0] if res_vo else {"updated": 0}
+        except Exception as e:
+            log["Z16c_education_parity_v5"] = f"ERR:{str(e)[:160]}"
         # W2: ops drills (care/intake/water/machine) + dilution already in V_chem
         try:
             from w2_ops_rescue import ops_seed_rows as _ops_rows

@@ -229,6 +229,7 @@ ITEM_PRIMARY_IDS = frozenset({
     "I_FABRIC_COTTON", "I_FABRIC_POLY", "I_FABRIC_WOOL", "I_FABRIC_SILK",
     "I_FABRIC_LINEN", "I_FABRIC_DENIM", "I_FABRIC_RAYON",
     "I_FABRIC_LEATHER", "I_FABRIC_SUEDE", "I_FABRIC_FUR",
+    "I_FABRIC_ACETATE", "I_FABRIC_NYLON", "I_FABRIC_BLEND",
     "I_CHEM_NEVER_MIX", "I_CHEM_BLEACH", "I_CHEM_SOLVENT", "I_CHEM_ACID_PPE",
     "I_CARE_LABEL", "I_INTAKE_SCRIPT", "I_WATER_HARDNESS",
     "I_COLOR_FADE", "I_WHITE_FADE",
@@ -1175,12 +1176,44 @@ def _tpl_paint_latex() -> Protocol:
     return Protocol(
         stain_id="S_PAINT_LATEX",
         why_ko="[왜 이 순서] 수성페인트=젖었을 때 찬물·세제. 마르면 용제 테스트. 문질러 번짐 주의.",
-        why_vi="GIAO DUC: Sơn nước. Ướt: lạnh+D2. Khô: dung môi test.",
+        why_vi="[Tại sao] Sơn nước. Ướt: lạnh+D2. Khô: dung môi test.",
         steps=[
             Step("id", "수성페인트·젖음/마름", "Nhận sơn nước ướt/khô", force="Cap1"),
             Step("rinse", "젖었으면 즉시 찬물·긁기", "Nếu ướt: xả lạnh + cạo", force="Cap1"),
             Step("dish", "세제", "D2", chem="D2", force="Cap2", spray=True),
             Step("solvent", "마른 후: 용제/알코올 테스트", "Khô: D1/A1 test", chem="D1", optional=True, force="Cap1"),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_paint_oil() -> Protocol:
+    return Protocol(
+        stain_id="S_PAINT_OIL",
+        why_ko="[왜 이 순서] 유성페인트=수지·안료·유기용제. 수성과 다름. 시너 테스트·환기·PPE. 아세테이트 금지.",
+        why_vi="[Tại sao] Sơn dầu ≠ sơn nước. Dung môi test + thông gió + PPE. CẤM acetate.",
+        steps=[
+            Step("id", "유성페인트 확인(수성과 구분)", "Xác nhận sơn dầu", force="Cap1"),
+            Step("scrape", "고형 긁기", "Cạo", force="Cap1"),
+            Step("solvent", "시너/미네랄스피릿 구석 테스트+블롯", "Dung môi test + blot", chem="D1", force="Cap1"),
+            Step("dish", "주방세제", "D2", chem="D2", force="Cap2", spray=True),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_betel() -> Protocol:
+    return Protocol(
+        stain_id="S_BETEL",
+        why_ko="[왜 이 순서] 빈랑=탄닌+적갈 색소. 찬물·문지르기 금지. 식초 1:4→흰/면 산소.",
+        why_vi="[Tại sao] Trầu/cau = tannin đỏ nâu. Lạnh, không chà. Giấm 1:4 → oxy trắng.",
+        steps=[
+            Step("id", "빈랑·적갈 확인", "Nhận trầu đỏ nâu", force="Cap1"),
+            Step("blot", "찬물 흡수(문지르기 금지)", "Thấm lạnh — CẤM chà", force="Cap1"),
+            Step("vinegar", "식초 1:4", "Giấm 1:4", chem="A3", minutes_lo=5, minutes_hi=15, soak=True, spray=True),
+            Step("oxygen", "흰/면 잔색: 산소", "Oxy trắng/cotton", chem="B1", when="white_only", soak=True),
             Step("wash", "세탁", "Giặt", force="Cap2"),
             Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
         ],
@@ -1278,6 +1311,8 @@ PROTOCOL_BUILDERS = {
     "S_HAIR_DYE": _tpl_hair_dye,
     "S_SHOE_POLISH": _tpl_shoe_polish,
     "S_PAINT_LATEX": _tpl_paint_latex,
+    "S_PAINT_OIL": _tpl_paint_oil,
+    "S_BETEL": _tpl_betel,
     "S_GLUE": _tpl_glue,
     "S_STARCH_TRANSFER": _tpl_starch_transfer,
 }
@@ -1514,7 +1549,7 @@ def _stain_family(stain_id: str, sc: Optional[dict] = None) -> str:
         return "mud"
     if sid == "S_MILDEW":
         return "mildew"
-    if sid in {"S_INK_PEN", "S_INK_PERMANENT", "S_HAIR_DYE", "S_MASCARA", "S_PAINT_LATEX"}:
+    if sid in {"S_INK_PEN", "S_INK_PERMANENT", "S_HAIR_DYE", "S_MASCARA", "S_PAINT_LATEX", "S_PAINT_OIL"}:
         return "ink"
     if sid in {
         "S_ENGINE_OIL", "S_MOTORBIKE_OIL", "S_TAR", "S_GREASE", "S_COOKING_OIL",
