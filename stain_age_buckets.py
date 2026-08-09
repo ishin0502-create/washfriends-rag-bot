@@ -13,13 +13,23 @@ AgeBucket = Literal["fresh", "dried", "hard", "unknown"]
 
 # Prefer dried_path when these cues appear (KO / VI unsigned / EN).
 _HARD_KO = (
-    "몇달", "몇 달", "수개월", "한달", "한 달", "두달", "세달", "반년", "1년", "일년",
+    "몇달", "몇 달", "수개월", "한달", "한 달", "두달", "두 달", "세달", "세 달",
+    "두세달", "두세 달", "서너달", "서너 달", "반년", "1년", "일년", "작년", "작년에",
     "오래전", "오래 전", "아주 오래", "열고착", "이미 다림질", "이미 건조기",
     "열로 굳", "영구",
 )
 _DRIED_KO = (
     "마른", "마름", "말랐", "굳은", "고착", "건조된", "건조한", "어제", "그제",
     "며칠", "며칠 전", "하룻밤", "하룻 밤", "이미 말", "이미 건조",
+    "오래된", "오래 된", "오래됐", "오래됐어", "오래됨",
+    "예전", "예전에", "묵은", "꽤 된", "꽤된",
+    "시간이 지", "시간 지", "시간이 좀 지", "지난지", "묻은지 좀",
+    "기간을 알", "기간 알 수", "얼마나 됐", "얼마나 된", "언제 묻",
+    "몇주", "몇 주", "수주", "지난주", "지난 주",
+    "이전부터", "전부터 있",
+    "지워지지 않", "안 지워", "잘 안 지워", "잘 지워지지", "지워지지 않는",
+    "남아있어", "남아 있", "잔여 얼룩", "잔여얼룩",
+    "빨았는데", "세탁했는데", "한번 빨", "1차 실패", "안 빠져",
 )
 _HARD_VI = (
     "vai thang", "nhieu thang", "nua nam", "1 nam", "mot nam", "lau roi",
@@ -27,15 +37,17 @@ _HARD_VI = (
 )
 _DRIED_VI = (
     "vet kho", "da kho", "kho roi", "hom qua", "hom kia", "vai ngay",
-    "qua dem", "da say khoa",
+    "qua dem", "da say khoa", "truoc day", "lau", "kho xoa", "khong het",
 )
 _HARD_EN = (
     "months ago", "month-old", "year-old", "years ago", "heat-set", "heat set",
-    "already ironed", "already dried", "permanent",
+    "already ironed", "already dried", "permanent", "last year",
 )
 _DRIED_EN = (
     "dried", "set in", "set stain", "old stain", "overnight", "yesterday",
-    "few days", "days ago",
+    "few days", "days ago", "old wine", "old coffee", "aged stain",
+    "weeks ago", "last week", "won't come out", "will not come out",
+    "doesn't come out", "still there after wash", "previously stained",
 )
 _FRESH_KO = ("방금", "지금 막", "막 묻", "신선", "아직 젖", "아직 축", "방금 전")
 _FRESH_VI = ("moi do", "vua do", "con uot", "con am", "tuoi")
@@ -271,33 +283,38 @@ def _frame_for(bucket: AgeBucket) -> dict[str, str]:
     if bucket == "dried":
         return {
             "age_frame_ko": (
-                "age_bucket=dried. 본문 축=dried_path_ko(단계). "
+                "age_bucket=dried. 본문 축=dried_path_ko(단계·분). "
+                "protocol.steps는 약 순서만 — 신선 분(5–15분)을 dried 장침지보다 우선하지 말 것. "
                 "신선이면 fresh_path는 「신선 시」한 줄만. "
+                "탄닌·색소(와인·커피 등): 문지르기·솔 문지르기 금지 — 흰 천 흡수·식초만. "
+                "원단·두께 미상이면 Cap을 얇다고 단정하지 말 것(보통 기준+얇으면 Cap1). "
                 "rescue_2nd·rescue_disclose·limit_path_ko를 [성공률·고지]에 포함."
             ),
             "age_frame_vi": (
-                "age_bucket=dried. Body = dried_path_vi. "
-                "Fresh = one line only. Include rescue + limit_path_vi."
+                "age_bucket=dried. Body = dried_path_vi (phút dài). "
+                "protocol chỉ thứ tự — không ưu tiên phút tươi. "
+                "Tannin: CẤM chà. Include rescue + limit_path_vi."
             ),
             "age_frame_en": (
-                "age_bucket=dried. Body = dried_path_en. "
-                "Fresh = one line. Include rescue + limit_path_en."
+                "age_bucket=dried. Body = dried_path (longer soak). "
+                "Protocol = chem order only; do not prefer fresh minutes. "
+                "Tannin: no scrubbing. Include rescue + limit_path_en."
             ),
         }
     if bucket == "hard":
         return {
             "age_frame_ko": (
                 "age_bucket=hard. (1)에서 limit_path_ko를 먼저 고지. "
-                "시도는 dried_path_ko 1회만. 무한 반복·100% 약속 금지. "
-                "rescue_disclose 필수."
+                "시도는 dried_path_ko 1회만(장침지). protocol 신선 분을 본문으로 쓰지 말 것. "
+                "탄닌: 문지르기 금지. 무한 반복·100% 약속 금지. rescue_disclose 필수."
             ),
             "age_frame_vi": (
                 "age_bucket=hard. Lead with limit_path_vi. "
-                "Try dried_path once only. No 100%. rescue_disclose required."
+                "Try dried_path once only. No scrub. No 100%. rescue_disclose required."
             ),
             "age_frame_en": (
                 "age_bucket=hard. Lead with limit_path_en. "
-                "One dried attempt only. No 100%. rescue_disclose required."
+                "One dried attempt only. No scrub. No 100%. rescue_disclose required."
             ),
         }
     # unknown — dual teach
@@ -382,6 +399,22 @@ def apply_stain_age_buckets(
     out = dict(graph)
     out["stain_context"] = sc2
     out["age_bucket"] = bucket
+
+    # Tannin dried/hard: soft brush invites LLM "문지르기" — prefer cloth blot only.
+    tannin_ids = {
+        "S_RED_WINE", "S_BLACK_COFFEE", "S_TEA", "S_FRUIT_JUICE", "S_SOFT_DRINK",
+        "S_WHITE_WINE_BEER", "S_KIMCHI", "S_KETCHUP", "S_TOMATO_SAUCE",
+    }
+    if bucket in ("dried", "hard") and (
+        sid in tannin_ids or sc2.get("contains_tannin")
+    ):
+        tools = out.get("tools")
+        if isinstance(tools, list) and tools:
+            out["tools"] = [
+                t for t in tools
+                if not (isinstance(t, dict) and str(t.get("id") or "") == "T_BRUSH_SOFT")
+            ]
+
     return out
 
 

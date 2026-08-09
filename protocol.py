@@ -1626,32 +1626,31 @@ def _narrate_soft_brush(
     if family == "tannin":
         if w == "thin":
             ko = (
-                f"{spot}탄닌·색소 + {fab_ko}: ①흰 천으로 찍어 흡수(솔보다 우선). "
-                f"②그래도 남은 자국만 연질솔 — {_cap_plain_ko('Cap1')}, 바깥→안. "
-                f"왕복 문지르면 색소 번짐."
+                f"{spot}탄닌·색소 + {fab_ko}: 흰 천으로만 찍어 흡수(블롯). "
+                f"연질솔·왕복 문지르기 금지 — 색소 번짐. {_cap_plain_ko('Cap1')}."
             )
             vi = (
-                f"{spot_vi}Tannin/màu + {fab_vi}: ①ưu tiên khăn thấm. "
-                f"②còn vết mới chải — {_cap_plain_vi('Cap1')}, NGOÀI→TRONG. Không chà qua lại."
+                f"{spot_vi}Tannin/màu + {fab_vi}: chỉ thấm khăn (blot). "
+                f"CẤM chà bàn chải — lem màu. {_cap_plain_vi('Cap1')}."
             )
         elif w == "thick":
             ko = (
-                f"{spot}탄닌·색소 + {fab_ko}: 식초(또는 해당 산) 도포 후 남은 자국만 연질솔 — "
-                f"{cap_ko}, 바깥→안 한 방향. 천이 물들면 즉시 중단·흰 천으로 흡수."
+                f"{spot}탄닌·색소 + {fab_ko}: 식초 도포 후 흰 천 흡수 우선. "
+                f"남은 자국만 연질솔은 바깥→안 한 방향 찍기 — 왕복 문지르기 금지. {cap_ko}."
             )
             vi = (
-                f"{spot_vi}Tannin + {fab_vi}: sau giấm, chải vết còn — {cap_vi}, "
-                f"1 chiều NGOÀI→TRONG. Khăn nhuốm → dừng."
+                f"{spot_vi}Tannin + {fab_vi}: sau giấm, thấm khăn trước. "
+                f"Còn vết: chải 1 chiều NGOÀI→TRONG — CẤM chà qua lại. {cap_vi}."
             )
         else:
             ko = (
-                f"{spot}탄닌·색소 + {fab_ko}: ①먼저 흰 천으로 흡수. "
-                f"②남은 자국(=아직 보이는 얼룩)만 연질솔 — {cap_ko}, 바깥→안 한 방향(45°). "
+                f"{spot}탄닌·색소 + {fab_ko}: ①먼저 흰 천으로 흡수(블롯). "
+                f"②솔로 문지르기 금지 — 색소 번짐. 필요 시 Cap1 바깥→안 찍기만. "
                 f"왕복 문지르기 금지."
             )
             vi = (
                 f"{spot_vi}Tannin + {fab_vi}: ①thấm khăn trước. "
-                f"②chỉ vết còn lại — chải {cap_vi}, NGOÀI→TRONG 1 chiều (45°). Không chà qua lại."
+                f"②CẤM chà bàn chải — lem. Chỉ dab Cap1 NGOÀI→TRONG nếu cần."
             )
         return ko, vi, ko
 

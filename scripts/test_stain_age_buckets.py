@@ -17,11 +17,19 @@ def test_detect_dried():
     assert detect_stain_age("마른 와인 얼룩 지우는 법") == "dried"
     assert detect_stain_age("이미 마른 케첩") == "dried"
     assert detect_stain_age("dried wine stain") == "dried"
+    assert detect_stain_age("오래된 와인이 옷에 묻어있는데 어떻게 해야 지울수 있나요?") == "dried"
+    assert detect_stain_age("오래된 커피 얼룩") == "dried"
+    assert detect_stain_age("예전에 묻은 것 같은 와인") == "dried"
+    assert detect_stain_age("잘 지워지지 않는 오염이 있다") == "dried"
+    assert detect_stain_age("묵은 케첩 얼룩") == "dried"
+    assert detect_stain_age("시간이 지난 소스 얼룩") == "dried"
 
 
 def test_detect_hard():
     assert detect_stain_age("몇달 전 와인 열고착") == "hard"
     assert detect_stain_age("한달 전에 묻은 커피") == "hard"
+    assert detect_stain_age("두세달 이상 된 것 같은 와인") == "hard"
+    assert detect_stain_age("작년에 묻은 얼룩") == "hard"
 
 
 def test_detect_unknown():
