@@ -376,10 +376,13 @@ def _tpl_red_wine() -> Protocol:
 
 
 def _tpl_tannin_simple(stain_id: str, name_ko: str, name_vi: str) -> Protocol:
+    from education_gaps_v10 import thin_why_for
+
+    ow = thin_why_for(stain_id)
     return Protocol(
         stain_id=stain_id,
-        why_ko=f"[왜 이 순서] {name_ko}=탄닌·색소. 즉시·찬물. 식초 1:4 → 흰옷 산소. 열·건조 고착.",
-        why_vi=f"GIAO DUC: {name_vi}=tannin. SOM+LANH → giấm 1:4 → oxy trắng.",
+        why_ko=ow.get("why_ko") or f"[왜 이 순서] {name_ko}=탄닌·색소. 즉시·찬물. 식초 1:4 → 흰옷 산소. 열·건조 고착.",
+        why_vi=ow.get("why_vi") or f"GIAO DUC: {name_vi}=tannin. SOM+LANH → giấm 1:4 → oxy trắng.",
         steps=[
             Step("id", f"{name_ko}·신선·원단·색 확인", f"Nhận: {name_vi}", force="Cap1"),
             Step("rinse", "찬물 흡수·헹굼(안쪽) — 문지르기 금지", "Xả/thấm lạnh — không chà", tool_ids=["T_CLOTH"], force="Cap1"),
@@ -618,14 +621,18 @@ def _tpl_lipstick() -> Protocol:
 
 
 def _tpl_grease_like(stain_id: str, name_ko: str, name_vi: str) -> Protocol:
+    from education_gaps_v10 import thin_why_for
+
+    ow = thin_why_for(stain_id)
     return Protocol(
         stain_id=stain_id,
-        why_ko=f"[왜 이 순서] {name_ko}=소수성 오일/지방. 전분 흡착→주방세제. 미끄럼 남은 채 건조=열고착.",
-        why_vi=f"GIAO DUC: {name_vi}=dầu. N3 → D2. CAM sấy khi còn nhờn.",
+        why_ko=ow.get("why_ko") or f"[왜 이 순서] {name_ko}=소수성 오일/지방. 전분 흡착→주방세제. 미끄럼 남은 채 건조=열고착.",
+        why_vi=ow.get("why_vi") or f"GIAO DUC: {name_vi}=dầu. N3 → D2. CAM sấy khi còn nhờn.",
         steps=[
             Step("id", f"{name_ko}·원단 확인", f"Nhận {name_vi}", force="Cap1"),
             Step("absorb", "전분 10–30분 덮고 털기", "Phủ N3 10-30 phút", chem="N3", tool_ids=["T_CLOTH"], minutes_lo=10, minutes_hi=30, force="Cap1"),
             Step("dish", "주방세제 Cap2", "D2 Cap2", chem="D2", tool_ids=["T_CLOTH", "T_BRUSH_SOFT", "T_SPRAY"], force="Cap2", spray=True),
+            Step("lipase", "잔여 유지방: 리파아제(선택)", "Còn mỡ: E3 (tuỳ)", chem="E3", optional=True, minutes_lo=15, minutes_hi=30, soak=True, tool_ids=["T_SOAK_BIN", "T_TIMER"]),
             Step("wash", "세탁", "Giặt", force="Cap2"),
             Step("light", "미끄럼 없어진 뒤 건조·강광", "Hết nhờn mới sấy", force="Cap1"),
         ],
@@ -724,15 +731,18 @@ def _tpl_bubble_tea() -> Protocol:
 
 def _tpl_sauce_oil_tannin(stain_id: str, name_ko: str, name_vi: str) -> Protocol:
     """Ketchup / tomato: oil then vinegar then oxygen white."""
+    from education_gaps_v10 import thin_why_for
+
+    ow = thin_why_for(stain_id)
     return Protocol(
         stain_id=stain_id,
-        why_ko=f"[왜 이 순서] {name_ko}=색소+기름막. 긁기→주방세제→식초→흰옷 산소. 문질러 번짐 금지.",
-        why_vi=f"GIAO DUC: {name_vi}=màu+dầu. Cạo → D2 → A3 → B1 trắng.",
+        why_ko=ow.get("why_ko") or f"[왜 이 순서] {name_ko}=색소+기름막. 긁기→주방세제→식초→흰옷 산소. 문질러 번짐 금지.",
+        why_vi=ow.get("why_vi") or f"GIAO DUC: {name_vi}=màu+dầu. Cạo → D2 → A3 → B1 trắng.",
         steps=[
             Step("id", f"{name_ko}·원단", f"Nhận {name_vi}", force="Cap1"),
             Step("scrape", "고형 제거", "Cạo đặc", tool_ids=["T_CLOTH"], force="Cap1"),
             Step("dish", "주방세제 바깥→안", "D2 NGOÀI→TRONG", chem="D2", tool_ids=["T_CLOTH", "T_BRUSH_SOFT"], force="Cap2"),
-            Step("vinegar", "식초 1:4", "Giấm 1:4", chem="A3", tool_ids=["T_SPRAY", "T_TIMER"], minutes_lo=5, minutes_hi=10, spray=True, soak=True),
+            Step("vinegar", "식초 1:4", "Giấm 1:4", chem="A3", tool_ids=["T_SPRAY", "T_TIMER", "T_SOAK_BIN"], minutes_lo=5, minutes_hi=10, spray=True, soak=True),
             Step("oxygen", "흰옷 잔색 산소", "Trắng: B1", chem="B1", when="white_only"),
             Step("wash", "세탁; 잔색 채 건조 금지", "Giặt", force="Cap2"),
             Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
@@ -766,52 +776,44 @@ def _tpl_foundation() -> Protocol:
 
 
 def _tpl_protein_then_vinegar(stain_id: str, name_ko: str, name_vi: str) -> Protocol:
-    """Soy / fish sauce: enzyme then vinegar then oxygen white."""
+    from education_gaps_v10 import thin_why_for
+
+    ow = thin_why_for(stain_id)
+    ppe = stain_id in {"S_VOMIT", "S_URINE", "S_FECES"}
+    id_tools = ["T_GLOVE_NITRILE", "T_MASK"] if ppe else []
     return Protocol(
         stain_id=stain_id,
-        why_ko=f"[왜 이 순서] {name_ko}=단백질+탄닌/색소. 찬물→효소→식초→흰옷 산소. 냄새는 식초.",
-        why_vi=f"GIAO DUC: {name_vi}=protein+tannin. Lạnh → E → A3 → B1 trắng.",
+        why_ko=ow.get("why_ko") or f"[왜 이 순서] {name_ko}=단백질(+냄새). 찬물·효소 먼저→식초. 온수 금지.",
+        why_vi=ow.get("why_vi") or f"GIAO DUC: {name_vi}=protein. Enzyme rồi giấm. CAM nóng.",
+        water_temp_ko="찬물 우선",
+        water_temp_vi="Ưu tiên lạnh",
         steps=[
-            Step("id", f"{name_ko}·원단", f"Nhận {name_vi}", force="Cap1"),
+            Step("id", f"{name_ko}·원단", f"Nhận {name_vi}", tool_ids=id_tools, force="Cap1"),
             Step("rinse", "찬물 헹굼", "Xả lạnh", tool_ids=["T_CLOTH"], force="Cap1"),
-            Step(
-                "enzyme",
-                "효소 15–30분",
-                "Enzyme 15-30 phút",
-                chem="E1",
-                tool_ids=["T_SOAK_BIN", "T_TIMER"],
-                minutes_lo=15,
-                minutes_hi=30,
-                soak=True,
-            ),
-            Step(
-                "vinegar",
-                "식초 1:4 (색소·냄새)",
-                "Giấm 1:4",
-                chem="A3",
-                tool_ids=["T_SPRAY", "T_TIMER"],
-                minutes_lo=5,
-                minutes_hi=15,
-                spray=True,
-                soak=True,
-            ),
-            Step("oxygen", "흰옷 잔색 산소", "Trắng: B1", chem="B1", when="white_only"),
-            Step("wash", "세탁", "Giặt", force="Cap2"),
+            Step("enzyme", "효소 15–30분", "Enzyme 15-30 phút", chem="E1", tool_ids=["T_SOAK_BIN", "T_TIMER"], minutes_lo=15, minutes_hi=30, soak=True),
+            Step("vinegar", "식초 1:4", "Giấm 1:4", chem="A3", tool_ids=["T_SPRAY", "T_TIMER"], minutes_lo=5, minutes_hi=15, spray=True, soak=True),
+            Step("oxygen", "흰옷 잔색 산소", "Trắng: B1", chem="B1", when="white_only", optional=True),
+            Step("wash", "찬물 세탁", "Giặt lạnh", force="Cap2"),
             Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
         ],
     )
 
 
 def _tpl_protein_simple(stain_id: str, name_ko: str, name_vi: str, *, minutes=(15, 30)) -> Protocol:
+    from education_gaps_v10 import thin_why_for
+
+    ow = thin_why_for(stain_id)
     lo, hi = minutes
+    ppe = stain_id == "S_FECES"
+    id_tools = ["T_GLOVE_NITRILE", "T_MASK"] if ppe else []
     return Protocol(
         stain_id=stain_id,
-        why_ko=f"[왜 이 순서] {name_ko}=단백질. 찬물·효소. 온수·건조=고착. 흰면 잔색만 산소.",
-        why_vi=f"GIAO DUC: {name_vi}=protein. Lạnh + enzyme. CAM nóng/sấy sớm.",
+        why_ko=ow.get("why_ko") or f"[왜 이 순서] {name_ko}=단백질. 찬물·효소. 온수·건조=고착. 흰면 잔색만 산소.",
+        why_vi=ow.get("why_vi") or f"GIAO DUC: {name_vi}=protein. Lạnh + enzyme. CAM nóng/sấy sớm.",
         water_temp_ko="찬물 우선",
         water_temp_vi="Ưu tiên lạnh",
         steps=[
-            Step("id", f"{name_ko}·원단", f"Nhận {name_vi}", force="Cap1"),
+            Step("id", f"{name_ko}·원단", f"Nhận {name_vi}", tool_ids=id_tools, force="Cap1"),
             Step("scrape", "고형 제거(해당 시)", "Cạo đặc nếu có", tool_ids=["T_CLOTH"], force="Cap1", optional=True),
             Step("rinse", "찬물 헹굼", "Xả lạnh", tool_ids=["T_CLOTH"], force="Cap1"),
             Step("enzyme", "효소 침지", "Enzyme ngâm", chem="E1", tool_ids=["T_SOAK_BIN", "T_TIMER"], minutes_lo=lo, minutes_hi=hi, soak=True),
@@ -951,18 +953,21 @@ def _tpl_chocolate() -> Protocol:
 
 
 def _tpl_curry_mustard(stain_id: str, name_ko: str, name_vi: str) -> Protocol:
+    from education_gaps_v10 import thin_why_for
+
+    ow = thin_why_for(stain_id)
     return Protocol(
         stain_id=stain_id,
-        why_ko=f"[왜 이 순서] {name_ko}=커큐민 색소(+기름). 긁기→주방세제→베이킹소다→흰옷 산소/짧은 햇볕. 이른 열 고착.",
-        why_vi=f"GIAO DUC: {name_vi}=curcumin. Cạo → D2 → N1 → B1/nắng ngắn.",
+        why_ko=ow.get("why_ko") or f"[왜 이 순서] {name_ko}=커큐민 색소(+기름). 긁기→주방세제→베이킹소다→흰옷 산소. 이른 열 고착.",
+        why_vi=ow.get("why_vi") or f"GIAO DUC: {name_vi}=curcumin. Cạo → D2 → N1 → B1.",
         steps=[
             Step("id", f"{name_ko}·원단·색", f"Nhận {name_vi}", force="Cap1"),
             Step("scrape", "여분 제거", "Cạo", force="Cap1"),
-            Step("dish", "주방세제(기름)", "D2", chem="D2", force="Cap2", spray=True),
-            Step("soda", "베이킹소다 페이스트 15–30분", "N1 paste 15-30", chem="N1", minutes_lo=15, minutes_hi=30),
+            Step("dish", "주방세제(기름)", "D2", chem="D2", force="Cap2", spray=True, tool_ids=["T_CLOTH", "T_SPRAY"]),
+            Step("soda", "베이킹소다 페이스트 15–30분", "N1 paste 15-30", chem="N1", minutes_lo=15, minutes_hi=30, tool_ids=["T_TIMER"]),
             Step("oxygen", "흰/면: 산소(테스트)", "Trắng: B1", chem="B1", when="white_only"),
             Step("wash", "세탁; 유색은 산소 신중", "Giặt", force="Cap2"),
-            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+            Step("light", "건조 전 강광·UV 잔색 확인", "Ánh sáng/UV trước sấy", force="Cap1", tool_ids=["T_UV_LAMP"]),
         ],
     )
 
@@ -1392,6 +1397,106 @@ def _tpl_starch_transfer() -> Protocol:
     )
 
 
+def _tpl_doenjang() -> Protocol:
+    from education_gaps_v10 import NEW_STAIN_SEED_V10
+
+    meta = next(x for x in NEW_STAIN_SEED_V10 if x["id"] == "S_DOENJANG")
+    return Protocol(
+        stain_id="S_DOENJANG",
+        why_ko=meta["why_ko"],
+        why_vi=meta["why_vi"],
+        steps=[
+            Step("id", "된장·원단", "Nhận doenjang", force="Cap1"),
+            Step("scrape", "고형 Cap1 긁기", "Cạo Cap1", tool_ids=["T_CLOTH"], force="Cap1"),
+            Step("rinse", "찬물", "Xả lạnh", tool_ids=["T_CLOTH"], force="Cap1"),
+            Step("dish", "주방세제 Cap2", "D2 Cap2", chem="D2", tool_ids=["T_CLOTH", "T_BRUSH_SOFT"], force="Cap2"),
+            Step("enzyme", "효소 15–40분", "Enzyme 15-40", chem="E1", minutes_lo=15, minutes_hi=40, soak=True, tool_ids=["T_SOAK_BIN", "T_TIMER"]),
+            Step("oxygen", "흰/면 산소", "Trắng: B1", chem="B1", when="white_only"),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_gochujang() -> Protocol:
+    from education_gaps_v10 import NEW_STAIN_SEED_V10
+
+    meta = next(x for x in NEW_STAIN_SEED_V10 if x["id"] == "S_GOCHUJANG")
+    return Protocol(
+        stain_id="S_GOCHUJANG",
+        why_ko=meta["why_ko"],
+        why_vi=meta["why_vi"],
+        steps=[
+            Step("id", "고추장·원단", "Nhận gochujang", force="Cap1"),
+            Step("scrape", "페이스트 긁기", "Cạo", tool_ids=["T_CLOTH"], force="Cap1"),
+            Step("rinse", "찬물", "Xả lạnh", force="Cap1"),
+            Step("dish", "주방세제 Cap2", "D2", chem="D2", tool_ids=["T_CLOTH", "T_BRUSH_SOFT", "T_SPRAY"], force="Cap2", spray=True),
+            Step("vinegar", "식초 1:4 5–15분", "Giấm 1:4", chem="A3", minutes_lo=5, minutes_hi=15, spray=True, soak=True, tool_ids=["T_SPRAY", "T_TIMER", "T_SOAK_BIN"]),
+            Step("oxygen", "흰/면 산소", "Trắng: B1", chem="B1", when="white_only"),
+            Step("wash", "세탁·강광", "Giặt + ánh sáng", force="Cap2"),
+        ],
+    )
+
+
+def _tpl_persimmon() -> Protocol:
+    from education_gaps_v10 import NEW_STAIN_SEED_V10
+
+    meta = next(x for x in NEW_STAIN_SEED_V10 if x["id"] == "S_PERSIMMON")
+    return Protocol(
+        stain_id="S_PERSIMMON",
+        why_ko=meta["why_ko"],
+        why_vi=meta["why_vi"],
+        water_temp_ko="찬물만·즉시",
+        water_temp_vi="CHỈ lạnh — ngay",
+        steps=[
+            Step("id", "감물·즉시 처리", "Nhận hồng — xử lý ngay", force="Cap1"),
+            Step("rinse", "찬물 흡수(문지르기 금지)", "Thấm lạnh — không chà", tool_ids=["T_CLOTH"], force="Cap1"),
+            Step("vinegar", "식초 1:4 10–20분 반복", "Giấm 1:4 10-20 lặp", chem="A3", minutes_lo=10, minutes_hi=20, spray=True, soak=True, tool_ids=["T_SPRAY", "T_SOAK_BIN", "T_TIMER"]),
+            Step("oxygen", "흰/면 산소", "Trắng: B1", chem="B1", when="white_only", soak=True, minutes_lo=15, minutes_hi=45),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+            Step("light", "건조 전 강광; 지연 시 한계 고지", "Ánh sáng; báo nếu trễ", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_crayon() -> Protocol:
+    from education_gaps_v10 import NEW_STAIN_SEED_V10
+
+    meta = next(x for x in NEW_STAIN_SEED_V10 if x["id"] == "S_CRAYON")
+    return Protocol(
+        stain_id="S_CRAYON",
+        why_ko=meta["why_ko"],
+        why_vi=meta["why_vi"],
+        steps=[
+            Step("id", "크레용·원단", "Nhận sáp màu", force="Cap1"),
+            Step("freeze", "얼리거나 차게 해 깨기", "Làm lạnh rồi bẻ", minutes_lo=20, minutes_hi=40, tool_ids=["T_TIMER"], force="Cap2"),
+            Step("iron", "흡수지+낮은 열로 왁스 흡수", "Giấy + ủi thấp", tool_ids=["T_CLOTH", "T_STEAM_IRON"], force="Cap1"),
+            Step("dish", "잔여 주방세제", "D2", chem="D2", force="Cap2", tool_ids=["T_CLOTH"]),
+            Step("oxygen", "흰/면 안료 산소", "Trắng: B1", chem="B1", when="white_only"),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_softener_spot() -> Protocol:
+    from education_gaps_v10 import NEW_STAIN_SEED_V10
+
+    meta = next(x for x in NEW_STAIN_SEED_V10 if x["id"] == "S_SOFTENER_SPOT")
+    return Protocol(
+        stain_id="S_SOFTENER_SPOT",
+        why_ko=meta["why_ko"],
+        why_vi=meta["why_vi"],
+        steps=[
+            Step("id", "유연제 오일 링 확인", "Nhận vòng softener", force="Cap1"),
+            Step("dish", "주방세제 Cap2 탈지 5–15분", "D2 5-15 phút", chem="D2", minutes_lo=5, minutes_hi=15, force="Cap2", spray=True, tool_ids=["T_CLOTH", "T_BRUSH_SOFT", "T_SPRAY", "T_TIMER"]),
+            Step("vinegar", "헹굼 보조 식초 1:4(선택)", "Giấm 1:4 (tuỳ)", chem="A3", optional=True, spray=True, minutes_lo=5, minutes_hi=10),
+            Step("wash", "미온 재세탁", "Giặt ấm lại", chem="D3", force="Cap2"),
+            Step("light", "미끄럼 없어진 뒤 건조", "Hết nhờn mới sấy", force="Cap1"),
+        ],
+    )
+
+
 PROTOCOL_BUILDERS = {
     "S_RED_WINE": _tpl_red_wine,
     "S_BLACK_COFFEE": lambda: _tpl_tannin_simple("S_BLACK_COFFEE", "커피(블랙)", "cà phê đen"),
@@ -1460,6 +1565,12 @@ PROTOCOL_BUILDERS = {
     "S_ANNATTO": _tpl_annatto,
     "S_GLUE": _tpl_glue,
     "S_STARCH_TRANSFER": _tpl_starch_transfer,
+    # v10 — scorecard closure stains
+    "S_DOENJANG": _tpl_doenjang,
+    "S_GOCHUJANG": _tpl_gochujang,
+    "S_PERSIMMON": _tpl_persimmon,
+    "S_CRAYON": _tpl_crayon,
+    "S_SOFTENER_SPOT": _tpl_softener_spot,
 }
 
 
@@ -1506,8 +1617,14 @@ def _fabric_flags(graph: dict, entities: Optional[dict] = None) -> dict[str, Any
         is_suede = fid == "F9" or "suede" in fname or "nubuck" in fname or ft == "suede"
         is_fur = fid == "F10" or "fur" in fname or ft == "fur"
         is_rayon = fid == "F7" or "rayon" in fname or ft == "rayon"
-        is_acetate = "acetate" in fname or "아세테이트" in ft or ft == "acetate"
-        is_nylon = "nylon" in fname or "나일론" in ft or ft == "nylon"
+        is_acetate = (
+            fid == "F11"
+            or "acetate" in fname
+            or "아세테이트" in ft
+            or ft == "acetate"
+        )
+        is_nylon = fid == "F12" or "nylon" in fname or "나일론" in ft or ft == "nylon"
+        is_blend = fid == "F13" or "blend" in fname or "혼방" in ft or ft == "blend"
         flags = {
             "is_silk": is_silk,
             "is_wool": is_wool,
@@ -1517,13 +1634,15 @@ def _fabric_flags(graph: dict, entities: Optional[dict] = None) -> dict[str, Any
             "is_rayon": is_rayon,
             "is_acetate": is_acetate,
             "is_nylon": is_nylon,
+            "is_blend": is_blend,
             "delicate_protein": is_silk or is_wool,
             "no_oxygen": is_silk or is_wool or is_leather or is_suede or is_fur or is_rayon
+            or is_acetate or is_nylon or is_blend
             or fabric.get("can_oxygen") is False,
-            "no_acid": fabric.get("acid_safe") is False or is_silk or is_wool,
-            "no_enzyme": fabric.get("enzyme_safe") is False or is_silk or is_wool,
+            "no_acid": fabric.get("acid_safe") is False or is_silk or is_wool or is_acetate,
+            "no_enzyme": fabric.get("enzyme_safe") is False or is_silk or is_wool or is_acetate,
             "no_acetone": is_acetate or is_rayon,
-            "no_chlorine": False,
+            "no_chlorine": is_nylon or is_acetate or is_blend,
             "fname": fname,
             "fid": fid,
         }
@@ -2464,8 +2583,14 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
         # Still rewrite brush/cloth/mesh so Neo4j global seed copy never reaches the LLM
         out = dict(graph)
         flags = _fabric_flags(out, entities)
+        tools = list(out.get("tools") or [])
+        if not tools and not out.get("empty_tools_ok"):
+            from protocol_equipment import apply_safe_fallback_tools
+
+            out = apply_safe_fallback_tools(out, entities)
+            tools = list(out.get("tools") or [])
         out["tools"] = narrate_tools_for_context(
-            list(out.get("tools") or []),
+            tools,
             stain_id=real_stain_id,
             stain_context=sc_dict,
             fabric=fabric,

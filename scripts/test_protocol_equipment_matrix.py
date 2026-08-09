@@ -50,9 +50,53 @@ def _graph(stain_id: str, fabric_id: str, fabric_name: str, color: str = "white"
 
 
 def test_all_protocols_registered():
-    assert len(PROTOCOL_BUILDERS) >= 60
+    assert len(PROTOCOL_BUILDERS) >= 70
     for sid in PROTOCOL_BUILDERS:
         assert has_protocol(sid)
+
+
+def test_fallback_tools_when_no_protocol():
+    from protocol import apply_protocol_to_graph
+
+    g = {
+        "stain_context": {"id": "S_UNKNOWN_FAKE"},
+        "fabric_context": {"id": "F1", "name": "Cotton"},
+        "chemicals": [],
+        "tools": [],
+    }
+    out = apply_protocol_to_graph(g, entities={"fabric_type": "cotton"})
+    assert out.get("tools"), "fallback tools required"
+    assert out.get("fallback_tools") is True
+    assert any(t.get("id") == "T_CLOTH" for t in out["tools"])
+
+
+def test_new_v10_stains_in_builders():
+    for sid in ("S_DOENJANG", "S_GOCHUJANG", "S_PERSIMMON", "S_CRAYON", "S_SOFTENER_SPOT"):
+        assert has_protocol(sid)
+        out = apply_protocol_to_graph(
+            {
+                "stain_context": {"id": sid},
+                "fabric_context": {"id": "F1", "name": "Cotton", "enzyme_safe": True, "acid_safe": True, "can_oxygen": True},
+                "chemicals": [],
+                "tools": [],
+                "garment_color": "white",
+            },
+            entities={"stain_id": sid, "fabric_type": "cotton", "garment_color": "white"},
+        )
+        assert out.get("tools") and out.get("chemicals"), sid
+
+
+def test_acetate_fabric_flag_blocks_acetone_path():
+    from protocol import _fabric_flags
+
+    flags = _fabric_flags(
+        {"fabric_context": {"id": "F11", "name": "Acetate", "acid_safe": False, "enzyme_safe": False}},
+        {"fabric_type": "acetate"},
+    )
+    assert flags.get("is_acetate")
+    assert flags.get("no_acetone")
+    assert flags.get("no_oxygen")
+
 
 
 def test_seed_rows_cover_all_protocols():

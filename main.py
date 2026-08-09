@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-09-protocol-equipment-v9",
+            "build": "2026-08-09-education-scorecard-v10",
             "checks": checks,
         },
         status_code=200,
@@ -292,7 +292,10 @@ UNWIND [
   {id:'F7',name:'Rayon',name_vi:'Vai rayon',max_temp:30,can_bleach:false,enzyme_safe:false,acid_safe:false},
   {id:'F8',name:'Leather',name_vi:'Da (da bong)',max_temp:30,can_bleach:false,enzyme_safe:false,acid_safe:false},
   {id:'F9',name:'Suede',name_vi:'Da lon / suede / nubuck',max_temp:30,can_bleach:false,enzyme_safe:false,acid_safe:false},
-  {id:'F10',name:'Fur',name_vi:'Long thu that (fur)',max_temp:20,can_bleach:false,enzyme_safe:false,acid_safe:false}
+  {id:'F10',name:'Fur',name_vi:'Long thu that (fur)',max_temp:20,can_bleach:false,enzyme_safe:false,acid_safe:false},
+  {id:'F11',name:'Acetate',name_vi:'Vai acetate / triacetate',name_ko:'아세테이트',max_temp:30,can_bleach:false,enzyme_safe:false,acid_safe:false,can_oxygen:false},
+  {id:'F12',name:'Nylon',name_vi:'Vai nylon / polyamide',name_ko:'나일론',max_temp:40,can_bleach:false,enzyme_safe:true,acid_safe:true,can_oxygen:false},
+  {id:'F13',name:'Blend',name_vi:'Vai pha (blend)',name_ko:'혼방',max_temp:40,can_bleach:false,enzyme_safe:true,acid_safe:true,can_oxygen:false}
 ] AS f MERGE (n:Fabric {id:f.id}) SET n += f RETURN count(n) AS created""")
         _r(s, "E_chemicals", """
 UNWIND [
@@ -535,14 +538,14 @@ MATCH (f2:Fabric) WHERE f2.can_bleach=false
 MATCH (c2:Chemical {code:'B2'})
 MERGE (f2)-[:NEVER_USE]->(c2)
 WITH count(*) AS _b2
-MATCH (f3:Fabric) WHERE f3.id IN ['F3','F4','F7','F8','F9','F10']
+MATCH (f:Fabric) WHERE f.id IN ['F3','F4','F7','F8','F9','F10','F11','F12','F13']
 MATCH (c3:Chemical {code:'B1'})
-MERGE (f3)-[:NEVER_USE]->(c3)
+MERGE (f)-[:NEVER_USE]->(c3)
 WITH count(*) AS _b1
 MATCH (fo:Fabric) WHERE fo.id IN ['F1','F2','F5','F6']
 SET fo.can_oxygen = true
 WITH count(*) AS _ox1
-MATCH (fn:Fabric) WHERE fn.id IN ['F3','F4','F7','F8','F9','F10']
+MATCH (fn:Fabric) WHERE fn.id IN ['F3','F4','F7','F8','F9','F10','F11','F12','F13']
 SET fn.can_oxygen = false
 RETURN count(*) AS rels""")
         _r(s, "R_never_mix", """
@@ -824,7 +827,10 @@ UNWIND [
   {id:'F7',dry_hint_vi:'KHONG say may neu co the',iron_hint_vi:'Nhiet thap, can than'},
   {id:'F8',dry_hint_vi:'KHONG say may / KHONG nang truc tiep — phoi bong mat, boi kem da sau',iron_hint_vi:'KHONG ui'},
   {id:'F9',dry_hint_vi:'KHONG nuoc / KHONG say — chi kho, chuyen chuyen nghiep neu uot',iron_hint_vi:'KHONG ui'},
-  {id:'F10',dry_hint_vi:'KHONG may/say — treo moc rong vai, thoang khi, tranh nang/nhiet; chuyen chuyen gia long',iron_hint_vi:'KHONG ui / KHONG steam manh'}
+  {id:'F10',dry_hint_vi:'KHONG may/say — treo moc rong vai, thoang khi, tranh nang/nhiet; chuyen chuyen gia long',iron_hint_vi:'KHONG ui / KHONG steam manh'},
+  {id:'F11',dry_hint_vi:'KHONG say may; CAM acetone/A2 (tan vai)',iron_hint_vi:'Nhiet rat thap hoac khong ui'},
+  {id:'F12',dry_hint_vi:'Say thap; tranh nhiet cao (co)',iron_hint_vi:'Ui thap'},
+  {id:'F13',dry_hint_vi:'Theo thanh phan yeu nhat (len/lua uu tien an toan)',iron_hint_vi:'Theo nhan; chon muc thap hon'}
 ] AS h
 MATCH (f:Fabric {id:h.id})
 SET f.dry_hint_vi = h.dry_hint_vi, f.iron_hint_vi = h.iron_hint_vi
@@ -2308,9 +2314,10 @@ RETURN count(s) AS updated
                 fish_sauce_upgrade_fields as _fs_up,
                 vn_specialty_stain_seed_rows_v8 as _vn_v8,
             )
+            from education_gaps_v10 import vn_specialty_stain_seed_rows_v10 as _vn_v10
             from vi_text_canon import seed_canon_from_records as _vi_canon_rows
 
-            _vn = list(_vn_stain_rows()) + list(_vn_v7()) + list(_vn_v8())
+            _vn = list(_vn_stain_rows()) + list(_vn_v7()) + list(_vn_v8()) + list(_vn_v10())
             # Create/update stain nodes first (Group label is StainGroup, not Group).
             res_vn = s.run(
                 """

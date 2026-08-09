@@ -3946,10 +3946,17 @@ def _generate_response_core(
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_LIPSTICK"
         entities["stain_type"] = "son moi"
-    elif any(k in user_message for k in ("케첩", "켓찹", "케찹")) or "ketchup" in raw_n or "tuong ca" in raw_n:
+    elif any(k in user_message for k in ("케첩", "켓찹", "케찹")) or "ketchup" in raw_n or "tuong ca chua chai" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_KETCHUP"
         entities["stain_type"] = "ketchup"
+    elif any(
+        k in user_message
+        for k in ("토마토소스", "토마토 소스", "파스타소스", "파스타 소스", "볼로네제", "미트소스")
+    ) or "tomato sauce" in raw_n or "pasta sauce" in raw_n or "sot ca chua" in raw_n or "sốt cà" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_TOMATO_SAUCE"
+        entities["stain_type"] = "sot ca"
     elif any(k in user_message for k in ("마요네즈", "마요")) or "mayonnaise" in raw_n or "mayo" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_MAYO"
@@ -4008,17 +4015,44 @@ def _generate_response_core(
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_BUTTER"
         entities["stain_type"] = "bo"
+    elif any(k in user_message for k in ("기름때", "그리즈", "그리스")) or "grease" in raw_n or (
+        "mo boi" in raw_n and "xe" not in raw_n
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_GREASE"
+        entities["stain_type"] = "mo/grease"
     elif any(k in user_message for k in ("식용유", "식용 오일")) or "dau an" in raw_n or "cooking oil" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_COOKING_OIL"
         entities["stain_type"] = "dau an"
-    elif any(k in user_message for k in ("기름때", "그리즈")) or (
-        ("기름" in user_message or "오일" in user_message)
-        and not any(k in user_message for k in ("오토바이", "엔진", "기계"))
+    elif ("기름" in user_message or "오일" in user_message) and not any(
+        k in user_message for k in ("오토바이", "엔진", "기계", "유연제")
     ):
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_COOKING_OIL"
         entities["stain_type"] = "dau an"
+    elif any(k in user_message for k in ("된장", "된장찌개", "된장국")) or "doenjang" in raw_n or "tuong dau" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_DOENJANG"
+        entities["stain_type"] = "doenjang"
+    elif any(k in user_message for k in ("고추장", "비빔장")) or "gochujang" in raw_n or "tuong ot han" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_GOCHUJANG"
+        entities["stain_type"] = "gochujang"
+    elif any(k in user_message for k in ("감물", "감즙", "감 얼룩", "홍시")) or "persimmon" in raw_n or "hong chin" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_PERSIMMON"
+        entities["stain_type"] = "persimmon"
+    elif any(k in user_message for k in ("크레용", "크레파스", "색연필 왁스")) or "crayon" in raw_n or "sap mau" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_CRAYON"
+        entities["stain_type"] = "crayon"
+    elif any(k in user_message for k in ("유연제 얼룩", "유연제스팟", "유연제 스팟", "린스 얼룩")) or (
+        "softener" in raw_n
+    ) or ("nuoc xa" in raw_n and "vet" in raw_n):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_SOFTENER_SPOT"
+        entities["stain_type"] = "softener"
     elif any(
         k in user_message
         for k in ("주스", "쥬스", "과일즙", "과즙")

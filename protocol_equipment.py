@@ -283,3 +283,69 @@ def never_mix_pairs() -> list[tuple[str, str]]:
         ("E2", "B2"),
         ("E3", "B2"),
     ]
+
+
+def apply_safe_fallback_tools(graph: dict, entities: Optional[dict] = None) -> dict:
+    """When no Protocol / empty tools: still give PPE + cloth + spray guidance.
+
+    Prevents LLM 「해당 없음」 on unmatched or thin graph rows. Prompt should
+    still ask owner to identify stain; tools are intake-safe defaults only.
+    """
+    entities = entities or {}
+    out = dict(graph)
+    if out.get("empty_tools_ok"):
+        return out
+    if out.get("tools"):
+        return out
+    ids = ["T_CLOTH", "T_BRUSH_SOFT", "T_GLOVE_NITRILE", "T_SPRAY", "T_TIMER"]
+    tools = []
+    for tid in ids:
+        t = tool_stub(tid)
+        if tid == "T_CLOTH":
+            t["use_for_ko"] = (
+                "얼룩 종류 확정 전: 흰 천으로 바깥→안 흡수만. 문질러 번짐 금지. "
+                "오염을 특정하면 해당 SOP 도구로 교체."
+            )
+            t["use_for_vi"] = "Trước khi rõ vết: thấm khăn trắng NGOÀI→TRONG — không chà."
+        elif tid == "T_BRUSH_SOFT":
+            t["use_for_ko"] = "확정 전 Cap1 이하만. 강한 솔·경질 솔 금지."
+            t["use_for_vi"] = "Chỉ Cap1 trước khi rõ SOP. CẤM bàn chải cứng."
+        elif tid == "T_GLOVE_NITRILE":
+            t["use_for_ko"] = "체액·미지 약품·용제 의심 시 니트릴 장갑 먼저."
+            t["use_for_vi"] = "Găng nitrile nếu nghi dịch cơ thể/hóa chất."
+        elif tid == "T_SPRAY":
+            t["use_for_ko"] = (
+                "확정 전 임의 약품 분무 금지. 맑은 찬물만 약분무·블롯. "
+                "약 이름 없는 병에 식초·락스 섞지 말 것."
+            )
+            t["use_for_vi"] = "Chưa rõ vết: chỉ xịt nước lạnh nhẹ. CẤM trộn giấm/Javel."
+        elif tid == "T_TIMER":
+            t["use_for_ko"] = "임의 장시간 담금 금지. SOP 확정 후 규정 분만."
+            t["use_for_vi"] = "Không ngâm dài tùy ý — chỉ sau khi có SOP."
+        tools.append(t)
+    out["tools"] = tools
+    out["fallback_tools"] = True
+    sc = dict(out.get("stain_context") or {})
+    sc["must_include_ko"] = (
+        (str(sc.get("must_include_ko") or "") + ", 오염 종류 재확인 후 전용 SOP").strip(", ")
+    )
+    sc["precheck_ko"] = sc.get("precheck_ko") or (
+        "오염·원단·색을 먼저 특정하세요. 아래 도구는 임시 안전 키트입니다."
+    )
+    out["stain_context"] = sc
+    if not out.get("chemicals") and not out.get("empty_chems_ok"):
+        from protocol import CHEM_META
+
+        # Neutral dish soap only as intake-safe chem until stain matched
+        meta = CHEM_META.get("D2", {})
+        out["chemicals"] = [{
+            "code": "D2",
+            "name_ko": meta.get("name_ko") or "주방세제",
+            "name_vi": meta.get("name_vi") or "Nước rửa chén",
+            "dilution_ko": "확정 전: 미지 얼룩에 강한 표백·용제 금지. 필요 시 주방세제 1–2방울만 테스트.",
+            "dilution_vi": "Chưa rõ vết: CAM tẩy/dung môi mạnh. Chỉ D2 1-2 giọt test nếu cần.",
+            "protocol_order": 1,
+        }]
+        out["fallback_chems"] = True
+    return out
+
