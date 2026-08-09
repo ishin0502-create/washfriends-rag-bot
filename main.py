@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-09-education-parity-v5",
+            "build": "2026-08-09-vi-canon-carelabel-v6",
             "checks": checks,
         },
         status_code=200,
@@ -2317,14 +2317,16 @@ RETURN count(s) AS updated
             log["Z16b_stain_age_dried"] = d_age[0] if d_age else {"updated": 0, "rows": len(_ar)}
         except Exception as e:
             log["Z16b_stain_age_dried"] = f"ERR:{str(e)[:120]}"
-        # v5: VN specialty stains (oil paint, betel) + VI ops diacritic overlay
+        # v5/v6: VN specialty stains + VI ops canon + full VI diacritic rewrite
         try:
             from education_parity_v5 import (
                 seed_ops_vi_canon_rows as _vi_ops_rows,
                 vn_specialty_stain_seed_rows as _vn_stain_rows,
             )
+            from vi_text_canon import seed_canon_from_records as _vi_canon_rows
 
             _vn = _vn_stain_rows()
+            # Create/update stain nodes first (Group label is StainGroup, not Group).
             res_vn = s.run(
                 """
 UNWIND $rows AS o
@@ -2341,14 +2343,22 @@ SET st.name = o.name, st.name_vi = o.name_vi, st.name_ko = o.name_ko,
     st.dried_path_ko = o.dried_path_ko, st.dried_path_vi = o.dried_path_vi,
     st.success_rate_ko = o.success_rate_ko, st.success_rate_vi = o.success_rate_vi,
     st.refuse_when_ko = o.refuse_when_ko, st.refuse_when_vi = o.refuse_when_vi
-WITH st, o
-MATCH (g:Group {id:o.group_id})
-MERGE (st)-[:BELONGS_TO]->(g)
 RETURN count(st) AS upserted
 """,
                 rows=_vn,
             )
             log["Z16c_vn_specialty_stains"] = res_vn.data()[0] if res_vn else {"upserted": 0}
+            res_vn_rel = s.run(
+                """
+UNWIND $rows AS o
+MATCH (st:Stain {id:o.id})
+MATCH (g:StainGroup {id:o.group_id})
+MERGE (st)-[:BELONGS_TO]->(g)
+RETURN count(*) AS linked
+""",
+                rows=_vn,
+            )
+            log["Z16c_vn_specialty_links"] = res_vn_rel.data()[0] if res_vn_rel else {"linked": 0}
 
             _vo = _vi_ops_rows()
             res_vo = s.run(
@@ -2366,8 +2376,55 @@ RETURN count(i) AS updated
                 rows=_vo,
             )
             log["Z16d_ops_vi_canon"] = res_vo.data()[0] if res_vo else {"updated": 0}
+
+            # Force-overwrite unsigned stain VI education with diacritic canon.
+            _raw_vi = s.run(
+                """
+MATCH (st:Stain)
+RETURN st.id AS id,
+       st.why_vi AS why_vi,
+       st.fresh_path_vi AS fresh_path_vi,
+       st.dried_path_vi AS dried_path_vi,
+       st.precheck_vi AS precheck_vi,
+       st.motion_vi AS motion_vi,
+       st.water_temp_vi AS water_temp_vi,
+       st.aftercare_vi AS aftercare_vi,
+       st.force_metaphor_vi AS force_metaphor_vi,
+       st.sense_check_vi AS sense_check_vi,
+       st.success_rate_vi AS success_rate_vi,
+       st.refuse_when_vi AS refuse_when_vi
+"""
+            ).data()
+            _canon = _vi_canon_rows(_raw_vi)
+            if _canon:
+                # Dynamic SET only provided keys via apoc-less pattern: set each field if present
+                res_c = s.run(
+                    """
+UNWIND $rows AS o
+MATCH (st:Stain {id:o.id})
+SET st.why_vi = coalesce(o.why_vi, st.why_vi),
+    st.fresh_path_vi = coalesce(o.fresh_path_vi, st.fresh_path_vi),
+    st.dried_path_vi = coalesce(o.dried_path_vi, st.dried_path_vi),
+    st.precheck_vi = coalesce(o.precheck_vi, st.precheck_vi),
+    st.motion_vi = coalesce(o.motion_vi, st.motion_vi),
+    st.water_temp_vi = coalesce(o.water_temp_vi, st.water_temp_vi),
+    st.aftercare_vi = coalesce(o.aftercare_vi, st.aftercare_vi),
+    st.force_metaphor_vi = coalesce(o.force_metaphor_vi, st.force_metaphor_vi),
+    st.sense_check_vi = coalesce(o.sense_check_vi, st.sense_check_vi),
+    st.success_rate_vi = coalesce(o.success_rate_vi, st.success_rate_vi),
+    st.refuse_when_vi = coalesce(o.refuse_when_vi, st.refuse_when_vi)
+RETURN count(st) AS updated
+""",
+                    rows=_canon,
+                )
+                log["Z16e_vi_text_canon"] = {
+                    **(res_c.data()[0] if res_c else {"updated": 0}),
+                    "rows": len(_canon),
+                }
+            else:
+                log["Z16e_vi_text_canon"] = {"updated": 0, "rows": 0}
         except Exception as e:
-            log["Z16c_education_parity_v5"] = f"ERR:{str(e)[:160]}"
+            log["Z16c_education_parity_v5"] = f"ERR:{str(e)[:200]}"
         # W2: ops drills (care/intake/water/machine) + dilution already in V_chem
         try:
             from w2_ops_rescue import ops_seed_rows as _ops_rows

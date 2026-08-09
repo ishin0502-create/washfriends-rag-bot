@@ -1393,7 +1393,16 @@ def _infer_item_from_text(text: str) -> str:
         return "I_DENIM"
 
     # Ops / decision cards before garment type
-    if any(k in raw for k in ("케어라벨", "세탁표시", "세탁 기호", "케어 라벨", "세탁기호")) or "care label" in t or "ky hieu giat" in t or "washing symbol" in t:
+    if (
+        any(k in raw for k in ("케어라벨", "세탁표시", "세탁 기호", "케어 라벨", "세탁기호"))
+        or "care label" in t
+        or "ky hieu giat" in t
+        or "nhan giat" in t
+        or "doc nhan" in t
+        or "cach doc nhan" in t
+        or "washing symbol" in t
+        or ("nhan" in t and "giat" in t and any(k in t for k in ("doc", "ky hieu", "cach", "doc")))
+    ):
         return "I_CARE_LABEL"
     if any(k in raw for k in ("드라이클리닝", "드라이 클리닝", "물세탁인가", "드라이인가", "드라이로")) or (
         ("dry clean" in t or "dry-clean" in t or "giat kho" in t) and any(k in raw for k in ("물세탁", "해야", "인가", "vs", "아니면"))
@@ -1517,7 +1526,7 @@ def _infer_item_from_text(text: str) -> str:
         return "I_SWIMWEAR"
     if any(k in raw for k in ("담배냄새", "담배 냄새", "연기냄새", "연기 냄새")) or "mui thuoc" in t or "cigarette" in t or "smoke odor" in t:
         return "I_ODOR_SMOKE"
-    if any(k in raw for k in ("케어라벨", "세탁표시", "세탁 기호", "케어 라벨", "세탁기호")) or "care label" in t or "ky hieu giat" in t or "washing symbol" in t:
+    if any(k in raw for k in ("케어라벨", "세탁표시", "세탁 기호", "케어 라벨", "세탁기호")) or "care label" in t or "ky hieu giat" in t or "nhan giat" in t or "doc nhan" in t or "washing symbol" in t:
         return "I_CARE_LABEL"
     if any(k in raw for k in ("드라이클리닝", "드라이 클리닝", "물세탁인가", "드라이인가")) or "dry clean" in t or "dry-clean" in t or "dry vs wet" in t or "giat kho" in t:
         return "I_DRY_VS_WET"
@@ -2657,6 +2666,13 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             raw_graph = apply_stain_age_buckets(raw_graph, user_message, ents)
         except Exception:
             pass
+        if lang == "vi":
+            try:
+                from vi_text_canon import apply_vi_canon_to_graph
+
+                raw_graph = apply_vi_canon_to_graph(raw_graph)
+            except Exception:
+                pass
     safe_graph = _sanitize_graph_for_owner(raw_graph, lang) if isinstance(raw_graph, dict) else raw_graph
     graph_json = json.dumps(safe_graph, ensure_ascii=False, indent=2, default=str)
     query_type = graph_context.get("query_type", "unknown")
@@ -3467,7 +3483,16 @@ def _generate_response_core(
         entities["item_id"] = "I_ODOR_SMOKE"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
-    elif any(k in user_message for k in ("케어라벨", "세탁표시", "세탁 기호", "세탁기호", "케어 라벨")) or "care label" in raw_n or "washing symbol" in raw_n:
+    elif (
+        any(k in user_message for k in ("케어라벨", "세탁표시", "세탁 기호", "세탁기호", "케어 라벨"))
+        or "care label" in raw_n
+        or "washing symbol" in raw_n
+        or "ky hieu giat" in raw_n
+        or "nhan giat" in raw_n
+        or "doc nhan" in raw_n
+        or "cach doc nhan" in raw_n
+        or ("nhan" in raw_n and "giat" in raw_n and ("doc" in raw_n or "ky hieu" in raw_n or "cach" in raw_n))
+    ):
         entities["intent"] = "treatment"
         entities["item_id"] = "I_CARE_LABEL"
         entities["stain_id"] = ""
