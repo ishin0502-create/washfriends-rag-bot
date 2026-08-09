@@ -2739,7 +2739,7 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "fresh_path_ko·chemicals[]·분무기 use_for는 그 렌더이므로 서로 모순되게 쓰지 말 것. "
             "protocol이 없으면 fresh_path_ko의 「어디에·몇 분·어떻게」를 그대로. "
             "aftercare_ko의 강광·열고착 경고와 rescue_2nd_ko/rescue_disclose_ko가 있으면 "
-            "후관리·실패 시 2차에 포함. "
+            "후관리·실패 시 2차에 포함 — dried/hard면 「1차 실패 후」+「2차:」를 빠뜨리지 말 것. "
             "age_frame_ko·age_bucket을 따를 것: "
             "unknown이면 (1) 신선/마름 한 줄 → 본문 fresh_path(+protocol) → "
             "「마른·고착이면」dried_path_ko 단계 → limit_path_ko·rescue로 한계. "
@@ -2774,9 +2774,16 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
                 str(safe_graph.get("must_include_ko") or "")
                 or str((safe_graph.get("stain_context") or {}).get("must_include_ko") or "")
             ).strip()
+            sc_banner = safe_graph.get("stain_context") or {}
+            age_b = str(
+                (sc_banner.get("age_bucket") if isinstance(sc_banner, dict) else "")
+                or safe_graph.get("age_bucket")
+                or ""
+            )
             if must and (
                 safe_graph.get("specialty_item_care")
-                or (safe_graph.get("stain_context") or {}).get("group") == "item_care"
+                or (isinstance(sc_banner, dict) and sc_banner.get("group") == "item_care")
+                or age_b in ("dried", "hard")
             ):
                 wrapper = (
                     f"【필수 포함 — 생략 금지】 {must}\n\n" + wrapper
@@ -3123,6 +3130,107 @@ def _enforce_must_include(answer: str, graph_context: dict, lang: str) -> str:
     return answer.rstrip() + "\n\n※ 필수 안내: " + " ".join(lines)
 
 
+def _rescue_2nd_snippet(rescue: str, lang: str) -> str:
+    """Pick the 「2차:」 / 「Lần 2:」 clause from rescue_2nd_*."""
+    r = (rescue or "").strip()
+    if not r:
+        if lang == "ko":
+            return "2차: 동일 화학으로 1회만 재시도 후 한계·전문 고지. 100% 약속 금지."
+        if lang == "vi":
+            return "Lần 2: thử lại 1 lần theo cùng hóa chất rồi báo giới hạn. CẤM hứa 100%."
+        return "2nd pass: one retry on same chemistry, then disclose limits. Never promise 100%."
+    markers = ("2차:", "2차：", "Lần 2:", "Lan 2:", "2nd:")
+    for m in markers:
+        idx = r.find(m)
+        if idx >= 0:
+            snip = r[idx:].strip()
+            # Prefer the clause after a prior dried_path " / " join
+            return snip[:220].rstrip(" /")
+    if lang == "ko" and "2차" in r:
+        idx = r.find("2차")
+        return r[idx: idx + 220].strip()
+    if lang == "vi" and ("Lần 2" in r or "Lan 2" in r):
+        idx = r.find("Lần 2") if "Lần 2" in r else r.find("Lan 2")
+        return r[idx: idx + 220].strip()
+    return r[:220]
+
+
+def _enforce_rescue_pass(answer: str, graph_context: dict, lang: str) -> str:
+    """Ensure dried/hard answers keep explicit 1st-fail + 2nd-pass rescue labels."""
+    if not answer or lang not in ("ko", "vi", "en"):
+        return answer
+    g = graph_context.get("graph") if isinstance(graph_context, dict) else None
+    if not isinstance(g, dict):
+        return answer
+    sc = g.get("stain_context") if isinstance(g.get("stain_context"), dict) else {}
+    if (
+        g.get("item_wash_mode")
+        or g.get("specialty_item_care")
+        or sc.get("item_wash_mode")
+        or sc.get("group") == "item_care"
+    ):
+        return answer
+    bucket = str(sc.get("age_bucket") or g.get("age_bucket") or "")
+    if bucket not in ("dried", "hard"):
+        return answer
+
+    if lang == "ko":
+        rescue = str(sc.get("rescue_2nd_ko") or "")
+        disclose = str(sc.get("rescue_disclose_ko") or "")
+        need_fail = ("1차 실패" not in answer) and ("1차실패" not in answer)
+        need_2nd = ("2차" not in answer)
+        lines = []
+        if need_fail:
+            lines.append(
+                disclose
+                or "1차 실패·마른 얼룩: 성공률 하락·잔여 가능을 고지한 뒤에만 2차 진행. 100% 약속 금지."
+            )
+        if need_2nd:
+            lines.append(_rescue_2nd_snippet(rescue, "ko"))
+        if not lines:
+            return answer
+        return answer.rstrip() + "\n\n" + "\n".join(lines)
+
+    if lang == "vi":
+        rescue = str(sc.get("rescue_2nd_vi") or "")
+        disclose = str(sc.get("rescue_disclose_vi") or "")
+        low = answer.lower()
+        need_fail = not (
+            ("lần 1" in low or "lan 1" in low)
+            and ("thất" in answer or "that bai" in low)
+        )
+        need_2nd = ("lần 2" not in low and "lan 2" not in low)
+        lines = []
+        if need_fail:
+            lines.append(
+                disclose
+                or "Sau lần 1 thất bại/vết khô: báo tỷ lệ thấp trước khi làm lần 2. CẤM hứa 100%."
+            )
+        if need_2nd:
+            lines.append(_rescue_2nd_snippet(rescue, "vi"))
+        if not lines:
+            return answer
+        return answer.rstrip() + "\n\n" + "\n".join(lines)
+
+    # en
+    rescue = str(sc.get("rescue_2nd_en") or "")
+    disclose = str(sc.get("rescue_disclose_en") or "")
+    low = answer.lower()
+    need_fail = "1st fail" not in low and "first fail" not in low and "after 1st" not in low
+    need_2nd = "2nd" not in low and "second pass" not in low
+    lines = []
+    if need_fail:
+        lines.append(
+            disclose
+            or "After 1st fail/dried stain: disclose lower odds before 2nd pass. Never promise 100%."
+        )
+    if need_2nd:
+        lines.append(_rescue_2nd_snippet(rescue, "en"))
+    if not lines:
+        return answer
+    return answer.rstrip() + "\n\n" + "\n".join(lines)
+
+
 def _answer_with_optional_cache(
     cache_question: str,
     entities: dict,
@@ -3161,9 +3269,11 @@ def _answer_with_optional_cache(
             answer = answer2
             answer = _rewrite_item_care_step1_header(answer, graph_context, lang)
             answer = _enforce_must_include(answer, graph_context, lang)
+            answer = _enforce_rescue_pass(answer, graph_context, lang)
             return answer
     answer = _rewrite_item_care_step1_header(answer, graph_context, lang)
     answer = _enforce_must_include(answer, graph_context, lang)
+    answer = _enforce_rescue_pass(answer, graph_context, lang)
     if not reply_language_leaks(answer, lang):
         cache_store(cache_question, answer, ctx_key)
     else:

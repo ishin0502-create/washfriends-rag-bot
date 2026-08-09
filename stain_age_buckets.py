@@ -410,17 +410,23 @@ def _frame_for(bucket: AgeBucket) -> dict[str, str]:
                 "신선이면 fresh_path는 「신선 시」한 줄만. "
                 "탄닌·색소(와인·커피 등): 문지르기·솔 문지르기 금지 — 흰 천 흡수·식초만. "
                 "원단·두께 미상이면 Cap을 얇다고 단정하지 말 것(보통 기준+얇으면 Cap1). "
-                "rescue_2nd·rescue_disclose·limit_path_ko를 [성공률·고지]에 포함."
+                "[성공률·고지]에 반드시 「1차 실패 후」+ rescue_disclose_ko, "
+                "(6) 또는 그 다음 줄에 rescue_2nd_ko의 「2차:」로 시작하는 문장. "
+                "why에 「즉시 찬물만」으로 끝내지 말 것(이미 마른·세탁 실패 케이스)."
             ),
             "age_frame_vi": (
                 "age_bucket=dried. Body = dried_path_vi (phút dài). "
                 "protocol chỉ thứ tự — không ưu tiên phút tươi. "
-                "Tannin: CẤM chà. Include rescue + limit_path_vi."
+                "Tannin: CẤM chà. "
+                "[Tỷ lệ] phải có 「sau lần 1 thất bại」+ rescue_disclose_vi, "
+                "và câu bắt đầu 「Lần 2:」 từ rescue_2nd_vi. "
+                "Không kết thúc why bằng chỉ 「xử lý nước lạnh ngay」."
             ),
             "age_frame_en": (
                 "age_bucket=dried. Body = dried_path (longer soak). "
                 "Protocol = chem order only; do not prefer fresh minutes. "
-                "Tannin: no scrubbing. Include rescue + limit_path_en."
+                "Tannin: no scrubbing. "
+                "In success block: after 1st fail + rescue_disclose; include 2nd-pass line from rescue_2nd."
             ),
         }
     if bucket == "hard":
@@ -533,24 +539,39 @@ def apply_stain_age_buckets(
             f"LOCKED: age_bucket={bucket}. (2)(4)(6)은 dried_path_ko·침지 {min_ko}만. "
             f"protocol/fresh_path의 5–15분·「신선」본문 금지. "
             f"[성공률·고지]는 success_rate_ko만 사용(그래프 신선 성공률·단시간 양호 무시). "
-            f"타이머·담금통 use_for도 {min_ko}."
+            f"타이머·담금통 use_for도 {min_ko}. "
+            f"[성공률·고지]에 「1차 실패 후」+ rescue_disclose_ko 필수. "
+            f"(6) 다음에 rescue_2nd_ko의 「2차:」로 시작하는 재시도 한 줄 필수. "
+            f"why_ko를 「즉시 찬물로 처리해야」만으로 끝내지 말 것."
             + (" (1)에서 limit_path_ko 먼저." if bucket == "hard" else "")
         )
         sc2["path_lock_vi"] = (
             f"LOCKED age={bucket}: dried_path_vi + ngam {min_vi}. CAM phut tuoi 5-15. "
-            f"Dung success_rate_vi (CAM ty le tuoi)."
+            f"Dung success_rate_vi (CAM ty le tuoi). "
+            f"Bat buoc 「sau lần 1 thất bại」+ rescue_disclose_vi + câu 「Lần 2:」 từ rescue_2nd_vi."
         )
         sc2["path_lock_en"] = (
             f"LOCKED age={bucket}: dried_path + soak {min_en}. No fresh 5–15 body. "
-            f"Use success_rate_en only (no fresh short-window line)."
+            f"Use success_rate_en only (no fresh short-window line). "
+            f"Must include after-1st-fail disclose + 2nd-pass line from rescue_2nd."
+        )
+        # Force visible rescue labels even if LLM summarizes away the graph fields.
+        dried_must_ko = "1차 실패, 2차"
+        dried_must_vi = "lần 1 thất bại, Lần 2"
+        prev_ko = str(sc2.get("must_include_ko") or "").strip()
+        prev_vi = str(sc2.get("must_include_vi") or "").strip()
+        sc2["must_include_ko"] = (
+            f"{prev_ko}, {dried_must_ko}".strip(", ") if prev_ko else dried_must_ko
+        )
+        sc2["must_include_vi"] = (
+            f"{prev_vi}, {dried_must_vi}".strip(", ") if prev_vi else dried_must_vi
         )
         if bucket == "hard":
-            prev = str(sc2.get("must_include_ko") or "").strip()
             hard_must = (
                 "한계 고지 먼저(수개월·고착·100% 불가), dried 1회만, "
                 f"식초 침지 {min_ko}, 문지르기 금지, 신선 단시간 성공률 문구 금지"
             )
-            sc2["must_include_ko"] = f"{prev}, {hard_must}".strip(", ") if prev else hard_must
+            sc2["must_include_ko"] = f"{sc2['must_include_ko']}, {hard_must}"
     else:
         sc2["active_path_ko"] = sc2.get("fresh_path_ko") or ""
         sc2["active_path_vi"] = sc2.get("fresh_path_vi") or ""

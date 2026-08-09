@@ -157,6 +157,50 @@ def test_ko_edu_seed_syncs_dried():
     assert "장침지" in rows["S_RED_WINE"]["dried_path_ko"] or "식초" in rows["S_RED_WINE"]["dried_path_ko"]
 
 
+def test_dried_must_include_rescue_labels():
+    g = {
+        "stain_context": {
+            "id": "S_RED_WINE",
+            "contains_tannin": True,
+            "fresh_path_ko": "식초 5-15",
+            "why_ko": "즉시 찬물",
+        },
+        "tools": [],
+    }
+    out = apply_stain_age_buckets(g, "와인얼룩 한번 세탁했는데 안 지워져", {})
+    sc = out["stain_context"]
+    assert sc["age_bucket"] == "dried"
+    assert "1차 실패" in sc["must_include_ko"]
+    assert "2차" in sc["must_include_ko"]
+    assert "rescue_2nd" in sc["path_lock_ko"] or "2차" in sc["path_lock_ko"]
+
+
+def test_enforce_rescue_pass_appends():
+    import os
+
+    os.environ.setdefault("OPENAI_API_KEY", "sk-test-local-dummy")
+    from graphrag_engine import _enforce_rescue_pass
+
+    weak = (
+        "(1) 레드와인. (2) 식초. (3) Cap1. (4) 식초 1:4. (5) 찬물. "
+        "(6) 강광. [성공률·고지] 이미 마른 얼룩은 성공률 낮음. 100% 비보장."
+    )
+    ctx = {
+        "graph": {
+            "age_bucket": "dried",
+            "stain_context": {
+                "id": "S_RED_WINE",
+                "age_bucket": "dried",
+                "rescue_2nd_ko": "2차: 식초 1:4 재침지 15–30분 → 흰/면만 산소(테스트).",
+                "rescue_disclose_ko": "1차 실패·마른 얼룩: 성공률 하락을 고지한 뒤에만 2차 진행. 100% 약속 금지.",
+            },
+        }
+    }
+    out = _enforce_rescue_pass(weak, ctx, "ko")
+    assert "1차 실패" in out
+    assert "2차" in out
+
+
 if __name__ == "__main__":
     failed = 0
     for name, fn in list(globals().items()):
