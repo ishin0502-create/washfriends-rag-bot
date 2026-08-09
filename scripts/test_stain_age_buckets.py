@@ -67,6 +67,41 @@ def test_apply_dried_priority():
     assert sc["path_priority"] == "dried_path"
     assert sc["active_path_ko"] == sc["dried_path_ko"]
     assert "주방세제" in sc["dried_path_ko"]
+    assert "15–30" in sc.get("soak_minutes_ko", "")
+
+
+def test_hard_overrides_fresh_minutes():
+    g = {
+        "stain_context": {
+            "id": "S_RED_WINE",
+            "fresh_path_ko": "신선 5–15분",
+            "dried_path_ko": "짧음",
+            "contains_tannin": True,
+        },
+        "protocol": {
+            "steps": [
+                {"ko": "레드와인·신선 여부", "chem": "", "soak": False},
+                {"ko": "식초 5–15분", "chem": "A3", "soak": True, "minutes_lo": 5, "minutes_hi": 15},
+            ]
+        },
+        "tools": [
+            {"id": "T_TIMER", "use_for_ko": "5–15분"},
+            {"id": "T_SOAK_BIN", "use_for_ko": "5–15분 담금"},
+            {"id": "T_BRUSH_SOFT", "use_for_ko": "솔"},
+        ],
+    }
+    out = apply_stain_age_buckets(g, "두세달된 와인 자국", {"stain_age": "hard"})
+    sc = out["stain_context"]
+    assert sc["age_bucket"] == "hard"
+    assert "path_lock_ko" in sc
+    assert "15–30" in sc["soak_minutes_ko"]
+    assert out["protocol_minutes_ko"] == "15–30분"
+    soak = out["protocol"]["steps"][1]
+    assert soak["minutes_lo"] == 15 and soak["minutes_hi"] == 30
+    timer = next(t for t in out["tools"] if t["id"] == "T_TIMER")
+    assert "15–30" in timer["use_for_ko"]
+    assert "5–15분을 쓰지 말" in timer["use_for_ko"]
+    assert not any(t.get("id") == "T_BRUSH_SOFT" for t in out["tools"])
 
 
 def test_item_care_skipped():

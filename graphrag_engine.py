@@ -2128,6 +2128,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
         "rescue_2nd_vi", "rescue_disclose_vi",
         "must_include_vi",
         "limit_path_vi", "age_frame_vi", "active_path_vi",
+        "path_lock_vi", "soak_minutes_vi",
     )
     KO_FIELDS = (
         "why_ko", "fresh_path_ko", "dried_path_ko",
@@ -2138,6 +2139,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
         "rescue_2nd_ko", "rescue_disclose_ko",
         "must_include_ko",
         "limit_path_ko", "age_frame_ko", "active_path_ko",
+        "path_lock_ko", "soak_minutes_ko",
     )
     EN_FIELDS = (
         "why_en", "fresh_path_en", "dried_path_en",
@@ -2145,6 +2147,7 @@ def _sanitize_graph_for_owner(graph, lang: str):
         "sense_check_en", "success_rate_en", "refuse_when_en",
         "must_include_en", "item_name_en",
         "limit_path_en", "age_frame_en", "active_path_en",
+        "path_lock_en", "soak_minutes_en",
     )
 
     sc = g.get("stain_context")
@@ -2715,9 +2718,10 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "age_frame_ko·age_bucket을 따를 것: "
             "unknown이면 (1) 신선/마름 한 줄 → 본문 fresh_path(+protocol) → "
             "「마른·고착이면」dried_path_ko 단계 → limit_path_ko·rescue로 한계. "
-            "dried면 본문=dried_path_ko(장침지 분), protocol 신선 분(5–15)보다 dried 우선. "
+            "dried면 본문=dried_path_ko(장침지 soak_minutes_ko), protocol 신선 분(5–15) 금지. "
+            "path_lock_ko가 있으면 최우선. "
             "탄닌·와인: 문지르기·솔 문지르기 금지. 두께 미상이면 얇다고 Cap 단정 금지. "
-            "hard면 limit_path_ko 먼저 → dried 1회만·100% 금지. "
+            "hard면 limit_path_ko·path_lock을 (1)에 먼저 → dried 1회·100% 금지·「1시간 내 양호」금지. "
             "fresh면 본문=fresh_path, 마름은 (6)/성공률에 한 줄. "
             "[왜 이 순서] → … → [감각 체크] → [성공률·고지] → [거절·보내기] — 각 블록 짧게. "
             "why_ko/fresh_path_ko/sense_check_ko·color_note_ko가 있으면 그대로. "

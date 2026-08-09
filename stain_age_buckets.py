@@ -263,6 +263,87 @@ LIMIT_EN = (
     "do not infinite-repeat. One dried path + rescue, then disclose limits. Never promise 100%."
 )
 
+# Dried/hard soak window — overrides fresh protocol 5–15 for vinegar-family soaks.
+DRIED_SOAK_LO = 15
+DRIED_SOAK_HI = 30
+
+
+def _min_label(lo: int, hi: int) -> tuple[str, str, str]:
+    if lo == hi:
+        return f"{lo}분", f"{lo} phut", f"{lo} min"
+    return f"{lo}–{hi}분", f"{lo}-{hi} phut", f"{lo}-{hi} min"
+
+
+def _rewrite_soak_tools(tools: list, lo: int, hi: int) -> list:
+    """Force timer/soak howto to dried minutes (no fresh 5–15 conflict)."""
+    if not isinstance(tools, list):
+        return tools
+    min_ko, min_vi, min_en = _min_label(lo, hi)
+    out = []
+    for t in tools:
+        if not isinstance(t, dict):
+            out.append(t)
+            continue
+        t2 = dict(t)
+        tid = str(t2.get("id") or "")
+        if tid == "T_TIMER":
+            t2["use_for_ko"] = (
+                f"마른·고착 기준 침지 {min_ko}. 타이머를 {min_ko}에 맞추고, "
+                f"울리면 즉시 찬물 헹굼. 감시 없이 밤새 방치 금지. "
+                f"(신선 SOP 5–15분을 쓰지 말 것.)"
+            )
+            t2["use_for_vi"] = (
+                f"Vet kho: ngam {min_vi}. Hen gio {min_vi}; het gio → xa lanh. "
+                f"CAM phut tuoi 5-15."
+            )
+            t2["use_for_en"] = (
+                f"Dried/set soak {min_en}. Timer {min_en}; rinse cold when it rings. "
+                f"Do not use fresh 5–15 min."
+            )
+        elif tid == "T_SOAK_BIN":
+            t2["use_for_ko"] = (
+                f"(4)약품 희석액을 통에 만들어 {min_ko} 담근다(마른·고착용). "
+                f"통에 약 이름·비율 확인. 신선 5–15분 경로 금지."
+            )
+            t2["use_for_vi"] = (
+                f"Pha dung dich (4), ngam {min_vi} (vet kho). CAM phut tuoi 5-15."
+            )
+            t2["use_for_en"] = (
+                f"Mix (4) chem in bin; soak {min_en} for dried/set. Do not use fresh 5–15 min."
+            )
+        out.append(t2)
+    return out
+
+
+def _override_protocol_minutes(proto: dict, lo: int, hi: int) -> dict:
+    """Mutate protocol.steps soak minutes + drop fresh wording."""
+    if not isinstance(proto, dict):
+        return proto
+    p2 = dict(proto)
+    steps = []
+    for s in list(p2.get("steps") or []):
+        if not isinstance(s, dict):
+            steps.append(s)
+            continue
+        s2 = dict(s)
+        chem = str(s2.get("chem") or "").upper()
+        soak = bool(s2.get("soak"))
+        # Extend vinegar/surfactant soaks; leave oxygen bleach windows alone
+        if soak and chem not in ("B1", "B2"):
+            s2["minutes_lo"] = lo
+            s2["minutes_hi"] = hi
+        for key, val in list(s2.items()):
+            if isinstance(val, str) and val:
+                s2[key] = (
+                    val.replace("5–15", f"{lo}–{hi}")
+                    .replace("5-15", f"{lo}-{hi}")
+                    .replace("신선 여부", "마른·고착")
+                    .replace("·신선", "·마른·고착")
+                )
+        steps.append(s2)
+    p2["steps"] = steps
+    return p2
+
 
 def _frame_for(bucket: AgeBucket) -> dict[str, str]:
     if bucket == "fresh":
@@ -304,17 +385,18 @@ def _frame_for(bucket: AgeBucket) -> dict[str, str]:
     if bucket == "hard":
         return {
             "age_frame_ko": (
-                "age_bucket=hard. (1)에서 limit_path_ko를 먼저 고지. "
-                "시도는 dried_path_ko 1회만(장침지). protocol 신선 분을 본문으로 쓰지 말 것. "
-                "탄닌: 문지르기 금지. 무한 반복·100% 약속 금지. rescue_disclose 필수."
+                "age_bucket=hard. path_lock_ko·limit_path_ko를 (1)에 먼저. "
+                "본문=dried_path_ko 1회만, 침지 soak_minutes_ko(15–30). "
+                "protocol/fresh 5–15분·「신선 여부」·「1시간 내 양호」 금지. "
+                "탄닌 문지르기 금지. 100% 약속 금지. rescue_disclose 필수."
             ),
             "age_frame_vi": (
-                "age_bucket=hard. Lead with limit_path_vi. "
-                "Try dried_path once only. No scrub. No 100%. rescue_disclose required."
+                "age_bucket=hard. Lead limit_path_vi. Body dried once, soak 15-30. "
+                "CAM phut tuoi 5-15. No 100%."
             ),
             "age_frame_en": (
-                "age_bucket=hard. Lead with limit_path_en. "
-                "One dried attempt only. No scrub. No 100%. rescue_disclose required."
+                "age_bucket=hard. Lead limit_path. Body dried once, soak 15–30. "
+                "No fresh 5–15. No 100%."
             ),
         }
     # unknown — dual teach
@@ -388,10 +470,34 @@ def apply_stain_age_buckets(
     )
     sc2.update(_frame_for(bucket))
 
-    # Prefer dried text in tip-like slots when dried/hard (LLM still sees both)
-    if bucket in ("dried", "hard") and sc2.get("dried_path_ko"):
-        sc2["active_path_ko"] = sc2["dried_path_ko"]
+    lo, hi = DRIED_SOAK_LO, DRIED_SOAK_HI
+    min_ko, min_vi, min_en = _min_label(lo, hi)
+
+    if bucket in ("dried", "hard"):
+        sc2["active_path_ko"] = sc2.get("dried_path_ko") or ""
         sc2["active_path_vi"] = sc2.get("dried_path_vi") or ""
+        sc2["soak_minutes_ko"] = min_ko
+        sc2["soak_minutes_vi"] = min_vi
+        sc2["soak_minutes_en"] = min_en
+        sc2["path_lock_ko"] = (
+            f"LOCKED: age_bucket={bucket}. (2)(4)(6)은 dried_path_ko·침지 {min_ko}만. "
+            f"protocol/fresh_path의 5–15분·「신선」본문·「1시간 내 성공률 양호」 금지. "
+            f"타이머·담금통 use_for도 {min_ko}."
+            + (" (1)에서 limit_path_ko 먼저." if bucket == "hard" else "")
+        )
+        sc2["path_lock_vi"] = (
+            f"LOCKED age={bucket}: dried_path_vi + ngam {min_vi}. CAM phut tuoi 5-15."
+        )
+        sc2["path_lock_en"] = (
+            f"LOCKED age={bucket}: dried_path + soak {min_en}. No fresh 5–15 body."
+        )
+        if bucket == "hard":
+            prev = str(sc2.get("must_include_ko") or "").strip()
+            hard_must = (
+                "한계 고지 먼저(수개월·고착·100% 불가), dried 1회만, "
+                f"식초 침지 {min_ko}, 문지르기 금지"
+            )
+            sc2["must_include_ko"] = f"{prev}, {hard_must}".strip(", ") if prev else hard_must
     else:
         sc2["active_path_ko"] = sc2.get("fresh_path_ko") or ""
         sc2["active_path_vi"] = sc2.get("fresh_path_vi") or ""
@@ -400,18 +506,20 @@ def apply_stain_age_buckets(
     out["stain_context"] = sc2
     out["age_bucket"] = bucket
 
-    # Tannin dried/hard: soft brush invites LLM "문지르기" — prefer cloth blot only.
-    tannin_ids = {
-        "S_RED_WINE", "S_BLACK_COFFEE", "S_TEA", "S_FRUIT_JUICE", "S_SOFT_DRINK",
-        "S_WHITE_WINE_BEER", "S_KIMCHI", "S_KETCHUP", "S_TOMATO_SAUCE",
-    }
-    if bucket in ("dried", "hard") and (
-        sid in tannin_ids or sc2.get("contains_tannin")
-    ):
-        tools = out.get("tools")
-        if isinstance(tools, list) and tools:
+    if bucket in ("dried", "hard"):
+        out["tools"] = _rewrite_soak_tools(list(out.get("tools") or []), lo, hi)
+        out["protocol_minutes_ko"] = min_ko
+        out["protocol_minutes_vi"] = min_vi
+        out["protocol_minutes_en"] = min_en
+        if isinstance(out.get("protocol"), dict):
+            out["protocol"] = _override_protocol_minutes(out["protocol"], lo, hi)
+        tannin_ids = {
+            "S_RED_WINE", "S_BLACK_COFFEE", "S_TEA", "S_FRUIT_JUICE", "S_SOFT_DRINK",
+            "S_WHITE_WINE_BEER", "S_KIMCHI", "S_KETCHUP", "S_TOMATO_SAUCE",
+        }
+        if sid in tannin_ids or sc2.get("contains_tannin"):
             out["tools"] = [
-                t for t in tools
+                t for t in (out.get("tools") or [])
                 if not (isinstance(t, dict) and str(t.get("id") or "") == "T_BRUSH_SOFT")
             ]
 
