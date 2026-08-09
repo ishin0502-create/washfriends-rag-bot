@@ -648,40 +648,69 @@ def _item_as_stain_shaped(item_graph: dict) -> dict:
         "I_GOLF_GLOVE_LEATHER",
         "I_COLOR_FADE",
     }
+    ops_script = item_id in {
+        "I_CLAIM_SCRIPT",
+        "I_PRICING_SCRIPT",
+        "I_QUIZ_STAINS",
+        "I_QUIZ_FABRIC",
+        "I_INTAKE_SCRIPT",
+        "I_CARE_LABEL",
+        "I_DRY_VS_WET",
+        "I_CHEM_NEVER_MIX",
+        "I_CHEM_BLEACH",
+        "I_CHEM_SOLVENT",
+        "I_CHEM_ACID_PPE",
+    }
+    sc = {
+        "id": ic.get("id"),
+        "name": ic.get("name"),
+        "name_vi": ic.get("name_vi"),
+        "name_ko": ic.get("name_ko"),
+        # tip set later by sanitize from why_{lang} — never pre-pick KO/VI
+        "urgency": "care",
+        "precheck_vi": ic.get("precheck_vi"),
+        "why_vi": ic.get("why_vi"),
+        "fresh_path_vi": ic.get("fresh_path_vi"),
+        "dried_path_vi": ic.get("dried_path_vi"),
+        "motion_vi": ic.get("motion_vi"),
+        "water_temp_vi": ic.get("water_temp_vi"),
+        "aftercare_vi": ic.get("aftercare_vi"),
+        "precheck_ko": ic.get("precheck_ko"),
+        "why_ko": ic.get("why_ko"),
+        "fresh_path_ko": ic.get("fresh_path_ko"),
+        "dried_path_ko": ic.get("dried_path_ko"),
+        "motion_ko": ic.get("motion_ko"),
+        "water_temp_ko": ic.get("water_temp_ko"),
+        "aftercare_ko": ic.get("aftercare_ko"),
+        "precheck_en": ic.get("precheck_en"),
+        "why_en": ic.get("why_en"),
+        "fresh_path_en": ic.get("fresh_path_en"),
+        "dried_path_en": ic.get("dried_path_en"),
+        "motion_en": ic.get("motion_en"),
+        "water_temp_en": ic.get("water_temp_en"),
+        "aftercare_en": ic.get("aftercare_en"),
+        "sense_check_ko": ic.get("sense_check_ko"),
+        "success_rate_ko": ic.get("success_rate_ko"),
+        "refuse_when_ko": ic.get("refuse_when_ko"),
+        "sense_check_vi": ic.get("sense_check_vi"),
+        "success_rate_vi": ic.get("success_rate_vi"),
+        "refuse_when_vi": ic.get("refuse_when_vi"),
+        "must_include_ko": ic.get("must_include_ko"),
+        "must_include_vi": ic.get("must_include_vi"),
+        "group": "item_care",
+    }
+    if ops_script:
+        sc["ops_script_mode"] = True
+        sc["item_wash_mode"] = False
     return {
-        "stain_context": {
-            "id": ic.get("id"),
-            "name": ic.get("name"),
-            "name_vi": ic.get("name_vi"),
-            "name_ko": ic.get("name_ko"),
-            # tip set later by sanitize from why_{lang} — never pre-pick KO/VI
-            "urgency": "care",
-            "precheck_vi": ic.get("precheck_vi"),
-            "why_vi": ic.get("why_vi"),
-            "fresh_path_vi": ic.get("fresh_path_vi"),
-            "dried_path_vi": ic.get("dried_path_vi"),
-            "motion_vi": ic.get("motion_vi"),
-            "water_temp_vi": ic.get("water_temp_vi"),
-            "aftercare_vi": ic.get("aftercare_vi"),
-            "precheck_ko": ic.get("precheck_ko"),
-            "why_ko": ic.get("why_ko"),
-            "fresh_path_ko": ic.get("fresh_path_ko"),
-            "dried_path_ko": ic.get("dried_path_ko"),
-            "motion_ko": ic.get("motion_ko"),
-            "water_temp_ko": ic.get("water_temp_ko"),
-            "aftercare_ko": ic.get("aftercare_ko"),
-            "precheck_en": ic.get("precheck_en"),
-            "why_en": ic.get("why_en"),
-            "fresh_path_en": ic.get("fresh_path_en"),
-            "dried_path_en": ic.get("dried_path_en"),
-            "motion_en": ic.get("motion_en"),
-            "water_temp_en": ic.get("water_temp_en"),
-            "aftercare_en": ic.get("aftercare_en"),
-            "group": "item_care",
-        },
+        "stain_context": sc,
         "fabric_context": item_graph.get("fabric_context"),
-        "chemicals": [] if no_shop_chem else (item_graph.get("chemicals") or []),
-        "tools": list(_COLOR_FADE_TOOLS) if item_id == "I_COLOR_FADE" else (item_graph.get("tools") or []),
+        "chemicals": [] if (no_shop_chem or ops_script) else (item_graph.get("chemicals") or []),
+        "tools": (
+            []
+            if ops_script
+            else (list(_COLOR_FADE_TOOLS) if item_id == "I_COLOR_FADE" else (item_graph.get("tools") or []))
+        ),
         "washfriends_supply": [],
         "force_levels": [],
         "fabric_cautions": [],
@@ -689,9 +718,10 @@ def _item_as_stain_shaped(item_graph: dict) -> dict:
         "never_mix_alerts": [],
         "climate_context": [],
         "item_context": ic,
-        "empty_tools_ok": False,
-        "empty_chems_ok": no_shop_chem,
+        "empty_tools_ok": bool(ops_script),
+        "empty_chems_ok": bool(no_shop_chem or ops_script),
         "color_fade_rules": item_id == "I_COLOR_FADE",
+        "ops_script_mode": bool(ops_script),
     }
 
 
@@ -1244,12 +1274,15 @@ def _infer_chem_safety_item(raw: str, t: str) -> str:
         return "I_CHEM_NEVER_MIX"
     if any(
         k in raw
-        for k in ("표백 안전", "락스 사용", "산소표백", "염소표백", "제이블", "자벨")
+        for k in ("표백 안전", "락스 사용", "산소표백", "염소표백", "제이블", "자벨", "락스 희석", "자벨 희석")
+    ) or (
+        any(k in raw for k in ("락스", "자벨", "제이블", "염소계"))
+        and any(k in raw for k in ("희석", "비율", "쓰는", "사용", "안전", "표백", "어떻게"))
     ) or any(
         k in t
         for k in (
             "bleach safety", "chlorine bleach", "oxygen bleach", "javel",
-            "nuoc tay", "tay oxy", "how to bleach",
+            "nuoc tay", "tay oxy", "how to bleach", "pha javel", "pha loang javel",
         )
     ):
         return "I_CHEM_BLEACH"
@@ -2770,6 +2803,24 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             or (safe_graph.get("stain_context") or {}).get("item_wash_mode")
             or safe_graph.get("specialty_item_care")
         ) and not leather_ko
+        ops_script = isinstance(safe_graph, dict) and (
+            safe_graph.get("ops_script_mode")
+            or (safe_graph.get("stain_context") or {}).get("ops_script_mode")
+            or str((safe_graph.get("item_context") or {}).get("id") or "")
+            in {
+                "I_CLAIM_SCRIPT",
+                "I_PRICING_SCRIPT",
+                "I_QUIZ_STAINS",
+                "I_QUIZ_FABRIC",
+                "I_INTAKE_SCRIPT",
+                "I_CARE_LABEL",
+                "I_DRY_VS_WET",
+                "I_CHEM_NEVER_MIX",
+                "I_CHEM_BLEACH",
+                "I_CHEM_SOLVENT",
+                "I_CHEM_ACID_PPE",
+            }
+        )
         if leather_ko:
             lang_rule = (
                 "한국어만. 베트남어·영어 금지. "
@@ -2779,6 +2830,18 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
                 "fresh_path_ko·must_include_ko 준수. 세탁기·통담금·표백 지어내기 금지. "
                 "[왜 이 순서] → [감각 체크] → [성공률·고지] → [거절·보내기]. "
                 "마크다운·코드/id 금지."
+            )
+        elif ops_script:
+            lang_rule = (
+                "한국어만. 베트남어·영어 금지. "
+                "이 질문은 얼룩 제거 SOP가 아니라 점주 교육 스크립트/퀴즈/약품 안전 카드다. "
+                "금지: '(1)오염·원단·두께·색상' 제목, 가짜 얼룩 처리 단계, 흰 천·흡수지·수온을 지어내기. "
+                "출력 형식: why_ko를 [왜 이 순서]에 요약 → fresh_path_ko의 (1)(2)(3)… 번호를 "
+                "거의 그대로 복사(퀴즈면 Q→정답→이유 유지) → "
+                "[감각 체크]=sense_check_ko → [성공률·고지]=success_rate_ko → "
+                "[거절·보내기]=refuse_when_ko → 후관리=aftercare_ko. "
+                "must_include_ko 구를 빠짐없이. 희석비·혼합금지가 있으면 dilution 문구 유지. "
+                "마크다운·코드/id 금지. 그래프에 없는 금액·약 지어내기 금지."
             )
         elif item_wash:
             lang_rule = (
@@ -3591,9 +3654,14 @@ def _generate_response_core(
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_SWEAT_YELLOW"
         entities["stain_type"] = "ve o nach"
-    elif any(k in user_message for k in ("풀로", "풀 이염", "전분 이염")) or (
+    elif any(k in user_message for k in ("풀로", "풀 이염", "전분 이염", "전분 얼룩", "전분 묻", "아밀라아제", "전분 효소")) or (
         "tinh bot" in raw_n and ("mau lan" in raw_n or "lo mau" in raw_n)
-    ) or ("starch" in raw_n and ("dye" in raw_n or "bleed" in raw_n)):
+    ) or ("starch" in raw_n and ("dye" in raw_n or "bleed" in raw_n)) or "amylase" in raw_n or (
+        "전분" in user_message
+        and "분유" not in user_message
+        and "옥수수" not in user_message
+        and "흡착" not in user_message
+    ):
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_STARCH_TRANSFER"
         entities["stain_type"] = "ho tinh bot mau lan"
@@ -3748,6 +3816,14 @@ def _generate_response_core(
     elif any(k in user_message for k in ("드라이클리닝", "드라이 클리닝", "물세탁인가", "드라이인가", "드라이로 보내")) or "dry clean" in raw_n or "dry-clean" in raw_n:
         entities["intent"] = "treatment"
         entities["item_id"] = "I_DRY_VS_WET"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("락스 희석", "자벨 희석", "표백 안전", "염소표백", "염소 표백")) or (
+        any(k in user_message for k in ("락스", "자벨", "제이블"))
+        and any(k in user_message for k in ("희석", "비율", "사용", "안전", "어떻게"))
+    ) or "pha javel" in raw_n or "pha loang javel" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_CHEM_BLEACH"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
     elif any(k in user_message for k in ("접수", "체크인", "사진 동의", "견적 말하는법", "접수 스크립트")) or "check-in" in raw_n or "intake" in raw_n or "tiep nhan" in raw_n:

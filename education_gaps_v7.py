@@ -321,6 +321,7 @@ OPS_DRILLS_V7: dict[str, dict[str, str]] = {
         "sense_check_ko": "금지 3가지(효소·아세톤·락스)를 바로 말할 수 있으면 통과.",
         "success_rate_ko": "5문항 중 4 이상: 안전 교육 통과.",
         "refuse_when_ko": "금지 항목을 헷갈리면 단독 스포팅 금지.",
+        "must_include_ko": "실크 효소 금지, 아세테이트 아세톤 금지, 표백 보류, 정답",
         "why_vi": "[Tại sao] Quiz vải: lụa/len/acetate/tẩy.",
         "fresh_path_vi": (
             "(1)Lụa + enzyme? → CẤM → S1. "

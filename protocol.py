@@ -1279,7 +1279,7 @@ def _tpl_starch_transfer() -> Protocol:
         steps=[
             Step("id", "전분·풀 이염·원단", "Nhận hồ tinh bột", force="Cap1"),
             Step("rinse", "찬물", "Xả lạnh", force="Cap1"),
-            Step("enzyme", "효소(전분/단백질) 침지", "Enzyme ngâm", chem="E1", minutes_lo=20, minutes_hi=45, soak=True),
+            Step("enzyme", "전분 효소(아밀라아제/E2) 침지", "Enzyme tinh bột E2", chem="E2", minutes_lo=15, minutes_hi=60, soak=True),
             Step("oxygen", "흰옷 산소", "Trắng: B1", chem="B1", when="white_only", soak=True),
             Step("wash", "세탁; 잔색 채 다림질 금지", "Giặt; CAM ủi khi còn", force="Cap2"),
             Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),

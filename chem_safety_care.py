@@ -82,8 +82,9 @@ def _bleach() -> dict[str, str]:
         "precheck_ko": "표백: B1=산소(유색 신중), B2=염소(흰 면만). 케어라벨 삼각형 확인.",
         "why_ko": "[왜] B2는 흰 면만. 유색·울·실크·단백질 얼룩에 염소=탈색·손상. B1도 울/실크 금지.",
         "fresh_path_ko": (
-            "(1)라벨 삼각형. (2)흰 면만 B2 희석. (3)유색=B1 또는 금지. "
-            "(4)단백질 얼룩에 뜨거운 염소 금지. (5)사용 후 충분히 헹굼. (6)A5와 혼합 금지."
+            "(1)라벨 삼각형·흰 면 확인. (2)B2(락스/자벨): 원액 1 : 물 10–20(병 우선) 짧은 담금·즉시 헹굼. "
+            "(3)유색=B1 또는 금지. (4)단백질 얼룩에 뜨거운 염소 금지. "
+            "(5)식초·암모니아와 절대 혼합 금지. (6)사용 후 충분히 헹굼."
         ),
         "dried_path_ko": "이미 탈색: 복원 불가 고지. 추가 염소 금지.",
         "motion_ko": "Cap0–1 균일 담금(점 찍기 금지)",
@@ -92,12 +93,13 @@ def _bleach() -> dict[str, str]:
         "sense_check_ko": "눈: 균일. 코: 잔여 자극 시 재헹굼.",
         "success_rate_ko": "흰 면+라벨 OK: 양호. 유색 염소: 사고.",
         "refuse_when_ko": "유색·실크·울에 B2 요구 → 거절.",
-        "must_include_ko": "B2=흰 면만, B1≠울/실크, A5 혼합 금지, 헹굼",
+        "must_include_ko": "B2=흰 면만, 1:10–20, A5·식초 혼합 금지, 헹굼",
         "precheck_vi": "B1 oxy (mau than), B2 Javel (CHI cotton trang). Doc tam giac nhan.",
         "why_vi": "[Tai sao] B2 chi trang. Mau/len/lua + Javel = hong. B1 CAM len/lua.",
         "fresh_path_vi": (
-            "(1)Doc nhan. (2)B2 pha CHI cotton trang. (3)Mau = B1/cam. "
-            "(4)CAM Javel nong len protein. (5)Xa ky. (6)CAM tron A5."
+            "(1)Doc nhan + cotton trang. (2)B2: dac 1 : nuoc 10–20 (uu tien nhan), ngam ngan, xa ngay. "
+            "(3)Mau = B1/cam. (4)CAM Javel nong len protein. "
+            "(5)CAM tron giấm/A5. (6)Xa ky."
         ),
         "dried_path_vi": "Da mat mau: bao khong phuc. CAM them Javel.",
         "motion_vi": "Cap0-1 ngam deu",
