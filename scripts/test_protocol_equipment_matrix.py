@@ -29,18 +29,28 @@ from protocol_equipment import (
 FABRICS = [
     ("cotton", "F1", "Cotton", True),
     ("silk", "F4", "Silk", False),
+    ("wool", "F3", "Wool", False),
+    ("acetate", "F11", "Acetate", False),
 ]
+
+# Codes that must never remain active after fabric safety rewrite
+FORBIDDEN_BY_FABRIC = {
+    "silk": {"E1", "E2", "E3", "B1", "B2", "A3", "A4", "A5", "X1", "X2", "A2"},
+    "wool": {"E1", "E2", "E3", "B1", "B2", "A3", "A4", "A5", "X1", "X2", "A2"},
+    "acetate": {"E1", "E2", "E3", "B1", "B2", "A3", "A4", "A5", "X1", "X2", "A2"},
+}
 
 
 def _graph(stain_id: str, fabric_id: str, fabric_name: str, color: str = "white"):
+    sturdy = fabric_id in {"F1", "F2", "F5", "F6"}
     return {
         "stain_context": {"id": stain_id},
         "fabric_context": {
             "id": fabric_id,
             "name": fabric_name,
-            "acid_safe": fabric_id in {"F1", "F2", "F5", "F6"},
-            "enzyme_safe": fabric_id in {"F1", "F2", "F5", "F6"},
-            "can_oxygen": fabric_id in {"F1", "F2", "F5", "F6"},
+            "acid_safe": sturdy,
+            "enzyme_safe": sturdy,
+            "can_oxygen": sturdy,
             "can_bleach": fabric_id == "F1",
         },
         "chemicals": [],  # empty Neo4j — must hydrate from Protocol
@@ -199,8 +209,37 @@ def test_silk_blocks_aggressive_chems():
         entities={"stain_id": "S_RUST", "fabric_type": "silk"},
     )
     codes = [c["code"] for c in out["chemicals"]]
-    # X2 must not remain active on silk path
+    # X2 must not remain; with no_acid, A3 must not remain either (S1 substitute)
     assert "X2" not in codes
+    assert "A3" not in codes
+    assert codes, "silk rust must still expose a safe chem"
+
+
+def test_matrix_delicate_never_empty_or_leaks():
+    """CI safety belt: silk / wool / acetate × all protocols."""
+    failures = []
+    for ft, fid, fn, _sturdy in FABRICS:
+        if ft == "cotton":
+            continue
+        forbid = FORBIDDEN_BY_FABRIC[ft]
+        for sid in sorted(PROTOCOL_BUILDERS):
+            out = apply_protocol_to_graph(
+                _graph(sid, fid, fn, "white"),
+                entities={"stain_id": sid, "fabric_type": ft, "garment_color": "white"},
+            )
+            tools = out.get("tools") or []
+            chems = out.get("chemicals") or []
+            codes = {c.get("code") for c in chems}
+            if not tools:
+                failures.append(f"{sid}×{ft}: tools empty")
+            if not chems:
+                failures.append(f"{sid}×{ft}: chemicals empty")
+            leaked = sorted(codes & forbid)
+            if leaked:
+                failures.append(f"{sid}×{ft}: leak {leaked}")
+            if ft == "acetate" and "A2" in codes:
+                failures.append(f"{sid}×acetate: acetone A2 present")
+    assert not failures, "\n".join(failures[:50])
 
 
 def test_chem_meta_dilutions_not_thin():

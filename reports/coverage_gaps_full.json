@@ -1,0 +1,294 @@
+{
+  "generated_at": "2026-08-09T15:56:23.448574+00:00",
+  "meta": {
+    "protocols": 71,
+    "fabrics": [
+      "cotton",
+      "silk",
+      "wool",
+      "acetate"
+    ],
+    "neo4j_rows": 0,
+    "from_cache": false
+  },
+  "top20": [
+    {
+      "kind": "ask_failure",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 60,
+      "reasons": [
+        "empty_graph_or_failure"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 12,
+      "message": "구스이블 세탁방법 알려줘",
+      "hits": 12
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:가죽"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 21,
+      "message": "가죽",
+      "hits": 21
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:매니큐어"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 3,
+      "message": "매니큐어",
+      "hits": 3
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:아세톤"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 3,
+      "message": "아세톤",
+      "hits": 3
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:아세테이트"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 2,
+      "message": "아세테이트",
+      "hits": 2
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:토마토소스"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 2,
+      "message": "토마토소스",
+      "hits": 2
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:구스"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 1,
+      "message": "구스",
+      "hits": 1
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:된장"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 1,
+      "message": "된장",
+      "hits": 1
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:기름때"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 1,
+      "message": "기름때",
+      "hits": 1
+    }
+  ],
+  "all_gaps": [
+    {
+      "kind": "ask_failure",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 60,
+      "reasons": [
+        "empty_graph_or_failure"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 12,
+      "message": "구스이블 세탁방법 알려줘",
+      "hits": 12
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:가죽"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 21,
+      "message": "가죽",
+      "hits": 21
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:매니큐어"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 3,
+      "message": "매니큐어",
+      "hits": 3
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:아세톤"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 3,
+      "message": "아세톤",
+      "hits": 3
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:아세테이트"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 2,
+      "message": "아세테이트",
+      "hits": 2
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:토마토소스"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 2,
+      "message": "토마토소스",
+      "hits": 2
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:구스"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 1,
+      "message": "구스",
+      "hits": 1
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:된장"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 1,
+      "message": "된장",
+      "hits": 1
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
+        "topic:기름때"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 1,
+      "message": "기름때",
+      "hits": 1
+    }
+  ],
+  "counts": {
+    "total": 9,
+    "matrix": 0,
+    "missing_protocol": 0,
+    "ask_failure": 1
+  }
+}

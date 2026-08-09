@@ -1641,7 +1641,7 @@ def _fabric_flags(graph: dict, entities: Optional[dict] = None) -> dict[str, Any
             or fabric.get("can_oxygen") is False,
             "no_acid": fabric.get("acid_safe") is False or is_silk or is_wool or is_acetate,
             "no_enzyme": fabric.get("enzyme_safe") is False or is_silk or is_wool or is_acetate,
-            "no_acetone": is_acetate or is_rayon,
+            "no_acetone": is_acetate or is_rayon or is_silk or is_wool,
             "no_chlorine": is_nylon or is_acetate or is_blend,
             "fname": fname,
             "fid": fid,
@@ -1726,9 +1726,22 @@ def apply_context_to_protocol(
         if not blocked:
             continue
 
-        # Protein delicates: replace enzyme/oxygen/acid/oxalic step with explicit S1 local care
-        if flags.get("delicate_protein") and s.chem in {"E1", "E2", "E3", "B1", "A3", "X2"}:
-            if s.chem == "X2":
+        # Safe substitute so silk/wool/acetate never end with empty chem education.
+        # X2→A3 only when acid is allowed; if no_acid (silk/wool/acetate), fall through to S1.
+        aggressive = {"E1", "E2", "E3", "B1", "B2", "A3", "A4", "A5", "X1", "X2", "A2"}
+        wants_safe = (
+            flags.get("delicate_protein")
+            or flags.get("is_acetate")
+            or flags.get("is_nylon")
+            or flags.get("is_blend")
+            or flags.get("is_rayon")
+        )
+        if wants_safe and s.chem in aggressive:
+            if (
+                s.chem == "X2"
+                and flags.get("delicate_protein")
+                and not flags.get("no_acid")
+            ):
                 s.chem = "A3"
                 s.action_ko = "실크·울 녹: 옥살산 금지 — 식초 약하게만·테스트. 심하면 전문."
                 s.action_vi = "Len/lụa rỉ: không X2 — chỉ giấm nhẹ, test. Nặng → chuyên."
@@ -1737,16 +1750,29 @@ def apply_context_to_protocol(
                 s.minutes_lo = 5
                 s.minutes_hi = 10
                 s.blocked = False
+                s.block_reason_ko = ""
+                s.block_reason_vi = ""
                 continue
             s.chem = "S1"
-            s.action_ko = "실크·울: 중성세제 국소·찬물만 — 효소·산소·강한 산 대신. 심하면 거절·전문."
-            s.action_vi = "Len/lụa: chỉ S1 cục bộ nước lạnh — không enzyme/oxy/acid mạnh."
+            if flags.get("is_acetate"):
+                s.action_ko = (
+                    "아세테이트: 아세톤·효소·산·표백 금지 — 중성세제(S1) 국소·찬물만. 심하면 전문."
+                )
+                s.action_vi = "Acetate: CAM acetone/enzyme/acid/tẩy — chỉ S1 cục bộ nước lạnh."
+            else:
+                s.action_ko = (
+                    "섬세 원단: 중성세제 국소·찬물만 — 효소·산소·강한 산·아세톤 대신. 심하면 거절·전문."
+                )
+                s.action_vi = (
+                    "Vải nhạy: chỉ S1 cục bộ nước lạnh — không enzyme/oxy/acid mạnh/acetone."
+                )
             s.spray = False
             s.soak = False
             s.minutes_lo = None
             s.minutes_hi = None
             s.blocked = False
             s.block_reason_ko = ""
+            s.block_reason_vi = ""
             continue
 
         s.blocked = True
@@ -2685,6 +2711,26 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
     out["tools"] = bind_tools_from_protocol(
         proto, list(out.get("tools") or []), item_id=item_id
     )
+    # Delicate/acetate paths must never ship empty tools/chems to the LLM.
+    if not out.get("tools") and not out.get("empty_tools_ok"):
+        from protocol_equipment import apply_safe_fallback_tools
+
+        out = apply_safe_fallback_tools(out, entities)
+    if not out.get("chemicals") and not out.get("empty_chems_ok"):
+        meta = CHEM_META.get("S1") or CHEM_META.get("D2") or {}
+        code = "S1" if "S1" in CHEM_META else "D2"
+        out["chemicals"] = [
+            {
+                "code": code,
+                "name_ko": meta.get("name_ko") or code,
+                "name_vi": meta.get("name_vi") or code,
+                "dilution_ko": meta.get("dilution_ko")
+                or "섬세·제한 원단: 중성만. 금지약 생략.",
+                "dilution_vi": meta.get("dilution_vi") or "Vải hạn chế: chỉ trung tính.",
+                "protocol_order": 1,
+            }
+        ]
+        out["fallback_chems"] = True
     # Drop legacy fabric-safety dual-truth leftovers so the LLM cannot prefer them.
     out.pop("chemicals_blocked_for_fabric", None)
     out.pop("delicate_chem_rule", None)

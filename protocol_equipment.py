@@ -200,6 +200,13 @@ def collect_required_tool_ids(proto: Any) -> list[str]:
         if tid not in ids:
             ids.append(tid)
 
+    # Always keep a blot kit when any active step/chem remains (delicate S1 rewrites
+    # often clear soak/spray/tool_ids and would otherwise leave tools=[]).
+    if (codes or any(True for _ in proto.active_steps())) and "T_CLOTH" not in ids:
+        ids.append("T_CLOTH")
+    if codes and "T_BRUSH_SOFT" not in ids:
+        ids.append("T_BRUSH_SOFT")
+
     return _ordered_unique(ids)
 
 
