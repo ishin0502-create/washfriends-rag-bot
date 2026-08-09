@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-09-education-gaps-v8b",
+            "build": "2026-08-09-education-gaps-v8c",
             "checks": checks,
         },
         status_code=200,
@@ -490,7 +490,9 @@ MATCH (s:Stain) WHERE s.id IN [
   'S_DYE_TRANSFER','S_STARCH_TRANSFER','S_SHIRT_YELLOW','S_MILDEW',
   'S_KETCHUP','S_TOMATO_SAUCE','S_MAYO','S_COLLAR_STAIN',
   'S_SOY_SAUCE','S_FISH_SAUCE','S_COOKING_OIL','S_GREASE','S_BUTTER',
-  'S_SHOE_POLISH','S_LIPSTICK','S_FOUNDATION','S_BUBBLE_TEA'
+  'S_SHOE_POLISH','S_LIPSTICK','S_FOUNDATION','S_BUBBLE_TEA',
+  'S_PAINT_OIL','S_BETEL','S_IODINE','S_CHILI',
+  'S_SHRIMP_PASTE','S_SUGARCANE','S_GAC','S_ANNATTO'
 ]
 OPTIONAL MATCH (s)-[old:USES_CHEMICAL]->()
 DELETE old
@@ -545,8 +547,8 @@ FOREACH (_ IN CASE WHEN s.id = 'S_MAYO' THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(e1)
   MERGE (s)-[:USES_CHEMICAL]->(e3))
 FOREACH (_ IN CASE WHEN s.id IN ['S_SOY_SAUCE','S_FISH_SAUCE'] THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(e1) MERGE (s)-[:USES_CHEMICAL]->(a3)
-  MERGE (s)-[:USES_CHEMICAL]->(b1))
+  MERGE (s)-[:USES_CHEMICAL]->(e1) MERGE (s)-[:USES_CHEMICAL]->(d2)
+  MERGE (s)-[:USES_CHEMICAL]->(a3) MERGE (s)-[:USES_CHEMICAL]->(b1))
 FOREACH (_ IN CASE WHEN s.id IN ['S_COOKING_OIL','S_GREASE','S_BUTTER'] THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(n3) MERGE (s)-[:USES_CHEMICAL]->(d2)
   MERGE (s)-[:USES_CHEMICAL]->(e3))
@@ -557,6 +559,24 @@ FOREACH (_ IN CASE WHEN s.id = 'S_LIPSTICK' THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a1)
   MERGE (s)-[:USES_CHEMICAL]->(b1))
 FOREACH (_ IN CASE WHEN s.id = 'S_FOUNDATION' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a1)
+  MERGE (s)-[:USES_CHEMICAL]->(b1))
+FOREACH (_ IN CASE WHEN s.id = 'S_PAINT_OIL' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(d1) MERGE (s)-[:USES_CHEMICAL]->(a1)
+  MERGE (s)-[:USES_CHEMICAL]->(d2))
+FOREACH (_ IN CASE WHEN s.id = 'S_BETEL' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(a3) MERGE (s)-[:USES_CHEMICAL]->(b1))
+FOREACH (_ IN CASE WHEN s.id = 'S_IODINE' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(a1) MERGE (s)-[:USES_CHEMICAL]->(b1))
+FOREACH (_ IN CASE WHEN s.id = 'S_CHILI' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a3)
+  MERGE (s)-[:USES_CHEMICAL]->(b1))
+FOREACH (_ IN CASE WHEN s.id = 'S_SHRIMP_PASTE' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(e1)
+  MERGE (s)-[:USES_CHEMICAL]->(a3) MERGE (s)-[:USES_CHEMICAL]->(b1))
+FOREACH (_ IN CASE WHEN s.id = 'S_SUGARCANE' THEN [1] ELSE [] END |
+  MERGE (s)-[:USES_CHEMICAL]->(a3) MERGE (s)-[:USES_CHEMICAL]->(b1))
+FOREACH (_ IN CASE WHEN s.id IN ['S_GAC','S_ANNATTO'] THEN [1] ELSE [] END |
   MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a1)
   MERGE (s)-[:USES_CHEMICAL]->(b1))
 RETURN count(DISTINCT s) AS stains""")
@@ -869,6 +889,14 @@ UNWIND [
   {id:'S_NAIL_POLISH',tools:['T_CLOTH','T_GLOVE_NITRILE']},
   {id:'S_GLUE',tools:['T_CLOTH','T_BRUSH_SOFT','T_GLOVE_NITRILE']},
   {id:'S_PAINT_LATEX',tools:['T_CLOTH','T_BRUSH_SOFT','T_GLOVE_NITRILE']},
+  {id:'S_PAINT_OIL',tools:['T_CLOTH','T_GLOVE_NITRILE','T_MASK','T_BRUSH_SOFT']},
+  {id:'S_BETEL',tools:['T_CLOTH','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_IODINE',tools:['T_CLOTH','T_GLOVE_NITRILE']},
+  {id:'S_CHILI',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_SHRIMP_PASTE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_SUGARCANE',tools:['T_CLOTH','T_SPRAY','T_SOAK_BIN','T_TIMER']},
+  {id:'S_GAC',tools:['T_CLOTH','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER','T_UV_LAMP']},
+  {id:'S_ANNATTO',tools:['T_CLOTH','T_GLOVE_NITRILE','T_SOAK_BIN','T_TIMER']},
   {id:'S_HAIR_DYE',tools:['T_GLOVE_NITRILE','T_CLOTH','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER']},
   {id:'S_MASCARA',tools:['T_CLOTH','T_BRUSH_SOFT','T_GLOVE_NITRILE']},
   {id:'S_DYE_TRANSFER',tools:['T_CLOTH','T_SPRAY','T_SOAK_BIN','T_TIMER']},
