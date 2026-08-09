@@ -4124,6 +4124,30 @@ def _generate_response_core(
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_CHILI"
         entities["stain_type"] = "tuong ot"
+    elif any(k in user_message for k in ("새우젓", "맘톰", "쉬림프페이스트")) or any(
+        k in raw_n for k in ("mam tom", "mắm tôm", "shrimp paste")
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_SHRIMP_PASTE"
+        entities["stain_type"] = "mam tom"
+    elif any(k in user_message for k in ("사탕수수", "느억미아", "사탕수수즙")) or any(
+        k in raw_n for k in ("nuoc mia", "nước mía", "sugarcane")
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_SUGARCANE"
+        entities["stain_type"] = "nuoc mia"
+    elif any(k in user_message for k in ("극열매", "각열매", "가정 얼룩", "가정즙")) or any(
+        k in raw_n for k in ("gac", "bot gac", "bot gấc", "bột gấc")
+    ) or "gấc" in user_message.lower() or "gấc" in raw_n:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_GAC"
+        entities["stain_type"] = "gac"
+    elif any(k in user_message for k in ("아나토", "디에우마우", "디에우 마우")) or any(
+        k in raw_n for k in ("annatto", "dieu mau", "điều màu")
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_ANNATTO"
+        entities["stain_type"] = "dieu mau"
     elif any(k in user_message for k in ("잔디", "풀물", "풀 얼룩")) or "co xanh" in raw_n or "grass stain" in raw_n or (
         "grass" in raw_n and "grease" not in raw_n
     ):

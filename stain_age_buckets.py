@@ -278,6 +278,14 @@ try:
     DRIED_PATH_VI["S_CHILI"] = DRIED_CHILI_VI
 except Exception:
     pass
+try:
+    from education_gaps_v8 import DRIED_BY_ID_V8
+
+    for _sid, (_ko, _vi) in DRIED_BY_ID_V8.items():
+        DRIED_PATH_KO[_sid] = _ko
+        DRIED_PATH_VI[_sid] = _vi
+except Exception:
+    pass
 
 
 LIMIT_KO = (

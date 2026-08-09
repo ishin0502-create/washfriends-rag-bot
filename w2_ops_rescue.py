@@ -274,6 +274,13 @@ def rescue_card_for_stain(sc: dict) -> dict:
                 stain_card = RESCUE_CHILI
         except Exception:
             pass
+    if not stain_card:
+        try:
+            from education_gaps_v8 import RESCUE_BY_STAIN_V8
+
+            stain_card = RESCUE_BY_STAIN_V8.get(sid)
+        except Exception:
+            pass
 
     gid = ""
     grp = sc.get("group_id") or sc.get("group")

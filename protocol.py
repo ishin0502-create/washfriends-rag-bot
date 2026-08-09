@@ -1254,6 +1254,91 @@ def _tpl_chili() -> Protocol:
     )
 
 
+def _tpl_shrimp_paste() -> Protocol:
+    return Protocol(
+        stain_id="S_SHRIMP_PASTE",
+        why_ko="[왜 이 순서] 맘톰=유분+단백질+색소+냄새. 긁기→찬물→D2→E1→A3→흰/면 산소. 느억맘과 구분.",
+        why_vi="[Tại sao] Mắm tôm = dầu+protein+màu+mùi. Cạo → D2 → E1 → A3 → oxy. Khác nước mắm.",
+        steps=[
+            Step("id", "맘톰·원단(느억맘 구분)", "Nhận mắm tôm", force="Cap1"),
+            Step("scrape", "여분 긁기·찬물", "Cạo + xả lạnh", force="Cap1"),
+            Step("dish", "주방세제", "D2", chem="D2", force="Cap2", spray=True),
+            Step("enzyme", "효소 찬물", "E1", chem="E1", minutes_lo=15, minutes_hi=45, soak=True),
+            Step("vinegar", "식초 1:4 냄새", "Giấm 1:4", chem="A3", minutes_lo=10, minutes_hi=20, soak=True),
+            Step("oxygen", "흰/면 산소(테스트)", "Oxy trắng", chem="B1", when="white_only", soak=True),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_sugarcane() -> Protocol:
+    return Protocol(
+        stain_id="S_SUGARCANE",
+        why_ko="[왜 이 순서] 느억미아=당+색소. 찬물 흡수→식초 1:4→흰/면 산소. 문지르기·열고착 금지.",
+        why_vi="[Tại sao] Nước mía = đường+màu. Thấm lạnh → giấm 1:4 → oxy trắng. CẤM chà.",
+        steps=[
+            Step("id", "사탕수수즙·원단", "Nhận nước mía", force="Cap1"),
+            Step("rinse", "안쪽 찬물 흡수(문지르기 금지)", "Thấm lạnh — CẤM chà", force="Cap1"),
+            Step("vinegar", "식초 1:4", "Giấm 1:4", chem="A3", minutes_lo=10, minutes_hi=20, soak=True, spray=True),
+            Step("oxygen", "흰/면 산소(테스트)", "Oxy trắng", chem="B1", when="white_only", soak=True),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_gac() -> Protocol:
+    return Protocol(
+        stain_id="S_GAC",
+        why_ko="[왜 이 순서] 가정=카로티노이드+오일. 긁기→D2→알코올 블롯→흰/면 산소·햇빛. 커리와 구분.",
+        why_vi="[Tại sao] Gấc = carotenoid+dầu. Cạo → D2 → blot A1 → oxy + nắng. Khác cà ri.",
+        steps=[
+            Step("id", "가정·원단", "Nhận gấc", force="Cap1"),
+            Step("scrape", "여분 오일 긁기", "Cạo dầu", force="Cap1"),
+            Step("dish", "주방세제", "D2", chem="D2", force="Cap2", spray=True),
+            Step("alcohol", "알코올 안쪽 블롯(테스트)", "Blot cồn", chem="A1", force="Cap1", tool_ids=["T_CLOTH"]),
+            Step("oxygen", "흰/면 산소(테스트)", "Oxy trắng", chem="B1", when="white_only", soak=True),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+            Step("light", "햇빛·강광", "Nắng/ánh sáng", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_annatto() -> Protocol:
+    return Protocol(
+        stain_id="S_ANNATTO",
+        why_ko="[왜 이 순서] 디에우마우=식품 황·주황 색소. 찬물→알코올 블롯→흰/면 산소. 문지르기 금지.",
+        why_vi="[Tại sao] Điều màu = màu vàng–cam. Lạnh → blot cồn → oxy trắng. CẤM chà.",
+        steps=[
+            Step("id", "아나토·원단", "Nhận điều màu", force="Cap1"),
+            Step("rinse", "찬물 흡수(문지르기 금지)", "Thấm lạnh — CẤM chà", force="Cap1"),
+            Step("alcohol", "알코올 안쪽 블롯(테스트)", "Blot cồn", chem="A1", force="Cap1", tool_ids=["T_CLOTH"]),
+            Step("oxygen", "흰/면 산소(테스트)", "Oxy trắng", chem="B1", when="white_only", soak=True),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_fish_sauce() -> Protocol:
+    return Protocol(
+        stain_id="S_FISH_SAUCE",
+        why_ko="[왜 이 순서] 느억맘=단백질+유분+냄새. 찬물→효소→주방세제→식초→흰/면 산소. 락스 남용 금지.",
+        why_vi="[Tại sao] Nước mắm = protein+dầu+mùi. Lạnh → E1 → D2 → A3 → oxy. CẤM Javel lạm.",
+        steps=[
+            Step("id", "느억맘·원단", "Nhận nước mắm", force="Cap1"),
+            Step("rinse", "찬물", "Xả lạnh", force="Cap1"),
+            Step("enzyme", "효소", "E1", chem="E1", minutes_lo=15, minutes_hi=45, soak=True),
+            Step("dish", "주방세제", "D2", chem="D2", force="Cap2", spray=True),
+            Step("vinegar", "식초 1:4", "Giấm 1:4", chem="A3", minutes_lo=10, minutes_hi=20, soak=True),
+            Step("oxygen", "흰/면 산소(테스트)", "Oxy trắng", chem="B1", when="white_only", soak=True),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+        ],
+    )
+
+
 def _tpl_glue() -> Protocol:
     return Protocol(
         stain_id="S_GLUE",
@@ -1311,7 +1396,7 @@ PROTOCOL_BUILDERS = {
     "S_TOMATO_SAUCE": lambda: _tpl_sauce_oil_tannin("S_TOMATO_SAUCE", "토마토소스", "sốt cà"),
     "S_MUD": _tpl_mud,
     "S_SOY_SAUCE": lambda: _tpl_protein_then_vinegar("S_SOY_SAUCE", "간장", "nước tương"),
-    "S_FISH_SAUCE": lambda: _tpl_protein_then_vinegar("S_FISH_SAUCE", "느억맘·액젓", "nước mắm"),
+    "S_FISH_SAUCE": _tpl_fish_sauce,
     # v3 — remaining high-frequency / VN specialty
     "S_EGG": lambda: _tpl_protein_simple("S_EGG", "계란", "trứng"),
     "S_MILK": lambda: _tpl_protein_simple("S_MILK", "우유", "sữa"),
@@ -1349,6 +1434,10 @@ PROTOCOL_BUILDERS = {
     "S_BETEL": _tpl_betel,
     "S_IODINE": _tpl_iodine,
     "S_CHILI": _tpl_chili,
+    "S_SHRIMP_PASTE": _tpl_shrimp_paste,
+    "S_SUGARCANE": _tpl_sugarcane,
+    "S_GAC": _tpl_gac,
+    "S_ANNATTO": _tpl_annatto,
     "S_GLUE": _tpl_glue,
     "S_STARCH_TRANSFER": _tpl_starch_transfer,
 }
@@ -1606,7 +1695,7 @@ def _stain_family(stain_id: str, sc: Optional[dict] = None) -> str:
         return "mud"
     if sid == "S_MILDEW":
         return "mildew"
-    if sid in {"S_INK_PEN", "S_INK_PERMANENT", "S_HAIR_DYE", "S_MASCARA", "S_PAINT_LATEX", "S_PAINT_OIL", "S_IODINE"}:
+    if sid in {"S_INK_PEN", "S_INK_PERMANENT", "S_HAIR_DYE", "S_MASCARA", "S_PAINT_LATEX", "S_PAINT_OIL", "S_IODINE", "S_GAC", "S_ANNATTO"}:
         return "ink"
     if sid in {
         "S_ENGINE_OIL", "S_MOTORBIKE_OIL", "S_TAR", "S_GREASE", "S_COOKING_OIL",

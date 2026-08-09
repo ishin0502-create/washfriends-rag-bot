@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-09-education-gaps-v7b",
+            "build": "2026-08-09-education-gaps-v8",
             "checks": checks,
         },
         status_code=200,
@@ -2373,9 +2373,13 @@ RETURN count(s) AS updated
                 vn_specialty_stain_seed_rows as _vn_stain_rows,
             )
             from education_gaps_v7 import vn_specialty_stain_seed_rows_v7 as _vn_v7
+            from education_gaps_v8 import (
+                fish_sauce_upgrade_fields as _fs_up,
+                vn_specialty_stain_seed_rows_v8 as _vn_v8,
+            )
             from vi_text_canon import seed_canon_from_records as _vi_canon_rows
 
-            _vn = list(_vn_stain_rows()) + list(_vn_v7())
+            _vn = list(_vn_stain_rows()) + list(_vn_v7()) + list(_vn_v8())
             # Create/update stain nodes first (Group label is StainGroup, not Group).
             res_vn = s.run(
                 """
@@ -2409,6 +2413,23 @@ RETURN count(*) AS linked
                 rows=_vn,
             )
             log["Z16c_vn_specialty_links"] = res_vn_rel.data()[0] if res_vn_rel else {"linked": 0}
+
+            # Fish sauce education upgrade (existing node)
+            try:
+                _fs = {"id": "S_FISH_SAUCE", **_fs_up()}
+                res_fs = s.run(
+                    """
+MERGE (st:Stain {id:$id})
+SET st.why_ko = $why_ko, st.why_vi = $why_vi,
+    st.fresh_path_ko = $fresh_path_ko, st.fresh_path_vi = $fresh_path_vi,
+    st.dried_path_ko = $dried_path_ko, st.dried_path_vi = $dried_path_vi
+RETURN st.id AS id
+""",
+                    **_fs,
+                )
+                log["Z16c_fish_sauce_upgrade"] = res_fs.data()[0] if res_fs else {}
+            except Exception as e:
+                log["Z16c_fish_sauce_upgrade"] = f"ERR:{str(e)[:120]}"
 
             _vo = _vi_ops_rows()
             res_vo = s.run(
