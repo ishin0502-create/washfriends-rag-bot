@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-09-rescue-label-v6c",
+            "build": "2026-08-09-owner-phrasing-v6d",
             "checks": checks,
         },
         status_code=200,
@@ -620,9 +620,9 @@ UNWIND [
    use_for_ko:'(런타임) 탄닌·유성·단백질·잉크 맥락으로 다시 씀.',
    use_for_en:'(runtime) Rewritten per stain chemistry.'},
   {id:'T_SPRAY',name_vi:'Bình xịt (mỗi hóa chất 1 bình + ghi tên/tỷ lệ)',name_ko:'분무기(약마다 따로·겉에 이름·비율 쓰기)',
-   use_for_vi:'Pha dung dịch của vết (vd giấm 1:4) vào bình RIÊNG — không trộn thuốc khác. Viết lên bình tên+tỷ lệ. Xịt 1-2 phát, không ngập.',
-   use_for_ko:'이 얼룩용 희석액(예: 흰 식초 식초1:물4)을 다른 약이 안 든 분무기에만 넣는다. 병 겉에 「식초 1:4」처럼 적는다(섞이면 위험·효과 없음). 얼룩에 1–2번만 뿌림.',
-   use_for_en:'Mix this stain dilution (e.g. vinegar 1:4) in a dedicated bottle — never mix chemicals. Write name+ratio on bottle. Mist 1-2 sprays.'},
+   use_for_vi:'Pha dung dịch của vết (vd giấm trắng 1:4) vào bình RIÊNG — không trộn thuốc khác. Ghi nhãn lên bình: tên thuốc + tỷ lệ (vd 「giấm trắng 5% / giấm1:nước4」). Xịt 1-2 phát, không ngập.',
+   use_for_ko:'이 얼룩용 희석액(예: 흰 식초 식초1:물4)을 다른 약이 안 든 분무기에만 넣는다. 분무기 겉면 라벨에 「흰 식초 5% / 식초1:물4」처럼 약 이름과 희석비를 적어 둔다(섞이면 위험·효과 없음). 얼룩에 1–2번만 뿌림.',
+   use_for_en:'Mix this stain dilution (e.g. vinegar 1:4) in a dedicated bottle — never mix chemicals. Label bottle with name+ratio. Mist 1-2 sprays.'},
   {id:'T_BRUSH_SHOE',name_vi:'Ban chai de giay (long cung)',name_ko:'운동화 밑창용 경질 솔',
    use_for_vi:'Chi de cao su/gai: chai kho bun roi cham D2. CAM than mesh/lua.',
    use_for_ko:'고무·클리트 밑창만: 흙 털고 D2. 갑피 메시·실크에 사용 금지.',

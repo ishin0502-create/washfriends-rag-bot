@@ -1028,16 +1028,19 @@ def _bind_tool_howto_to_protocol(graph: dict) -> dict:
             t["name_vi"] = "Bình xịt (mỗi hóa chất 1 bình + ghi tên/tỷ lệ)"
             t["use_for_ko"] = (
                 f"이 얼룩용: (4)약품의「{spray_name_ko}」을 「{dil_ko}」로 타서, "
-                f"다른 약이 안 들어 있는 분무기에만 넣는다. 병 겉에 「{spray_name_ko} / {dil_ko}」라고 펜으로 적는다"
-                f"(섞이면 위험하거나 효과가 없어짐). 얼룩에 1–2번만 뿌리고 흠뻑 적시지 말 것."
+                f"다른 약이 안 들어 있는 분무기에만 넣는다. "
+                f"분무기 겉면 라벨에 「{spray_name_ko} / {dil_ko}」처럼 약 이름과 희석비를 적어 둔다"
+                f"(다른 약과 섞이면 위험하거나 효과가 없어짐). 얼룩에 1–2번만 뿌리고 흠뻑 적시지 말 것."
             )
             t["use_for_vi"] = (
                 f"Cho vết này: pha 「{spray_name_vi}」 theo 「{dil_vi}」 vào bình RIÊNG (không trộn thuốc khác). "
-                f"Viết lên bình 「{spray_name_vi} / {dil_vi}」. Xịt 1-2 phát — không ngập."
+                f"Ghi nhãn lên bình: 「{spray_name_vi} / {dil_vi}」(tên thuốc + tỷ lệ). "
+                f"Xịt 1-2 phát — không ngập."
             )
             t["use_for_en"] = (
                 f"For this stain: mix 「{spray_name_en}」 at 「{dil_en}」 in a dedicated bottle (no other chemical). "
-                f"Write 「{spray_name_en} / {dil_en}」 on the bottle. Mist 1-2 sprays — do not soak."
+                f"Label the bottle 「{spray_name_en} / {dil_en}」 (name + dilution). "
+                f"Mist 1-2 sprays — do not soak."
             )
         elif tid == "T_TIMER":
             t["use_for_ko"] = (
@@ -2721,7 +2724,8 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "번역투·장황한 접속어·브랜드 날조 금지. "
             "단계: (1)오염·원단·두께·색상 — match_diagnosis의 chemistry·fabric_type·fabric_weight·"
             "fabric_rule을 반드시 반영(소수성 오일 vs 단백질 vs 탄닌 등). "
-            "원단·두께 미상이면 weight_bands를 (1)에 반드시 넣고 "
+            "원단·두께 미확인이면 weight_bands를 (1)에 넣고 "
+            "「Cap1·표백 보류 → 확인 후 조정」으로 말할 것. 「보수적으로 안내」는 쓰지 말 것. "
             "SOP는 보통 두께 기준으로 (2)–(6)까지 완결할 것. "
             "색 미확인·유색이면 chemicals[]에 없는 산소/염소 표백을 (4)에 넣지 말 것 — "
             "‘흰옷 확인 후·구석 테스트’만 안내. "
@@ -2732,7 +2736,8 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "(2)도구 — tools[]의 각 항목을 'name_ko: use_for_ko' 한 줄로 "
             "(사용법 생략·지어내기 금지; 없으면 해당 없음). "
             "타이머·담금통은 use_for_ko에 적힌 정확한 분(예: 15–45분)을 그대로 말할 것. "
-            "분무기는 「무슨 약을 어떤 비율로 넣고, 병 겉에 왜 적는지」를 use_for_ko 그대로. "
+            "분무기는 use_for_ko 그대로 — 「분무기 겉면 라벨에 약 이름과 희석비를 적어 둔다」. "
+            "「식초 1 물 4라고 적는다」처럼 어색하게 줄이지 말 것. "
             "(3)힘·방향 Cap — 얇은 원단은 Cap1–2만. "
             "(4)약품(name_ko·dilution_ko) (5)수온 (6)후관리. "
             "protocol.steps가 있으면 그것이 유일한 실행 순서 — "
@@ -2872,7 +2877,8 @@ Answer from this data only. Do not mix languages."""
                 "CHỈ tiếng Việt. CẤM Hàn/Anh. "
                 "Bước: (1) Nhận diện (vet/vai/độ dày/màu) — bắt buộc dùng match_diagnosis "
                 "(chemistry, fabric_type, fabric_weight, fabric_rule). "
-                "Nếu chưa rõ vải/độ dày: nêu weight_bands_vi và hoàn tất SOP mức vừa — "
+                "Nếu chưa rõ vải/độ dày: nêu 「Cap1 + tạm dừng tẩy → xác nhận rồi chỉnh」 "
+                "và weight_bands_vi; hoàn tất SOP mức vừa — không nói mơ hồ kiểu bảo thủ. "
                 "không chỉ hỏi rồi dừng. ask_if_needed chỉ là gợi ý tùy chọn. "
                 "Chưa rõ màu / màu: CẤM bịa tẩy oxy trong (4) nếu không có trong chemicals[]. "
                 "Nếu _compact_followup=true: xác nhận vải/độ dày ngắn, chỉ nêu điểm đổi — không lặp SOP dài. "
@@ -3067,6 +3073,45 @@ def _rewrite_item_care_step1_header(answer: str, graph_context: dict, lang: str)
     if not _STAIN_STEP1_RE.search(answer):
         return answer
     return _STAIN_STEP1_RE.sub(_ITEM_STEP1, answer, count=1)
+
+
+def _polish_owner_ko_phrasing(answer: str) -> str:
+    """Fix known awkward owner-facing phrases without changing chemistry."""
+    if not answer:
+        return answer
+    out = answer
+    # Dilution label first (before 병 겉에 → 라벨 rewrite)
+    out = re.sub(
+        r"「([^」]+)」라고\s*(?:펜으로\s*)?적는다",
+        r"「\1」처럼 분무기 겉면 라벨에 적어 둔다",
+        out,
+    )
+    out = re.sub(
+        r"(식초\s*1\s*[:：]\s*물\s*4)\s*라고\s*(?:펜으로\s*)?적는다",
+        r"\1처럼 분무기 겉면 라벨에 적어 둔다",
+        out,
+    )
+    out = out.replace("이라고 펜으로 적는다", "처럼 분무기 겉면 라벨에 적어 둔다")
+    out = out.replace("라고 펜으로 적는다", "처럼 분무기 겉면 라벨에 적어 둔다")
+    # Avoid double "분무기 겉면 라벨에 … 분무기 겉면 라벨에"
+    out = out.replace("병 겉에 ", "분무기 겉면 라벨에 ")
+    out = re.sub(
+        r"분무기 겉면 라벨에\s*(「[^」]+」)\s*처럼\s*분무기 겉면 라벨에\s*적어 둔다",
+        r"분무기 겉면 라벨에 \1처럼 적어 둔다",
+        out,
+    )
+    replacements = (
+        ("보수적으로 안내", "Cap1·표백 보류로 진행"),
+        ("보수적으로(약하게) 안내하고", "Cap1·표백 보류로 진행하고"),
+        ("보수적으로(약하게) 안내", "Cap1·표백 보류로 진행"),
+        ("원단 두께 미상일시 보수적으로 안내", "원단·두께 미확인 시 Cap1·표백 보류로 진행"),
+        ("원단·두께 미상일 시 보수적으로 안내", "원단·두께 미확인 시 Cap1·표백 보류로 진행"),
+        ("원단·두께 미상일시 보수적으로 안내", "원단·두께 미확인 시 Cap1·표백 보류로 진행"),
+    )
+    for a, b in replacements:
+        if a in out:
+            out = out.replace(a, b)
+    return out
 
 
 def _enforce_must_include(answer: str, graph_context: dict, lang: str) -> str:
@@ -3270,10 +3315,14 @@ def _answer_with_optional_cache(
             answer = _rewrite_item_care_step1_header(answer, graph_context, lang)
             answer = _enforce_must_include(answer, graph_context, lang)
             answer = _enforce_rescue_pass(answer, graph_context, lang)
+            if lang == "ko":
+                answer = _polish_owner_ko_phrasing(answer)
             return answer
     answer = _rewrite_item_care_step1_header(answer, graph_context, lang)
     answer = _enforce_must_include(answer, graph_context, lang)
     answer = _enforce_rescue_pass(answer, graph_context, lang)
+    if lang == "ko":
+        answer = _polish_owner_ko_phrasing(answer)
     if not reply_language_leaks(answer, lang):
         cache_store(cache_question, answer, ctx_key)
     else:

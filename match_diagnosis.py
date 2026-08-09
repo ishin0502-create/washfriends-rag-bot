@@ -157,17 +157,17 @@ def fabric_weight_rule(weight: str, fabric_type: str = "", lang: str = "ko") -> 
     # unknown
     if lang == "vi":
         return (
-            "Chưa rõ độ dày/loại vải: nêu giả định an toàn (nhẹ hơn), "
-            "và hỏi 1 câu — vải gì + mỏng/dày — trước khi dùng oxy/enzyme mạnh."
+            "Chưa rõ loại vải/độ dày: trước hết xác nhận (cotton/poly/lụa·len + mỏng/dày + màu). "
+            "Khi chưa rõ: làm theo Cap1 và tạm dừng tẩy oxy/clo; sau khi xác nhận thì chỉnh theo."
         )
     if lang == "en":
         return (
-            "Fabric weight unknown: stay conservative; ask one question "
-            "(fiber + thin/thick) before strong oxy/enzyme."
+            "Fabric/thickness unknown: first confirm fiber + thin/thick + color. "
+            "Until then use Cap1 and hold oxygen/chlorine bleach; adjust after confirmed."
         )
     return (
-        "원단·두께 미상: 보수적으로(약하게) 안내하고, "
-        "강한 산소표백·효소 전에 원단(면/폴리/실크·울)과 얇음/두꺼움을 한 문장으로 되물을 것."
+        "원단·두께 미확인: 먼저 원단(면/폴리/실크·울)·얇음/두꺼움·색을 확인한다. "
+        "확인 전에는 Cap1·표백 보류로 진행하고, 확인되면 그에 맞게 조정한다."
     )
 
 
@@ -207,7 +207,8 @@ def build_match_diagnosis(
     weight_missing = weight == "unknown"
 
     bands_ko = (
-        "두께별 차이(반드시 말할 것): "
+        "원단·두께 미확인 시: Cap1·표백 보류로 진행(확인되면 조정). "
+        "두께별 차이: "
         "①얇음→Cap1·블롯만·통담금·경질솔 금지 / "
         "②보통→아래 SOP 기준 / "
         "③두꺼움→Cap2–3·담금·솔 여유. "
@@ -215,7 +216,8 @@ def build_match_diagnosis(
         "색 미확인이면 산소·염소 표백은 넣지 말고 ‘흰옷 확인 후’만 안내."
     )
     bands_vi = (
-        "Theo độ dày (bắt buộc nêu): "
+        "Chưa rõ vải/độ dày: làm Cap1 và tạm dừng tẩy (xác nhận rồi chỉnh). "
+        "Theo độ dày: "
         "①mỏng→Cap1·blot·cấm ngâm cả áo / "
         "②vừa→SOP dưới / "
         "③dày→Cap2–3. "
@@ -223,7 +225,8 @@ def build_match_diagnosis(
         "Chưa rõ màu: không nêu tẩy oxy/Javel — chỉ sau khi xác nhận trắng."
     )
     bands_en = (
-        "By thickness (must state): "
+        "If fabric/thickness unknown: Cap1 and hold bleach (adjust after confirmed). "
+        "By thickness: "
         "①thin→Cap1 blot, no full soak / "
         "②medium→SOP below / "
         "③thick→Cap2–3. "
@@ -264,18 +267,21 @@ def build_match_diagnosis(
         ),
         "accuracy_rule_ko": (
             "(1)에서 반드시: 오염 성분 + 원단 + 두께(+색). "
-            "원단·두께 미상이면 weight_bands로 얇/보통/두꺼움 차이를 말하고 SOP는 보통 기준으로 완결. "
+            "원단·두께 미확인이면 「Cap1·표백 보류 → 확인 후 조정」과 weight_bands를 말하고 "
+            "SOP는 보통 기준으로 완결. 「보수적으로 안내」라는 말은 쓰지 말 것. "
             "색 미확인이면 산소·염소 표백을 (4)에 넣지 말 것. "
             "도구 분·희석·사용법은 tools[]/chemicals[]만 — 지어내기 금지."
         ),
         "accuracy_rule_vi": (
             "Ở (1): thành phần + vải + độ dày (+màu). "
-            "Nếu chưa rõ: nói weight_bands và hoàn tất SOP mức vừa. "
+            "Chưa rõ: nói 「Cap1 + tạm dừng tẩy → xác nhận rồi chỉnh」 và weight_bands; "
+            "hoàn tất SOP mức vừa. Không nói kiểu mơ hồ 「hướng dẫn bảo thủ」. "
             "Phút/pha chỉ từ tools[]/chemicals[]."
         ),
         "accuracy_rule_en": (
             "In (1): chemistry + fabric + thickness (+color). "
-            "If unknown: state weight_bands and complete medium SOP. "
+            "If unknown: say Cap1 + hold bleach → adjust after confirm, plus weight_bands; "
+            "complete medium SOP. Do not say vague 'guide conservatively'. "
             "Minutes/dilution only from tools[]/chemicals[]."
         ),
     }
