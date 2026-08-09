@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-09-owner-phrasing-v6e",
+            "build": "2026-08-09-education-gaps-v7",
             "checks": checks,
         },
         status_code=200,
@@ -726,7 +726,7 @@ SET s.precheck_vi = o.precheck_vi, s.motion_vi = o.motion_vi,
 RETURN count(s) AS updated""")
         _r(s, "V_chem_dilution", """
 UNWIND [
-  {code:'E1',dilution_vi:'1 muong canh / 1 lit nuoc lanh; khuay tan, ngam 15-60 phut',dilution_ko:'찬물 1리터에 큰술 1 → 잘 녹여 15–60분 담금'},
+  {code:'E1',dilution_vi:'Protease: 1 muỗng / 1L lạnh → ngâm 15–60 phút (ưu tiên nhãn). CẤM lụa/len → S1.',dilution_ko:'단백질 효소: 찬물 1L에 큰술 1 → 잘 녹여 15–60분(병 우선). 실크·울 금지→중성세제.'},
   {code:'N2',dilution_vi:'2 muong canh / 1 lit nuoc lanh (mau tuoi)',dilution_ko:'찬물 1리터에 소금 큰술 2 (선혈)'},
   {code:'A3',dilution_vi:'1 phần giấm + 4 phần nước (khử mùi / tannin)',dilution_ko:'식초 1 : 물 4 (탄닌·냄새)'},
   {code:'A5',dilution_vi:'1 muong canh / 1 coc nuoc — KHONG tron B2',dilution_ko:'물 1컵에 큰술 1 — 락스(염소)와 절대 혼합 금지'},
@@ -734,21 +734,38 @@ UNWIND [
   {code:'A1',dilution_vi:'Cham bang bong/khan — khong do ngap',dilution_ko:'솜·흰 천으로 가볍게 찍기 (흠뻑 붓지 말 것)'},
   {code:'D2',dilution_vi:'1-2 giot nguyen chat len vet hoac pha loang nhe',dilution_ko:'얼룩에 1–2방울 또는 약하게 희석'},
   {code:'S1',dilution_vi:'Theo huong dan chai Wash Friends — uu tien lua/len',dilution_ko:'워시프렌즈 중성세제 병 안내 따름 — 실크·울 우선'},
-  {code:'B1',dilution_vi:'Theo nhan chai; thuong ngam 15-45 phut nuoc am/lanh — test mau',dilution_ko:'병 라벨 따름; 보통 찬물·미지근 15–45분 담금 — 구석 색 테스트'},
+  {code:'B1',dilution_vi:'CHỈ trắng + test góc. Theo nhãn; thường 1–2 muỗng / 1L lạnh/ấm → 15–45 phút. CẤM màu/chưa rõ/lụa/len.',dilution_ko:'흰옷만·구석 색 테스트. 병 라벨; 보통 찬물·미지근 1L에 큰술 1–2 → 15–45분. 유색·색 미확인·실크·울 금지.'},
   {code:'D3',dilution_vi:'Theo nhan chai; uu tien chuong trinh thuong sau khi da xu ly vet',dilution_ko:'병 라벨 따름; 얼룩 전처리 후 일반 세탁 용량'},
   {code:'N1',dilution_vi:'Paste: baking soda + it nuoc; hoac 1-2 muong / 1 lit khi ngam',dilution_ko:'페이스트: 베이킹소다+물 약간; 또는 담글 때 1리터에 1–2큰술'},
   {code:'N3',dilution_vi:'Phu day len vet dau 10-30 phut roi chai bot',dilution_ko:'기름 얼룩에 두껍게 덮어 10–30분 후 털어내기'},
   {code:'D1',dilution_vi:'Cham it, thong gio; khong do ngap — theo nhan san pham',dilution_ko:'환기 필수, 소량 찍기 — 제품 라벨 따름'},
-  {code:'E3',dilution_vi:'Theo nhan enzyme; thuong ngam am nhe 15-30 phut sau khi tay dau',dilution_ko:'라벨 따름; 보통 탈지 후 미지근 15–30분 담금'},
-  {code:'E2',dilution_vi:'Theo nhan enzyme tinh bot; thuong ngam lanh/am 15-60 phut (amylase)',dilution_ko:'전분 효소 라벨 따름; 보통 찬물·미온 15–60분 담금(아밀라아제)'},
-  {code:'B2',dilution_vi:'CHI cotton TRANG: pha loang theo nhan Javel — KHONG mau/len/lua; KHONG tron A5/A3',dilution_ko:'흰 면만: 락스(자벨) 병 라벨 희석 — 유색·실크·울 금지; 암모니아·식초와 혼합 금지'},
-  {code:'A2',dilution_vi:'Cham cuc it Cap1 + giay tham mat trai; CAM acetate/rayon; thong gio',dilution_ko:'안쪽 Cap1 극소량+흡수지; 아세테이트/레이온 금지; 환기'},
+  {code:'E3',dilution_vi:'Lipase: theo nhãn; thường 1 muỗng / 1L ấm nhẹ → ngâm 15–30 phút sau khử dầu.',dilution_ko:'리파아제: 병 표기; 보통 미온 1L에 큰술 1 → 탈지 후 15–30분 담금. 실크·울 주의.'},
+  {code:'E2',dilution_vi:'Amylase: 1 muỗng canh / 1L nước lạnh (hoặc theo nhãn) → ngâm 15–60 phút. CẤM lụa/len.',dilution_ko:'전분 효소: 찬물 1L에 큰술 1(또는 병 표기) → 잘 녹여 15–60분 담금. 실크·울 금지.'},
+  {code:'B2',dilution_vi:'CHỈ cotton TRẮNG. VD: Javel đặc 1 : nước 10–20 (ưu tiên nhãn) · ngâm ngắn · xả ngay. CẤM màu/lụa/len/acetate. CẤM trộn giấm/amoniac.',dilution_ko:'흰 면만. 예: 가정용 자벨/락스 원액 1 : 물 10–20(병 우선) · 짧은 담금·즉시 헹굼. 유색·실크·울·아세테이트 금지. 식초·암모니아와 절대 혼합 금지.'},
+  {code:'A2',dilution_vi:'Nguyên chất rất ít — thấm khăn mặt trái Cap1 (giấy thấm dưới). CẤM acetate/rayon/triacetate. Thông gió + PPE.',dilution_ko:'원액 극소량만 — 흰 천/솜에 묻혀 안쪽 Cap1 블롯(흡수지 아래). 아세테이트·레이온·트리아세테이트 즉시 금지. 환기·PPE.'},
   {code:'WF_SOFT',dilution_vi:'Theo chai Softener Wash Friends — chi buoc xa/hoan thien, khong xu ly vet',dilution_ko:'워시프렌즈 유연제 병 안내 — 헹굼·마감만, 얼룩 처리에 쓰지 말 것'},
   {code:'WF_FRAG',dilution_vi:'Xit nhe 1-2 phat theo chai — khong ngap; sau khi do kho/sach',dilution_ko:'병 안내대로 1–2회만 약하게 — 흠뻑 금지; 건조·청결 후'}
 ] AS d
 MATCH (c:Chemical {code:d.code})
 SET c.dilution_vi = d.dilution_vi, c.dilution_ko = d.dilution_ko
 RETURN count(c) AS updated""")
+        # v7 dilution overwrite (same codes — keeps seed idempotent if list above drifts)
+        try:
+            from education_gaps_v7 import dilution_seed_rows as _dil_v7
+
+            _dv = _dil_v7()
+            res_dv = s.run(
+                """
+UNWIND $rows AS d
+MATCH (c:Chemical {code:d.code})
+SET c.dilution_vi = d.dilution_vi, c.dilution_ko = d.dilution_ko
+RETURN count(c) AS updated
+""",
+                rows=_dv,
+            )
+            log["V7_chem_dilution"] = res_dv.data()[0] if res_dv else {"updated": 0}
+        except Exception as e:
+            log["V7_chem_dilution"] = f"ERR:{str(e)[:120]}"
         _r(s, "V2b_chem_alt_ko", """
 UNWIND [
   {code:'E1',alt1_ko:'슈퍼 효소 표기 세제·효소 담금제',alt2_ko:'실크·울이면 워시프렌즈 중성세제만 (효소 금지)',alt3_ko:''},
@@ -1872,6 +1889,38 @@ UNWIND [
    motion_vi:'Luc 0 — giao tiep + anh',
    water_temp_vi:'N/A',
    aftercare_vi:'Luu anh + phieu. Zalo: tra loi <2h neu co anh vet.'},
+  {id:'I_CLAIM_SCRIPT',name:'Claim / dispute resolution script',name_vi:'Script khieu nai / tranh chap',name_ko:'클레임·분쟁 대응 스크립트',fabric_id:'F1',
+   precheck_vi:'Tim anh luc nhan + phieu ky. Binh tinh.',
+   why_vi:'GIAO DUC: Anh+phieu = bang chung. Doi chieu → loi shop: xin loi+phuong an / hu san: dua anh.',
+   fresh_path_vi:'(1) Hoi phieu+anh. (2) So sanh. (3) Xin loi neu loi / chi anh neu hu san. (4) CAM hua 100% hoan.',
+   dried_path_vi:'Tranh chap dai: esca HQ, ghi van ban.',
+   motion_vi:'Luc 0',
+   water_temp_vi:'N/A',
+   aftercare_vi:'Luu anh+tom tat.'},
+  {id:'I_PRICING_SCRIPT',name:'Pricing / quote script',name_vi:'Script bao gia',name_ko:'요금·가격 안내 스크립트',fabric_id:'F1',
+   precheck_vi:'Mo bang gia cua hang. CAM bia so.',
+   why_vi:'GIAO DUC: Gia = ro + tu tin. Xem bang gia. Than dat → giai thich gia tri.',
+   fresh_path_vi:'(1) Dem mon. (2) Xem bang gia. (3) Bao co ban + phu phi vet. (4) CAM bia/giam lung tung.',
+   dried_path_vi:'Da noi sai gia: sua theo phieu + xin loi.',
+   motion_vi:'Luc 0',
+   water_temp_vi:'N/A',
+   aftercare_vi:'Ghi tach phi tren phieu.'},
+  {id:'I_QUIZ_STAINS',name:'Stain chemistry quiz (staff)',name_vi:'Quiz vet ban (nhan vien)',name_ko:'얼룩 화학 퀴즈(직원)',fabric_id:'F1',
+   precheck_vi:'On 5 cau.',
+   why_vi:'GIAO DUC: Hoi→dap→ly do.',
+   fresh_path_vi:'(1) Mau tuoi: chi lanh. (2) Ruou: CAM cha. (3) Muc: blot con. (4) Son dau≠nuoc. (5) Kho: ngam 15-30.',
+   dried_path_vi:'Sai → doc lai SOP.',
+   motion_vi:'Luc 0',
+   water_temp_vi:'N/A',
+   aftercare_vi:'On hang tuan.'},
+  {id:'I_QUIZ_FABRIC',name:'Fabric safety quiz (staff)',name_vi:'Quiz vai an toan (nhan vien)',name_ko:'원단 안전 퀴즈(직원)',fabric_id:'F1',
+   precheck_vi:'On 5 cau CAM.',
+   why_vi:'GIAO DUC: Lua/len/acetate/tay.',
+   fresh_path_vi:'(1) Lua CAM enzyme. (2) Acetate CAM acetone. (3) Mau CAM Javel. (4) X chau CAM nuoc. (5) Chua ro: Cap1.',
+   dried_path_vi:'Sai → doc fabric card.',
+   motion_vi:'Luc 0',
+   water_temp_vi:'N/A',
+   aftercare_vi:'Nhan vien moi: tuan dau.'},
   {id:'I_WATER_HARDNESS',name:'Hard water / VN tap water correction',name_vi:'Nuoc cung / dieu chinh nuoc may VN',name_ko:'경수·베트남 수돗물 보정',fabric_id:'F1',
    precheck_vi:'Dau hieu: bot it, vai cung, vang trang, can may. Hoi khu vuc (HN/HCM nhieu noi cung).',
    why_vi:'GIAO DUC: Nuoc cung (Ca/Mg) = bot giat kem hieu luc + can may + vai cang. Bu: (1) tang bot vua / dung chat cho nuoc cung (2) THEM xa (3) A3 1:4 xa cuoi tuy chon (4) ve sinh may dinh ky. Khong doi bang them xa vai (mat tham khan).',
@@ -2025,7 +2074,7 @@ FOREACH (_ IN CASE WHEN i.id = 'I_SWIMWEAR' THEN [1] ELSE [] END |
 FOREACH (_ IN CASE WHEN i.id = 'I_ODOR_SMOKE' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(spray) MERGE (i)-[:USES_CHEMICAL]->(a3)
   MERGE (i)-[:USES_CHEMICAL]->(n1) MERGE (i)-[:USES_CHEMICAL]->(d2))
-FOREACH (_ IN CASE WHEN i.id IN ['I_CARE_LABEL','I_DRY_VS_WET','I_INTAKE_SCRIPT','I_WATER_HARDNESS','I_MACHINE_PROFILE','I_SORT','I_RINSE','I_QC_HANDOVER'] THEN [1] ELSE [] END |
+FOREACH (_ IN CASE WHEN i.id IN ['I_CARE_LABEL','I_DRY_VS_WET','I_INTAKE_SCRIPT','I_CLAIM_SCRIPT','I_PRICING_SCRIPT','I_QUIZ_STAINS','I_QUIZ_FABRIC','I_WATER_HARDNESS','I_MACHINE_PROFILE','I_SORT','I_RINSE','I_QC_HANDOVER'] THEN [1] ELSE [] END |
   MERGE (i)-[:USES_TOOL]->(cloth))
 FOREACH (_ IN CASE WHEN i.id = 'I_RINSE' THEN [1] ELSE [] END |
   MERGE (i)-[:USES_CHEMICAL]->(a3))
@@ -2323,9 +2372,10 @@ RETURN count(s) AS updated
                 seed_ops_vi_canon_rows as _vi_ops_rows,
                 vn_specialty_stain_seed_rows as _vn_stain_rows,
             )
+            from education_gaps_v7 import vn_specialty_stain_seed_rows_v7 as _vn_v7
             from vi_text_canon import seed_canon_from_records as _vi_canon_rows
 
-            _vn = _vn_stain_rows()
+            _vn = list(_vn_stain_rows()) + list(_vn_v7())
             # Create/update stain nodes first (Group label is StainGroup, not Group).
             res_vn = s.run(
                 """
@@ -2432,7 +2482,7 @@ RETURN count(st) AS updated
             res_ops = s.run(
                 """
 UNWIND $rows AS o
-MATCH (i:Item {id:o.id})
+MERGE (i:Item {id:o.id})
 SET i.why_ko = o.why_ko, i.why_vi = coalesce(o.why_vi, i.why_vi),
     i.why_en = coalesce(o.why_en, i.why_en),
     i.fresh_path_ko = o.fresh_path_ko, i.fresh_path_vi = coalesce(o.fresh_path_vi, i.fresh_path_vi),

@@ -38,7 +38,35 @@ def process_channel_image(
     if awaiting_label:
         if kind == "care_label":
             pending = pop_pending_label(channel, user_id) or session
-            return format_care_label_reply(result, lang=pending.get("lang") or lang, pending=pending)
+            reply_lang = pending.get("lang") or lang
+            label_txt = format_care_label_reply(result, lang=reply_lang, pending=pending)
+            stain = (pending.get("stain_guess") or pending.get("caption") or caption or "").strip()
+            if stain:
+                try:
+                    from education_gaps_v7 import care_label_constraints
+
+                    constraints = care_label_constraints(result)
+                except Exception:
+                    constraints = {"_from_care_label": True}
+                entities = {
+                    "intent": "treatment",
+                    "stain_type": stain,
+                    "fabric_type": constraints.get("fabric_type")
+                    or pending.get("fabric_guess")
+                    or result.get("fabric_type")
+                    or "",
+                    "lang": reply_lang,
+                    "_image_analysis": True,
+                    **constraints,
+                }
+                sep = "\n\n---\n[라벨 한도 반영 SOP]\n" if reply_lang == "ko" else "\n\n---\n[SOP trong giới hạn nhãn]\n"
+                sop = generate_response_from_entities(
+                    entities,
+                    user_caption=stain,
+                    prefix=label_txt + sep,
+                )
+                return sop if sop else label_txt
+            return label_txt
         # Sent another stain / unclear photo while waiting
         if kind == "stain_photo" and not needs_clarification(result):
             clear_session(channel, user_id)

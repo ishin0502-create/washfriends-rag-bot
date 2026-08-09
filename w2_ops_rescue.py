@@ -5,23 +5,19 @@ Accuracy: checklist only — no invented chemistry. Minutes/ratios from existing
 """
 from __future__ import annotations
 
-# ── Dilution gaps (E2/B2/A2/WF) ──────────────────────────────────────────────
-DILUTION_GAPS = [
-    {
-        "code": "E2",
-        "dilution_vi": "Theo nhan enzyme tinh bot; thuong ngam lanh/am 15-60 phut (amylase)",
-        "dilution_ko": "전분 효소 라벨 따름; 보통 찬물·미온 15–60분 담금(아밀라아제)",
-    },
-    {
-        "code": "B2",
-        "dilution_vi": "CHI cotton TRANG: pha loang theo nhan Javel — KHONG mau/len/lua; KHONG tron A5/A3",
-        "dilution_ko": "흰 면만: 락스(자벨) 병 라벨 희석 — 유색·실크·울 금지; 암모니아·식초와 혼합 금지",
-    },
-    {
-        "code": "A2",
-        "dilution_vi": "Cham cuc it Cap1 + giay tham mat trai; CAM acetate/rayon; thong gio",
-        "dilution_ko": "안쪽 Cap1 극소량+흡수지; 아세테이트/레이온 금지; 환기",
-    },
+# ── Dilution gaps (synced with education_gaps_v7 / V_chem / CHEM_META) ────────
+try:
+    from education_gaps_v7 import DILUTION_V7 as _DV7
+
+    DILUTION_GAPS = [
+        {"code": d["code"], "dilution_vi": d["dilution_vi"], "dilution_ko": d["dilution_ko"]}
+        for d in _DV7
+    ]
+except Exception:
+    DILUTION_GAPS = []
+
+# WF supply dilutions (not in CHEM stain path; keep for seed/V_chem parity)
+_WF_DILUTION = [
     {
         "code": "WF_SOFT",
         "dilution_vi": "Theo chai Softener Wash Friends — chi buoc xa/hoan thien, khong xu ly vet",
@@ -33,6 +29,10 @@ DILUTION_GAPS = [
         "dilution_ko": "병 안내대로 1–2회만 약하게 — 흠뻑 금지; 건조·청결 후",
     },
 ]
+_gap_codes = {d["code"] for d in DILUTION_GAPS}
+for _row in _WF_DILUTION:
+    if _row["code"] not in _gap_codes:
+        DILUTION_GAPS.append(_row)
 
 # ── Ops decision drills (question → judge → script → refuse) ─────────────────
 OPS_DRILLS = {
@@ -216,6 +216,13 @@ try:
 except Exception:
     pass
 
+try:
+    from education_gaps_v7 import OPS_DRILLS_V7
+
+    OPS_DRILLS.update(OPS_DRILLS_V7)
+except Exception:
+    pass
+
 RESCUE_BY_GROUP = {
     "G1": {
         "ko": "2차: 찬물 재확인 → 효소 농도·시간↑(원단 허용 시, 실크·울 금지) → 흰 면만 과산화/산소 검토. 고객에 성공률↓ 고지.",
@@ -257,6 +264,16 @@ def rescue_card_for_stain(sc: dict) -> dict:
         disclose_vi = (
             "Lan 1 that bai/vet kho: bao ty le thap truoc khi lam lan 2. CAM hua 100%."
         )
+    if not stain_card:
+        try:
+            from education_gaps_v7 import RESCUE_CHILI, RESCUE_IODINE
+
+            if sid == "S_IODINE":
+                stain_card = RESCUE_IODINE
+            elif sid == "S_CHILI":
+                stain_card = RESCUE_CHILI
+        except Exception:
+            pass
 
     gid = ""
     grp = sc.get("group_id") or sc.get("group")

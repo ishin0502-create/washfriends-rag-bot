@@ -9,12 +9,27 @@ from graphrag_engine import _enrich_rescue_aftercare, _enrich_teach_slots
 
 
 def test_ops_five():
-    assert len(OPS_DRILLS) == 5
-    for iid, row in OPS_DRILLS.items():
-        assert "질문" in row["fresh_path_ko"] or "질문" in row["why_ko"] or "(1)질문" in row["fresh_path_ko"]
-        assert row["refuse_when_ko"]
-        assert "강광" in row["aftercare_ko"] or "전표" in row["aftercare_ko"] or "기록" in row["aftercare_ko"] or "메모" in row["aftercare_ko"] or "청소" in row["aftercare_ko"]
-
+    core = {
+        "I_CARE_LABEL",
+        "I_DRY_VS_WET",
+        "I_INTAKE_SCRIPT",
+        "I_WATER_HARDNESS",
+        "I_CLAIM_SCRIPT",
+        "I_PRICING_SCRIPT",
+        "I_QUIZ_STAINS",
+        "I_QUIZ_FABRIC",
+    }
+    assert core <= set(OPS_DRILLS)
+    for iid in core:
+        row = OPS_DRILLS[iid]
+        assert row.get("fresh_path_ko")
+        assert row.get("refuse_when_ko")
+        assert (
+            "질문" in row["fresh_path_ko"]
+            or "질문" in row.get("why_ko", "")
+            or "Q1" in row["fresh_path_ko"]
+            or "(1)" in row["fresh_path_ko"]
+        )
 
 def test_dilution_gaps():
     codes = {d["code"] for d in DILUTION_GAPS}

@@ -264,6 +264,20 @@ try:
     DRIED_PATH_VI.update(EXTRA_DRIED_PATH_VI)
 except Exception:
     pass
+try:
+    from education_gaps_v7 import (
+        DRIED_CHILI_KO,
+        DRIED_CHILI_VI,
+        DRIED_IODINE_KO,
+        DRIED_IODINE_VI,
+    )
+
+    DRIED_PATH_KO["S_IODINE"] = DRIED_IODINE_KO
+    DRIED_PATH_KO["S_CHILI"] = DRIED_CHILI_KO
+    DRIED_PATH_VI["S_IODINE"] = DRIED_IODINE_VI
+    DRIED_PATH_VI["S_CHILI"] = DRIED_CHILI_VI
+except Exception:
+    pass
 
 
 LIMIT_KO = (
@@ -589,7 +603,7 @@ def apply_stain_age_buckets(
             out["protocol"] = _override_protocol_minutes(out["protocol"], lo, hi)
         tannin_ids = {
             "S_RED_WINE", "S_BLACK_COFFEE", "S_TEA", "S_FRUIT_JUICE", "S_SOFT_DRINK",
-            "S_WHITE_WINE_BEER", "S_KIMCHI", "S_KETCHUP", "S_TOMATO_SAUCE",
+            "S_WHITE_WINE_BEER", "S_KIMCHI", "S_KETCHUP", "S_TOMATO_SAUCE", "S_CHILI",
         }
         if sid in tannin_ids or sc2.get("contains_tannin"):
             out["tools"] = [

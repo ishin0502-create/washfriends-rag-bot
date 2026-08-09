@@ -267,7 +267,7 @@ def format_care_label_reply(label: dict, *, lang: str = "vi", pending: dict | No
     notes = label.get("notes") or ""
 
     if lang == "ko":
-        lines = ["케어 라벨 판독 결과입니다. (라벨이 잘못 표기된 경우도 있으니 고가·민감 원단은 보수적으로 처리하세요.)", ""]
+        lines = ["케어 라벨 판독 결과입니다. (라벨 오표기 가능 → 고가·민감은 Cap1·표백 보류 후 확인·조정.)", ""]
         if fiber:
             lines.append(f"1) 조성/표기: {fiber}")
         # wash

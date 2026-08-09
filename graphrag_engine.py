@@ -245,6 +245,10 @@ _ITEM_FABRIC_TOKEN = {
     "I_CARE_LABEL": "cotton",
     "I_DRY_VS_WET": "cotton",
     "I_INTAKE_SCRIPT": "cotton",
+    "I_CLAIM_SCRIPT": "cotton",
+    "I_PRICING_SCRIPT": "cotton",
+    "I_QUIZ_STAINS": "cotton",
+    "I_QUIZ_FABRIC": "cotton",
     "I_WATER_HARDNESS": "cotton",
     "I_MACHINE_PROFILE": "cotton",
     "I_SORT": "cotton",
@@ -561,8 +565,11 @@ def _fetch_graph_context(entities: dict) -> dict:
                 if entities.get("garment_color"):
                     g0["garment_color"] = entities["garment_color"]
                 context["graph"] = _refine_tools_for_context(
-                    _apply_delicate_s1_fallback(
-                        _apply_fabric_chem_safety(g0, entities)
+                    _apply_care_label_constraints(
+                        _apply_delicate_s1_fallback(
+                            _apply_fabric_chem_safety(g0, entities)
+                        ),
+                        entities,
                     ),
                     entities,
                 )
@@ -601,8 +608,11 @@ def _fetch_graph_context(entities: dict) -> dict:
         g0 = dict(context["graph"])
         if entities.get("garment_color"):
             g0["garment_color"] = entities["garment_color"]
-        context["graph"] = _apply_delicate_s1_fallback(
-            _apply_fabric_chem_safety(g0, entities)
+        context["graph"] = _apply_care_label_constraints(
+            _apply_delicate_s1_fallback(
+                _apply_fabric_chem_safety(g0, entities)
+            ),
+            entities,
         )
 
     # Item care (shoes/bags/gore-tex/down/leather) — same 1)-6) fields as stains
@@ -615,8 +625,11 @@ def _fetch_graph_context(entities: dict) -> dict:
                 g1 = dict(context["graph"])
                 if entities.get("garment_color"):
                     g1["garment_color"] = entities["garment_color"]
-                context["graph"] = _apply_delicate_s1_fallback(
-                    _apply_fabric_chem_safety(g1, entities)
+                context["graph"] = _apply_care_label_constraints(
+                    _apply_delicate_s1_fallback(
+                        _apply_fabric_chem_safety(g1, entities)
+                    ),
+                    entities,
                 )
 
     if isinstance(context.get("graph"), dict):
@@ -1411,6 +1424,25 @@ def _infer_item_from_text(text: str) -> str:
         ("dry clean" in t or "dry-clean" in t or "giat kho" in t) and any(k in raw for k in ("물세탁", "해야", "인가", "vs", "아니면"))
     ) or "dry vs wet" in t:
         return "I_DRY_VS_WET"
+    if any(
+        k in raw
+        for k in ("클레임", "분쟁", "보상", "항의", "손상 항의", "세탁 후 손상", "환불 요구")
+    ) or any(k in t for k in ("khieu nai", "khiếu nại", "tranh chap", "bồi thường", "boi thuong", "dispute", "claim script")):
+        return "I_CLAIM_SCRIPT"
+    if any(
+        k in raw for k in ("요금", "가격표", "가격 안내", "얼마예요", "얼마야", "견적", "바오자")
+    ) or any(k in t for k in ("bao gia", "bảng giá", "bang gia", "pricing", "bao nhieu tien", "giá giặt")):
+        return "I_PRICING_SCRIPT"
+    if any(k in raw for k in ("얼룩 퀴즈", "오염 퀴즈", "얼룩 연습", "얼룩 테스트 문제")) or any(
+        k in t for k in ("quiz vet", "quiz stain", "luyện vết", "연습문제 얼룩")
+    ):
+        return "I_QUIZ_STAINS"
+    if any(k in raw for k in ("원단 퀴즈", "섬유 퀴즈", "원단 연습", "원단 테스트 문제")) or any(
+        k in t for k in ("quiz vai", "quiz fabric", "luyện vải", "연습문제 원단")
+    ):
+        return "I_QUIZ_FABRIC"
+    if any(k in raw for k in ("퀴즈", "연습문제", "테스트 문제", "단원 문제")) or "quiz" in t:
+        return "I_QUIZ_STAINS"
     if any(k in raw for k in ("접수", "체크인", "인수인계", "사진 동의", "견적 스크립트")) or "check-in" in t or "check in" in t or "tiep nhan" in t or "intake script" in t:
         return "I_INTAKE_SCRIPT"
     if any(k in raw for k in ("경수", "센물", "수돗물 경도", "물때")) or "hard water" in t or "nuoc cung" in t:
@@ -1734,6 +1766,58 @@ def _apply_delicate_s1_fallback(graph: dict) -> dict:
     out = dict(graph)
     out["chemicals"] = [dict(_S1_OWNER)]
     out["washfriends_supply"] = []
+    return out
+
+
+def _apply_care_label_constraints(graph: dict, entities: Optional[dict] = None) -> dict:
+    """Clamp bleach/temp from care-label Vision flags on entities."""
+    if not isinstance(graph, dict):
+        return graph
+    entities = entities or {}
+    if not entities.get("_from_care_label") and not (
+        entities.get("care_no_bleach")
+        or entities.get("care_oxygen_only")
+        or entities.get("care_max_temp_c")
+        or entities.get("care_do_not_wash")
+    ):
+        return graph
+
+    out = dict(graph)
+    sc = dict(out.get("stain_context") or {})
+    notes = []
+    if entities.get("care_do_not_wash"):
+        notes.append("케어라벨: 물세탁 금지 → 드라이/전문 우선. 강한 습식 SOP 중단.")
+        sc["care_lock_ko"] = "라벨 물세탁 X — 습식 강처리 금지"
+        sc["care_lock_vi"] = "Nhãn CẤM giặt nước — dừng wet mạnh"
+    if entities.get("care_max_temp_c"):
+        t = entities["care_max_temp_c"]
+        notes.append(f"라벨 최고수온 약 {t}°C — 이 한도 초과 금지.")
+        sc["water_temp_ko"] = f"라벨 최대 약 {t}°C 이하"
+        sc["water_temp_vi"] = f"Theo nhãn ≤ ~{t}C"
+    if entities.get("care_hand_wash_only"):
+        notes.append("라벨: 손세탁만.")
+
+    chems = [c for c in (out.get("chemicals") or []) if c]
+    safe = []
+    blocked = list(out.get("chemicals_blocked") or [])
+    for c in chems:
+        code = str(c.get("code") or "").upper()
+        if entities.get("care_no_bleach") and code in {"B1", "B2", "A4", "X1"}:
+            blocked.append({"name_ko": c.get("name_ko"), "reason": "care_label_no_bleach"})
+            continue
+        if entities.get("care_oxygen_only") and code in {"B2", "X1"}:
+            blocked.append({"name_ko": c.get("name_ko"), "reason": "care_label_oxygen_only"})
+            continue
+        safe.append(c)
+    out["chemicals"] = safe
+    if blocked:
+        out["chemicals_blocked"] = blocked
+    if notes:
+        sc["care_label_note_ko"] = " ".join(notes)
+        sc["must_include_ko"] = (
+            (str(sc.get("must_include_ko") or "") + ", 라벨 한도").strip(", ")
+        )
+    out["stain_context"] = sc
     return out
 
 
@@ -3671,6 +3755,30 @@ def _generate_response_core(
         entities["item_id"] = "I_INTAKE_SCRIPT"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
+    elif any(k in user_message for k in ("클레임", "분쟁", "보상안", "세탁 후 손상", "환불 요구")) or any(
+        k in raw_n for k in ("khieu nai", "khiếu nại", "tranh chap", "boi thuong", "dispute")
+    ):
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_CLAIM_SCRIPT"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("요금", "가격표", "가격 안내", "견적 스크립트", "얼마예요")) or any(
+        k in raw_n for k in ("bao gia", "bang gia", "bảng giá", "pricing")
+    ):
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_PRICING_SCRIPT"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("원단 퀴즈", "섬유 퀴즈", "원단 연습문제")) or "quiz fabric" in raw_n or "quiz vai" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_QUIZ_FABRIC"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif any(k in user_message for k in ("얼룩 퀴즈", "오염 퀴즈", "퀴즈", "연습문제", "테스트 문제")) or "quiz" in raw_n:
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_QUIZ_STAINS"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
     elif any(k in user_message for k in ("경수", "센물", "수돗물", "물때")) or "hard water" in raw_n or "nuoc cung" in raw_n:
         entities["intent"] = "treatment"
         entities["item_id"] = "I_WATER_HARDNESS"
@@ -3928,6 +4036,18 @@ def _generate_response_core(
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_BETEL"
         entities["stain_type"] = "trau cau"
+    elif any(k in user_message for k in ("요오드", "포비돈", "포비돈요오드", "빨간약")) or any(
+        k in raw_n for k in ("thuoc do", "thuốc đỏ", "iodine", "povidone", "betadine")
+    ):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_IODINE"
+        entities["stain_type"] = "thuoc do"
+    elif any(k in user_message for k in ("칠리", "핫소스", "고추장 소스", "뚜엉엇", "뜨엉엇")) or any(
+        k in raw_n for k in ("tuong ot", "tương ớt", "chili sauce", "hot sauce", "sriracha")
+    ) or ("ot" in raw_n and "tuong" in raw_n):
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_CHILI"
+        entities["stain_type"] = "tuong ot"
     elif any(k in user_message for k in ("잔디", "풀물", "풀 얼룩")) or "co xanh" in raw_n or "grass stain" in raw_n or (
         "grass" in raw_n and "grease" not in raw_n
     ):

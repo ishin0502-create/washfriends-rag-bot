@@ -24,13 +24,53 @@ CHEM_META: dict[str, dict[str, str]] = {
         "dilution_vi": "1 phần giấm + 4 phần nước",
         "dilution_en": "vinegar 1 : water 4",
     },
+    "E2": {
+        "name_ko": "전분 분해 효소(아밀라아제)",
+        "name_vi": "Enzyme amylase",
+        "name_en": "Amylase enzyme",
+        "dilution_ko": "전분 효소: 찬물 1L에 큰술 1(또는 병 표기) → 잘 녹여 15–60분 담금. 실크·울 금지.",
+        "dilution_vi": "Amylase: 1 muỗng canh / 1L nước lạnh (hoặc theo nhãn) → ngâm 15–60 phút. CẤM lụa/len.",
+        "dilution_en": "Amylase: 1 tbsp / 1L cold (or per label); soak 15–60 min. No silk/wool.",
+    },
+    "A2": {
+        "name_ko": "아세톤(네일리무버 계열)",
+        "name_vi": "Acetone",
+        "name_en": "Acetone",
+        "dilution_ko": "원액 극소량만 — 흰 천/솜에 묻혀 안쪽 Cap1 블롯(흡수지 아래). 아세테이트·레이온·트리아세테이트 즉시 금지. 환기·PPE.",
+        "dilution_vi": "Nguyên chất rất ít — thấm khăn mặt trái Cap1 (giấy thấm dưới). CẤM acetate/rayon/triacetate. Thông gió + PPE.",
+        "dilution_en": "Neat tiny amount on cloth; Cap1 blot from reverse with blotter under. Never acetate/rayon/triacetate. Ventilate + PPE.",
+    },
+    "B2": {
+        "name_ko": "염소계 표백제(락스/자벨)",
+        "name_vi": "Javel",
+        "name_en": "Chlorine bleach",
+        "dilution_ko": "흰 면만. 예: 가정용 자벨/락스 원액 1 : 물 10–20(병 우선) · 짧은 담금·즉시 헹굼. 유색·실크·울·아세테이트 금지. 식초·암모니아와 절대 혼합 금지.",
+        "dilution_vi": "CHỈ cotton TRẮNG. VD: Javel đặc 1 : nước 10–20 (ưu tiên nhãn) · ngâm ngắn · xả ngay. CẤM màu/lụa/len/acetate. CẤM trộn giấm/amoniac.",
+        "dilution_en": "White cotton only. Example: household chlorine 1 : water 10–20 (label first); short soak then rinse. Never color/silk/wool/acetate. Never mix vinegar/ammonia.",
+    },
+    "E3": {
+        "name_ko": "리파아제(지방 분해 효소)",
+        "name_vi": "Enzyme lipase",
+        "name_en": "Lipase enzyme",
+        "dilution_ko": "리파아제: 병 표기; 보통 미온 1L에 큰술 1 → 탈지 후 15–30분 담금. 실크·울 주의.",
+        "dilution_vi": "Lipase: theo nhãn; thường 1 muỗng / 1L ấm nhẹ → ngâm 15–30 phút sau khử dầu.",
+        "dilution_en": "Lipase: per label; often 1 tbsp / 1L warm; soak 15–30 min after degrease.",
+    },
     "B1": {
         "name_ko": "산소계 표백제(과탄산 계열) — 흰옷만",
         "name_vi": "Tẩy oxy — CHỈ đồ trắng",
         "name_en": "Oxygen bleach — white garments only",
-        "dilution_ko": "흰옷만·구석 색 테스트; 병 라벨; 보통 15–45분. 유색·색미상은 쓰지 말 것.",
-        "dilution_vi": "CHỈ trắng + test góc; theo nhãn; 15-45 phút. Cấm màu/chưa rõ màu.",
-        "dilution_en": "White only + corner test; per label; 15–45 min. Never on colored/unknown color.",
+        "dilution_ko": "흰옷만·구석 색 테스트. 병 라벨; 보통 찬물·미지근 1L에 큰술 1–2 → 15–45분. 유색·색 미확인·실크·울 금지.",
+        "dilution_vi": "CHỈ trắng + test góc. Theo nhãn; thường 1–2 muỗng / 1L lạnh/ấm → 15–45 phút. CẤM màu/chưa rõ/lụa/len.",
+        "dilution_en": "White only + corner test. Per label; often 1–2 tbsp / 1L cold–warm; 15–45 min. Never colored/unknown/silk/wool.",
+    },
+    "E1": {
+        "name_ko": "단백질 분해 효소세제",
+        "name_vi": "Enzyme protease",
+        "name_en": "Protease enzyme",
+        "dilution_ko": "단백질 효소: 찬물 1L에 큰술 1 → 잘 녹여 15–60분(병 우선). 실크·울 금지→중성세제.",
+        "dilution_vi": "Protease: 1 muỗng / 1L lạnh → ngâm 15–60 phút (ưu tiên nhãn). CẤM lụa/len → S1.",
+        "dilution_en": "Protease: 1 tbsp / 1L cold; soak 15–60 min (label first). No silk/wool → neutral.",
     },
     "D2": {
         "name_ko": "주방세제(중성)",
@@ -39,14 +79,6 @@ CHEM_META: dict[str, dict[str, str]] = {
         "dilution_ko": "얼룩에 1–2방울 또는 약하게 희석",
         "dilution_vi": "1-2 giọt hoặc pha loãng nhẹ",
         "dilution_en": "1–2 drops neat or light dilution",
-    },
-    "E1": {
-        "name_ko": "단백질 분해 효소세제",
-        "name_vi": "Enzyme protease",
-        "name_en": "Protease enzyme",
-        "dilution_ko": "병 안내; 찬물 15–30분",
-        "dilution_vi": "Theo nhãn; nước lạnh 15-30 phút",
-        "dilution_en": "Per label; cold 15–30 min",
     },
     "S1": {
         "name_ko": "워시프렌즈 중성세제",
@@ -128,14 +160,6 @@ CHEM_META: dict[str, dict[str, str]] = {
         "dilution_vi": "~2-3% theo nhãn; cotton/poly ~30 phút; găng tay; xả + trung hòa",
         "dilution_en": "~2–3% per label; cotton/poly ~30 min; gloves; rinse+neutralize",
     },
-    "A2": {
-        "name_ko": "아세톤(네일리무버 계열)",
-        "name_vi": "Acetone",
-        "name_en": "Acetone",
-        "dilution_ko": "극소량 Cap1; 아세테이트·레이온 금지; 환기",
-        "dilution_vi": "Rất ít Cap1; CAM acetate/rayon; thông gió",
-        "dilution_en": "Tiny Cap1; no acetate/rayon; ventilate",
-    },
     "N1": {
         "name_ko": "베이킹소다",
         "name_vi": "Baking soda",
@@ -143,30 +167,6 @@ CHEM_META: dict[str, dict[str, str]] = {
         "dilution_ko": "페이스트 또는 약희석(중화·냄새)",
         "dilution_vi": "Bột nhão hoặc pha loãng",
         "dilution_en": "Paste or light dilution",
-    },
-    "B2": {
-        "name_ko": "염소계 표백제(락스/자벨)",
-        "name_vi": "Javel",
-        "name_en": "Chlorine bleach",
-        "dilution_ko": "흰 면만·병 라벨 희석 — 유색·실크·울 금지; 식초·암모니아와 혼합 금지",
-        "dilution_vi": "CHI cotton TRANG theo nhãn — CAM màu/len/lụa; không trộn giấm/amoniac",
-        "dilution_en": "White cotton only per label — never color/silk/wool; never mix with vinegar/ammonia",
-    },
-    "E3": {
-        "name_ko": "리파아제(지방 분해 효소)",
-        "name_vi": "Enzyme lipase",
-        "name_en": "Lipase enzyme",
-        "dilution_ko": "병 안내; 미온·지방 얼룩",
-        "dilution_vi": "Theo nhãn; ấm nhẹ cho mỡ",
-        "dilution_en": "Per label; warm for fat",
-    },
-    "E2": {
-        "name_ko": "전분 분해 효소(아밀라아제)",
-        "name_vi": "Enzyme amylase",
-        "name_en": "Amylase enzyme",
-        "dilution_ko": "병 안내; 찬물·전분 얼룩",
-        "dilution_vi": "Theo nhãn; lạnh cho tinh bột",
-        "dilution_en": "Per label; cold for starch",
     },
     "A4": {
         "name_ko": "과산화수소 3%(옥시)",
@@ -231,7 +231,8 @@ ITEM_PRIMARY_IDS = frozenset({
     "I_FABRIC_LEATHER", "I_FABRIC_SUEDE", "I_FABRIC_FUR",
     "I_FABRIC_ACETATE", "I_FABRIC_NYLON", "I_FABRIC_BLEND",
     "I_CHEM_NEVER_MIX", "I_CHEM_BLEACH", "I_CHEM_SOLVENT", "I_CHEM_ACID_PPE",
-    "I_CARE_LABEL", "I_INTAKE_SCRIPT", "I_WATER_HARDNESS",
+    "I_CARE_LABEL", "I_INTAKE_SCRIPT", "I_CLAIM_SCRIPT", "I_PRICING_SCRIPT",
+    "I_QUIZ_STAINS", "I_QUIZ_FABRIC", "I_WATER_HARDNESS",
     "I_COLOR_FADE", "I_WHITE_FADE",
     "I_KNIT", "I_UNDERWEAR", "I_ACTIVEWEAR", "I_SCARF", "I_GOLF_GLOVE_SYNTH",
 })
@@ -1220,6 +1221,39 @@ def _tpl_betel() -> Protocol:
     )
 
 
+def _tpl_iodine() -> Protocol:
+    return Protocol(
+        stain_id="S_IODINE",
+        why_ko="[왜 이 순서] 요오드·thuốc đỏ=할로겐 색소. 찬물→알코올 안쪽 블롯→흰/면 산소. 문지르기·열고착 금지.",
+        why_vi="[Tại sao] Thuốc đỏ/iod = sắc tố. Lạnh → blot cồn mặt trái → oxy trắng. CẤM chà/nhiệt.",
+        steps=[
+            Step("id", "요오드·thuốc đỏ·원단", "Nhận thuốc đỏ/iod", force="Cap1"),
+            Step("rinse", "안쪽 찬물 흡수(문지르기 금지)", "Thấm lạnh mặt trái — CẤM chà", force="Cap1"),
+            Step("alcohol", "알코올 안쪽 블롯(테스트·환기)", "Cồn blot mặt trái", chem="A1", force="Cap1", tool_ids=["T_CLOTH"]),
+            Step("oxygen", "흰/면: 산소(테스트)", "Oxy trắng", chem="B1", when="white_only", soak=True),
+            Step("wash", "찬물 세탁", "Giặt lạnh", force="Cap2"),
+            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_chili() -> Protocol:
+    return Protocol(
+        stain_id="S_CHILI",
+        why_ko="[왜 이 순서] 칠리·핫소스=오일+색소+산. 찬물→주방세제→식초 1:4→흰/면 산소.",
+        why_vi="[Tại sao] Tương ớt = dầu+màu+acid. Lạnh → D2 → giấm 1:4 → oxy trắng.",
+        steps=[
+            Step("id", "칠리·핫소스·원단", "Nhận tương ớt", force="Cap1"),
+            Step("scrape", "여분 긁기·찬물", "Cạo + xả lạnh", force="Cap1"),
+            Step("dish", "주방세제", "D2", chem="D2", force="Cap2", spray=True),
+            Step("vinegar", "식초 1:4", "Giấm 1:4", chem="A3", minutes_lo=10, minutes_hi=20, soak=True, spray=True),
+            Step("oxygen", "흰/면 산소(테스트)", "Oxy trắng", chem="B1", when="white_only", soak=True),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+        ],
+    )
+
+
 def _tpl_glue() -> Protocol:
     return Protocol(
         stain_id="S_GLUE",
@@ -1313,6 +1347,8 @@ PROTOCOL_BUILDERS = {
     "S_PAINT_LATEX": _tpl_paint_latex,
     "S_PAINT_OIL": _tpl_paint_oil,
     "S_BETEL": _tpl_betel,
+    "S_IODINE": _tpl_iodine,
+    "S_CHILI": _tpl_chili,
     "S_GLUE": _tpl_glue,
     "S_STARCH_TRANSFER": _tpl_starch_transfer,
 }
@@ -1334,7 +1370,7 @@ def _fabric_flags(graph: dict, entities: Optional[dict] = None) -> dict[str, Any
     ft = str(entities.get("fabric_type") or "").lower().strip()
     # Text-inferred sturdy fabrics win over a wrong Neo4j fabric row (e.g. 지울→wool)
     if ft in ("cotton", "polyester", "linen", "denim"):
-        return {
+        flags = {
             "is_silk": False,
             "is_wool": False,
             "is_leather": False,
@@ -1348,38 +1384,57 @@ def _fabric_flags(graph: dict, entities: Optional[dict] = None) -> dict[str, Any
             "no_acid": False,
             "no_enzyme": False,
             "no_acetone": False,
+            "no_chlorine": False,
             "fname": ft,
             "fid": {"cotton": "F1", "polyester": "F2", "linen": "F5", "denim": "F6"}.get(ft, ""),
         }
+    else:
+        fid = str(fabric.get("id") or "").upper()
+        fname = f"{fabric.get('name') or ''} {fabric.get('name_vi') or ''} {ft}".lower()
+        is_silk = fid == "F4" or "silk" in fname or "lua" in fname or ft == "silk"
+        is_wool = fid == "F3" or "wool" in fname or " len" in f" {fname}" or fname.strip() == "len" or ft == "wool"
+        is_leather = fid == "F8" or "leather" in fname or fname.strip() == "da" or ft == "leather"
+        is_suede = fid == "F9" or "suede" in fname or "nubuck" in fname or ft == "suede"
+        is_fur = fid == "F10" or "fur" in fname or ft == "fur"
+        is_rayon = fid == "F7" or "rayon" in fname or ft == "rayon"
+        is_acetate = "acetate" in fname or "아세테이트" in ft or ft == "acetate"
+        is_nylon = "nylon" in fname or "나일론" in ft or ft == "nylon"
+        flags = {
+            "is_silk": is_silk,
+            "is_wool": is_wool,
+            "is_leather": is_leather,
+            "is_suede": is_suede,
+            "is_fur": is_fur,
+            "is_rayon": is_rayon,
+            "is_acetate": is_acetate,
+            "is_nylon": is_nylon,
+            "delicate_protein": is_silk or is_wool,
+            "no_oxygen": is_silk or is_wool or is_leather or is_suede or is_fur or is_rayon
+            or fabric.get("can_oxygen") is False,
+            "no_acid": fabric.get("acid_safe") is False or is_silk or is_wool,
+            "no_enzyme": fabric.get("enzyme_safe") is False or is_silk or is_wool,
+            "no_acetone": is_acetate or is_rayon,
+            "no_chlorine": False,
+            "fname": fname,
+            "fid": fid,
+        }
 
-    fid = str(fabric.get("id") or "").upper()
-    fname = f"{fabric.get('name') or ''} {fabric.get('name_vi') or ''} {ft}".lower()
-    is_silk = fid == "F4" or "silk" in fname or "lua" in fname or ft == "silk"
-    is_wool = fid == "F3" or "wool" in fname or " len" in f" {fname}" or fname.strip() == "len" or ft == "wool"
-    is_leather = fid == "F8" or "leather" in fname or fname.strip() == "da" or ft == "leather"
-    is_suede = fid == "F9" or "suede" in fname or "nubuck" in fname or ft == "suede"
-    is_fur = fid == "F10" or "fur" in fname or ft == "fur"
-    is_rayon = fid == "F7" or "rayon" in fname or ft == "rayon"
-    is_acetate = "acetate" in fname or "아세테이트" in ft or ft == "acetate"
-    is_nylon = "nylon" in fname or "나일론" in ft or ft == "nylon"
-    return {
-        "is_silk": is_silk,
-        "is_wool": is_wool,
-        "is_leather": is_leather,
-        "is_suede": is_suede,
-        "is_fur": is_fur,
-        "is_rayon": is_rayon,
-        "is_acetate": is_acetate,
-        "is_nylon": is_nylon,
-        "delicate_protein": is_silk or is_wool,
-        "no_oxygen": is_silk or is_wool or is_leather or is_suede or is_fur or is_rayon
-        or fabric.get("can_oxygen") is False,
-        "no_acid": fabric.get("acid_safe") is False or is_silk or is_wool,
-        "no_enzyme": fabric.get("enzyme_safe") is False or is_silk or is_wool,
-        "no_acetone": is_acetate or is_rayon,
-        "fname": fname,
-        "fid": fid,
-    }
+    # Care-label Vision overlays (photo → SOP clamp)
+    if entities.get("care_no_bleach"):
+        flags["no_oxygen"] = True
+        flags["no_chlorine"] = True
+    if entities.get("care_oxygen_only"):
+        flags["no_chlorine"] = True
+    if entities.get("care_do_not_wash"):
+        flags["care_do_not_wash"] = True
+    if entities.get("care_hand_wash_only"):
+        flags["care_hand_wash_only"] = True
+    if entities.get("care_max_temp_c"):
+        try:
+            flags["care_max_temp_c"] = int(entities["care_max_temp_c"])
+        except (TypeError, ValueError):
+            pass
+    return flags
 
 
 def _chem_blocked(code: str, flags: dict, garment_color: str) -> tuple[bool, str, str]:
@@ -1392,6 +1447,8 @@ def _chem_blocked(code: str, flags: dict, garment_color: str) -> tuple[bool, str
         return True, "이 원단: 산(식초 등) 주의·금지", "Vải này: hạn chế acid"
     if flags.get("no_oxygen") and c in {"B1", "A4", "X1", "B2"}:
         return True, "이 원단: 산소/염소 표백 금지", "Vải này: cấm tẩy oxy/Javel"
+    if flags.get("no_chlorine") and c in {"B2", "X1"}:
+        return True, "케어라벨: 염소·강표백 금지(산소만 가능 시)", "Nhãn: cấm Javel (có thể chỉ oxy)"
     if garment_color in {"colored", "black"} and c in {"B2", "X1"}:
         return True, "유색·검정: 염소·환원표백 금지", "Màu/đen: cấm Javel"
     if garment_color == "black" and c in {"B1", "A4"}:
@@ -1549,7 +1606,7 @@ def _stain_family(stain_id: str, sc: Optional[dict] = None) -> str:
         return "mud"
     if sid == "S_MILDEW":
         return "mildew"
-    if sid in {"S_INK_PEN", "S_INK_PERMANENT", "S_HAIR_DYE", "S_MASCARA", "S_PAINT_LATEX", "S_PAINT_OIL"}:
+    if sid in {"S_INK_PEN", "S_INK_PERMANENT", "S_HAIR_DYE", "S_MASCARA", "S_PAINT_LATEX", "S_PAINT_OIL", "S_IODINE"}:
         return "ink"
     if sid in {
         "S_ENGINE_OIL", "S_MOTORBIKE_OIL", "S_TAR", "S_GREASE", "S_COOKING_OIL",
@@ -2317,6 +2374,28 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
         sc["water_temp_ko"] = proto.water_temp_ko
     if proto.water_temp_vi:
         sc["water_temp_vi"] = proto.water_temp_vi
+    flags = _fabric_flags(out, entities)
+    tmax = flags.get("care_max_temp_c")
+    if tmax:
+        sc["water_temp_ko"] = (
+            f"{sc.get('water_temp_ko') or '찬물'} · 라벨 최대 약 {tmax}°C 이하"
+        )
+        sc["water_temp_vi"] = (
+            f"{sc.get('water_temp_vi') or 'Lạnh'} · nhãn ≤ ~{tmax}C"
+        )
+        sc["must_include_ko"] = (
+            (str(sc.get("must_include_ko") or "") + ", 라벨 수온 한도").strip(", ")
+        )
+    if flags.get("care_do_not_wash"):
+        sc["care_lock_ko"] = "라벨 물세탁 X — 습식 강처리 금지"
+        sc["care_lock_vi"] = "Nhãn CẤM giặt nước — dừng wet mạnh"
+        sc["must_include_ko"] = (
+            (str(sc.get("must_include_ko") or "") + ", 라벨 물세탁 금지").strip(", ")
+        )
+    if flags.get("care_hand_wash_only"):
+        sc["must_include_ko"] = (
+            (str(sc.get("must_include_ko") or "") + ", 손세탁만").strip(", ")
+        )
     out["stain_context"] = sc
 
     out["chemicals"] = render_chemicals(proto, out.get("chemicals") or [])
