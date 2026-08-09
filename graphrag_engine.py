@@ -3111,6 +3111,11 @@ def _polish_owner_ko_phrasing(answer: str) -> str:
     for a, b in replacements:
         if a in out:
             out = out.replace(a, b)
+    # LLM sometimes collapses spray howto into 「라벨에 라벨」
+    out = out.replace("분무기 겉면 라벨에 라벨 붙임", "분무기 겉면 라벨에 약 이름·희석비를 적어 둔다")
+    out = out.replace("겉면 라벨에 라벨", "겉면 라벨에 약 이름·희석비")
+    out = out.replace("라벨에 라벨 붙임", "라벨에 약 이름·희석비를 적어 둔다")
+    out = out.replace("라벨에 라벨", "라벨에 약 이름·희석비")
     return out
 
 
