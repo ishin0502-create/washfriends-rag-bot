@@ -47,7 +47,7 @@ def _wine_graph(fabric_name="Cotton", fabric_id="F1", color=""):
 
 def test_has_wine_protocol():
     assert has_protocol("S_RED_WINE")
-    assert overlay_mode_for_item("I_KNIT") == "stain_primary"
+    assert overlay_mode_for_item("I_TOWEL") == "stain_primary"
     assert overlay_mode_for_item("I_NECKTIE") == "item_primary"
 
 
@@ -142,7 +142,8 @@ def test_bind_spray_from_protocol_direct():
     proto = build_protocol(_wine_graph(), entities={"fabric_type": "cotton"})
     assert proto is not None
     tools = bind_tools_from_protocol(proto, [{"id": "T_SPRAY", "use_for_ko": "x"}])
-    assert "식초" in tools[0]["use_for_ko"]
+    spray = next(t for t in tools if t["id"] == "T_SPRAY")
+    assert "식초" in spray["use_for_ko"]
 
 
 def test_jiulsu_not_wool():
@@ -361,7 +362,8 @@ def test_soak_bin_names_same_chem_as_spray():
     assert "식초" in by["T_SOAK_BIN"]["use_for_ko"]
     assert "식초 1" in by["T_SOAK_BIN"]["use_for_ko"] or "물 4" in by["T_SOAK_BIN"]["use_for_ko"]
     assert "분무기와 같은" in by["T_SOAK_BIN"]["use_for_ko"]
-    assert "안경" in by["T_BRUSH_SOFT"]["use_for_ko"] or "남은 자국" in by["T_BRUSH_SOFT"]["use_for_ko"]
+    assert "블롯" in by["T_BRUSH_SOFT"]["use_for_ko"] or "흡수" in by["T_BRUSH_SOFT"]["use_for_ko"]
+    assert "식초" in by["T_SPRAY"]["use_for_ko"]
 
 
 if __name__ == "__main__":

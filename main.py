@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-09-education-gaps-v8c",
+            "build": "2026-08-09-protocol-equipment-v9",
             "checks": checks,
         },
         status_code=200,
@@ -482,104 +482,34 @@ MATCH (s:Stain) WHERE s.contains_dye=true
 MATCH (a1:Chemical {code:'A1'}),(b1:Chemical {code:'B1'})
 FOREACH (c IN [a1,b1] | MERGE (s)-[:USES_CHEMICAL]->(c))
 RETURN count(DISTINCT s) AS stains""")
-        _r(s, "N2_specialty_stain_chems", """
-// Rewrite specialty stains: drop stale flag links, attach protocol chems
-MATCH (s:Stain) WHERE s.id IN [
-  'S_RUST','S_GUM','S_CANDLE_WAX','S_MOTORBIKE_OIL','S_ENGINE_OIL',
-  'S_GLUE','S_PAINT_LATEX','S_MUSTARD','S_CURRY','S_KIMCHI',
-  'S_DYE_TRANSFER','S_STARCH_TRANSFER','S_SHIRT_YELLOW','S_MILDEW',
-  'S_KETCHUP','S_TOMATO_SAUCE','S_MAYO','S_COLLAR_STAIN',
-  'S_SOY_SAUCE','S_FISH_SAUCE','S_COOKING_OIL','S_GREASE','S_BUTTER',
-  'S_SHOE_POLISH','S_LIPSTICK','S_FOUNDATION','S_BUBBLE_TEA',
-  'S_PAINT_OIL','S_BETEL','S_IODINE','S_CHILI',
-  'S_SHRIMP_PASTE','S_SUGARCANE','S_GAC','S_ANNATTO'
-]
-OPTIONAL MATCH (s)-[old:USES_CHEMICAL]->()
-DELETE old
-WITH DISTINCT s
-MATCH (a1:Chemical {code:'A1'}),(a2:Chemical {code:'A2'}),(a3:Chemical {code:'A3'}),
-      (b1:Chemical {code:'B1'}),(b2:Chemical {code:'B2'}),
-      (d1:Chemical {code:'D1'}),(d2:Chemical {code:'D2'}),
-      (d3:Chemical {code:'D3'}),(n1:Chemical {code:'N1'}),(n3:Chemical {code:'N3'}),
-      (e1:Chemical {code:'E1'}),(e2:Chemical {code:'E2'}),(e3:Chemical {code:'E3'})
-FOREACH (_ IN CASE WHEN s.id = 'S_RUST' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(a3))
-FOREACH (_ IN CASE WHEN s.id = 'S_CANDLE_WAX' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(n3) MERGE (s)-[:USES_CHEMICAL]->(d2))
-FOREACH (_ IN CASE WHEN s.id IN ['S_MOTORBIKE_OIL','S_ENGINE_OIL','S_TAR'] THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(n3) MERGE (s)-[:USES_CHEMICAL]->(d1)
-  MERGE (s)-[:USES_CHEMICAL]->(a1) MERGE (s)-[:USES_CHEMICAL]->(d3))
-FOREACH (_ IN CASE WHEN s.id = 'S_SUNSCREEN' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(n3) MERGE (s)-[:USES_CHEMICAL]->(d2)
-  MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id = 'S_MASCARA' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(a1) MERGE (s)-[:USES_CHEMICAL]->(d1)
-  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id = 'S_HAIR_DYE' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(a1) MERGE (s)-[:USES_CHEMICAL]->(b1)
-  MERGE (s)-[:USES_CHEMICAL]->(d3))
-FOREACH (_ IN CASE WHEN s.id = 'S_GLUE' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a1)
-  MERGE (s)-[:USES_CHEMICAL]->(a2))
-FOREACH (_ IN CASE WHEN s.id = 'S_PAINT_LATEX' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a1))
-FOREACH (_ IN CASE WHEN s.id IN ['S_MUSTARD','S_CURRY'] THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(n1) MERGE (s)-[:USES_CHEMICAL]->(b1)
-  MERGE (s)-[:USES_CHEMICAL]->(d2))
-FOREACH (_ IN CASE WHEN s.id IN ['S_KIMCHI','S_KETCHUP','S_TOMATO_SAUCE','S_BUBBLE_TEA'] THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a3)
-  MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id = 'S_BUBBLE_TEA' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(e1) MERGE (s)-[:USES_CHEMICAL]->(e2))
-FOREACH (_ IN CASE WHEN s.id = 'S_DYE_TRANSFER' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(b1) MERGE (s)-[:USES_CHEMICAL]->(a3)
-  MERGE (s)-[:USES_CHEMICAL]->(b2) MERGE (s)-[:USES_CHEMICAL]->(d3))
-FOREACH (_ IN CASE WHEN s.id = 'S_STARCH_TRANSFER' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(e2) MERGE (s)-[:USES_CHEMICAL]->(b1)
-  MERGE (s)-[:USES_CHEMICAL]->(d3))
-FOREACH (_ IN CASE WHEN s.id IN ['S_SHIRT_YELLOW','S_COLLAR_STAIN'] THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(e1) MERGE (s)-[:USES_CHEMICAL]->(e3)
-  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id = 'S_MILDEW' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(a3) MERGE (s)-[:USES_CHEMICAL]->(b1)
-  MERGE (s)-[:USES_CHEMICAL]->(b2) MERGE (s)-[:USES_CHEMICAL]->(d3))
-FOREACH (_ IN CASE WHEN s.id = 'S_MAYO' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(e1)
-  MERGE (s)-[:USES_CHEMICAL]->(e3))
-FOREACH (_ IN CASE WHEN s.id IN ['S_SOY_SAUCE','S_FISH_SAUCE'] THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(e1) MERGE (s)-[:USES_CHEMICAL]->(d2)
-  MERGE (s)-[:USES_CHEMICAL]->(a3) MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id IN ['S_COOKING_OIL','S_GREASE','S_BUTTER'] THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(n3) MERGE (s)-[:USES_CHEMICAL]->(d2)
-  MERGE (s)-[:USES_CHEMICAL]->(e3))
-FOREACH (_ IN CASE WHEN s.id = 'S_SHOE_POLISH' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(d1) MERGE (s)-[:USES_CHEMICAL]->(d2)
-  MERGE (s)-[:USES_CHEMICAL]->(a1) MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id = 'S_LIPSTICK' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a1)
-  MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id = 'S_FOUNDATION' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a1)
-  MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id = 'S_PAINT_OIL' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(d1) MERGE (s)-[:USES_CHEMICAL]->(a1)
-  MERGE (s)-[:USES_CHEMICAL]->(d2))
-FOREACH (_ IN CASE WHEN s.id = 'S_BETEL' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(a3) MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id = 'S_IODINE' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(a1) MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id = 'S_CHILI' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a3)
-  MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id = 'S_SHRIMP_PASTE' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(e1)
-  MERGE (s)-[:USES_CHEMICAL]->(a3) MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id = 'S_SUGARCANE' THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(a3) MERGE (s)-[:USES_CHEMICAL]->(b1))
-FOREACH (_ IN CASE WHEN s.id IN ['S_GAC','S_ANNATTO'] THEN [1] ELSE [] END |
-  MERGE (s)-[:USES_CHEMICAL]->(d2) MERGE (s)-[:USES_CHEMICAL]->(a1)
-  MERGE (s)-[:USES_CHEMICAL]->(b1))
-RETURN count(DISTINCT s) AS stains""")
+        # N2: Protocol is single truth — rewrite USES_CHEMICAL from PROTOCOL_BUILDERS
+        try:
+            from protocol_equipment import seed_chem_link_rows as _chem_rows
+
+            _rows = _chem_rows()
+            s.run(
+                """
+MATCH (st:Stain)-[r:USES_CHEMICAL]->()
+WHERE st.id IN $ids
+DELETE r
+""",
+                ids=[r["id"] for r in _rows],
+            )
+            res_n2 = s.run(
+                """
+UNWIND $rows AS row
+MATCH (st:Stain {id:row.id})
+UNWIND row.chems AS code
+MATCH (c:Chemical {code:code})
+MERGE (st)-[:USES_CHEMICAL]->(c)
+RETURN count(*) AS links, count(DISTINCT st) AS stains
+""",
+                rows=_rows,
+            )
+            log["N2_specialty_stain_chems"] = res_n2.data()[0] if res_n2 else {"links": 0}
+            log["N2_protocol_rows"] = len(_rows)
+        except Exception as e:
+            log["N2_specialty_stain_chems"] = f"ERR:{str(e)[:160]}"
         _r(s, "O_force_levels", """
 MATCH (s:Stain)
 MATCH (f:ForceLevel)
@@ -620,6 +550,23 @@ MATCH (c1:Chemical {code:'B2'}),(c2:Chemical {code:'A5'})
 MERGE (c1)-[:NEVER_MIX_WITH]->(c2)
 MERGE (c2)-[:NEVER_MIX_WITH]->(c1)
 RETURN count(*) AS rels""")
+        try:
+            from protocol_equipment import never_mix_pairs as _nmp
+
+            _pairs = [{"a": a, "b": b} for a, b in _nmp()]
+            res_nm = s.run(
+                """
+UNWIND $pairs AS p
+MATCH (c1:Chemical {code:p.a}),(c2:Chemical {code:p.b})
+MERGE (c1)-[:NEVER_MIX_WITH]->(c2)
+MERGE (c2)-[:NEVER_MIX_WITH]->(c1)
+RETURN count(*) AS rels
+""",
+                pairs=_pairs,
+            )
+            log["R_never_mix_v9"] = res_nm.data()[0] if res_nm else {"rels": 0}
+        except Exception as e:
+            log["R_never_mix_v9"] = f"ERR:{str(e)[:120]}"
         # Additive ops fields — fail-soft; never deletes existing stain/chem nodes
         _r(s, "T_tools", """
 UNWIND [
@@ -786,6 +733,22 @@ RETURN count(c) AS updated
             log["V7_chem_dilution"] = res_dv.data()[0] if res_dv else {"updated": 0}
         except Exception as e:
             log["V7_chem_dilution"] = f"ERR:{str(e)[:120]}"
+        try:
+            from education_gaps_v9 import dilution_seed_rows as _dil_v9
+
+            _dv9 = _dil_v9()
+            res_dv9 = s.run(
+                """
+UNWIND $rows AS d
+MATCH (c:Chemical {code:d.code})
+SET c.dilution_vi = d.dilution_vi, c.dilution_ko = d.dilution_ko
+RETURN count(c) AS updated
+""",
+                rows=_dv9,
+            )
+            log["V9_chem_dilution"] = res_dv9.data()[0] if res_dv9 else {"updated": 0}
+        except Exception as e:
+            log["V9_chem_dilution"] = f"ERR:{str(e)[:120]}"
         _r(s, "V2b_chem_alt_ko", """
 UNWIND [
   {code:'E1',alt1_ko:'슈퍼 효소 표기 세제·효소 담금제',alt2_ko:'실크·울이면 워시프렌즈 중성세제만 (효소 금지)',alt3_ko:''},
@@ -821,95 +784,35 @@ UNWIND [
   {code:'N2',name_ko:'소금(식염)',buy_where_ko:'슈퍼/마트',buy_where_vi:'Sieu thi (chu tu mua)'},
   {code:'N3',name_ko:'옥수수 전분·베이비파우더(오일 흡착)',buy_where_ko:'슈퍼/마트',buy_where_vi:'Sieu thi (chu tu mua)'},
   {code:'S1',name_ko:'워시프렌즈 중성세제',buy_where_ko:'워시프렌즈 본사·창고 공급',buy_where_vi:'Kho hang / cung ung noi bo Wash Friends'},
+  {code:'X1',name_ko:'환원 표백제(하이드로설파이트)',buy_where_ko:'화공점·세탁 전문점 (흰 면만·PPE)',buy_where_vi:'Cua hoa chat — CHI cotton trang + PPE'},
+  {code:'X2',name_ko:'옥살산(녹·철 얼룩용)',buy_where_ko:'화공점 (장갑 필수)',buy_where_vi:'Cua hoa chat — BAT BUOC gang tay'},
   {code:'WF_SOFT',name_ko:'워시프렌즈 섬유유연제',buy_where_ko:'워시프렌즈 본사·창고 공급',buy_where_vi:'Kho hang Wash Friends'},
   {code:'WF_FRAG',name_ko:'워시프렌즈 독일 향수 스프레이',buy_where_ko:'워시프렌즈 본사·창고 공급',buy_where_vi:'Kho hang Wash Friends'}
 ] AS x
 MATCH (c:Chemical {code:x.code})
 SET c.name_ko = x.name_ko, c.buy_where_ko = x.buy_where_ko, c.buy_where_vi = x.buy_where_vi
 RETURN count(c) AS updated""")
-        _r(s, "W_tool_links", """
-// P0: wipe stale flag-based links, then attach tools per stain SOP (path-accurate)
-MATCH (s:Stain)-[r:USES_TOOL]->()
-DELETE r
-WITH count(*) AS _cleared
-UNWIND [
-  // --- Biohazard / PPE ---
-  {id:'S_VOMIT',tools:['T_GLOVE_NITRILE','T_MASK','T_CLOTH','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER']},
-  {id:'S_URINE',tools:['T_GLOVE_NITRILE','T_MASK','T_CLOTH','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER','T_SPRAY']},
-  {id:'S_FECES',tools:['T_GLOVE_NITRILE','T_MASK','T_CLOTH','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER']},
-  {id:'S_MILDEW',tools:['T_GLOVE_NITRILE','T_MASK','T_BRUSH_SOFT','T_CLOTH','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  // --- Protein ---
-  {id:'S_BLOOD_FRESH',tools:['T_CLOTH','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER']},
-  {id:'S_BLOOD_DRY',tools:['T_CLOTH','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER']},
-  {id:'S_EGG',tools:['T_CLOTH','T_BRUSH_ULTRA','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER']},
-  {id:'S_MILK',tools:['T_CLOTH','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER']},
-  {id:'S_BABY_FORMULA',tools:['T_CLOTH','T_BRUSH_ULTRA','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER']},
-  {id:'S_CHOCOLATE',tools:['T_CLOTH','T_BRUSH_SOFT','T_BRUSH_ULTRA','T_SOAK_BIN','T_TIMER']},
-  {id:'S_COLLAR_STAIN',tools:['T_BRUSH_SOFT','T_CLOTH','T_SOAK_BIN','T_TIMER']},
-  {id:'S_SHIRT_YELLOW',tools:['T_BRUSH_SOFT','T_CLOTH','T_SOAK_BIN','T_TIMER','T_SPRAY']},
-  {id:'S_SWEAT_FRESH',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_SWEAT_YELLOW',tools:['T_BRUSH_SOFT','T_CLOTH','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_GRASS',tools:['T_BRUSH_SOFT','T_CLOTH','T_SOAK_BIN','T_TIMER']},
-  // --- Oil / solvent PPE ---
-  {id:'S_COOKING_OIL',tools:['T_CLOTH','T_BRUSH_SOFT']},
-  {id:'S_GREASE',tools:['T_CLOTH','T_BRUSH_SOFT']},
-  {id:'S_BUTTER',tools:['T_CLOTH','T_BRUSH_SOFT']},
-  {id:'S_MAYO',tools:['T_CLOTH','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER']},
-  {id:'S_SUNSCREEN',tools:['T_CLOTH','T_BRUSH_SOFT']},
-  {id:'S_FOUNDATION',tools:['T_CLOTH','T_BRUSH_SOFT']},
-  {id:'S_LIPSTICK',tools:['T_CLOTH','T_BRUSH_SOFT']},
-  {id:'S_DEODORANT',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY']},
-  {id:'S_ENGINE_OIL',tools:['T_GLOVE_NITRILE','T_MASK','T_BRUSH_HARD','T_BRUSH_SOFT','T_CLOTH']},
-  {id:'S_MOTORBIKE_OIL',tools:['T_GLOVE_NITRILE','T_MASK','T_BRUSH_HARD','T_BRUSH_SOFT','T_CLOTH']},
-  {id:'S_TAR',tools:['T_GLOVE_NITRILE','T_MASK','T_BRUSH_HARD','T_CLOTH','T_BRUSH_SOFT']},
-  {id:'S_SHOE_POLISH',tools:['T_GLOVE_NITRILE','T_CLOTH','T_BRUSH_SOFT']},
-  {id:'S_GUM',tools:['T_CLOTH']},
-  {id:'S_CANDLE_WAX',tools:['T_CLOTH']},
-  // --- Tannin / drinks / VN foods ---
-  {id:'S_RED_WINE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_TEA',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_BLACK_COFFEE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_MILK_COFFEE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_FRUIT_JUICE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_SOFT_DRINK',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_WHITE_WINE_BEER',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_KIMCHI',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_BUBBLE_TEA',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_BBQ_SAUCE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_KETCHUP',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_TOMATO_SAUCE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_SOY_SAUCE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_FISH_SAUCE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_PERFUME',tools:['T_CLOTH','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  // --- Dye / ink / specialty ---
-  {id:'S_CURRY',tools:['T_CLOTH','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER','T_UV_LAMP']},
-  {id:'S_MUSTARD',tools:['T_CLOTH','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER','T_UV_LAMP']},
-  {id:'S_INK_PEN',tools:['T_CLOTH','T_BRUSH_SOFT','T_GLOVE_NITRILE']},
-  {id:'S_INK_PERMANENT',tools:['T_CLOTH','T_BRUSH_SOFT','T_GLOVE_NITRILE']},
-  {id:'S_NAIL_POLISH',tools:['T_CLOTH','T_GLOVE_NITRILE']},
-  {id:'S_GLUE',tools:['T_CLOTH','T_BRUSH_SOFT','T_GLOVE_NITRILE']},
-  {id:'S_PAINT_LATEX',tools:['T_CLOTH','T_BRUSH_SOFT','T_GLOVE_NITRILE']},
-  {id:'S_PAINT_OIL',tools:['T_CLOTH','T_GLOVE_NITRILE','T_MASK','T_BRUSH_SOFT']},
-  {id:'S_BETEL',tools:['T_CLOTH','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_IODINE',tools:['T_CLOTH','T_GLOVE_NITRILE']},
-  {id:'S_CHILI',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_SHRIMP_PASTE',tools:['T_CLOTH','T_BRUSH_SOFT','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_SUGARCANE',tools:['T_CLOTH','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_GAC',tools:['T_CLOTH','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER','T_UV_LAMP']},
-  {id:'S_ANNATTO',tools:['T_CLOTH','T_GLOVE_NITRILE','T_SOAK_BIN','T_TIMER']},
-  {id:'S_HAIR_DYE',tools:['T_GLOVE_NITRILE','T_CLOTH','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER']},
-  {id:'S_MASCARA',tools:['T_CLOTH','T_BRUSH_SOFT','T_GLOVE_NITRILE']},
-  {id:'S_DYE_TRANSFER',tools:['T_CLOTH','T_SPRAY','T_SOAK_BIN','T_TIMER']},
-  {id:'S_STARCH_TRANSFER',tools:['T_CLOTH','T_BRUSH_SOFT','T_SOAK_BIN','T_TIMER']},
-  {id:'S_RUST',tools:['T_GLOVE_NITRILE','T_CLOTH','T_BRUSH_SOFT']},
-  {id:'S_LATERITE',tools:['T_GLOVE_NITRILE','T_BRUSH_HARD','T_BRUSH_SOFT','T_CLOTH']},
-  {id:'S_MUD',tools:['T_BRUSH_HARD','T_BRUSH_SOFT','T_CLOTH']}
-] AS row
-MATCH (s:Stain {id:row.id})
+        # W_tool_links: derived from Protocol tool_ids + PPE rules
+        try:
+            from protocol_equipment import seed_tool_link_rows as _tool_rows
+
+            _trows = _tool_rows()
+            s.run("MATCH (s:Stain)-[r:USES_TOOL]->() DELETE r")
+            res_w = s.run(
+                """
+UNWIND $rows AS row
+MATCH (st:Stain {id:row.id})
 UNWIND row.tools AS tid
 MATCH (t:Tool {id:tid})
-MERGE (s)-[:USES_TOOL]->(t)
-RETURN count(*) AS links""")
+MERGE (st)-[:USES_TOOL]->(t)
+RETURN count(*) AS links
+""",
+                rows=_trows,
+            )
+            log["W_tool_links"] = res_w.data()[0] if res_w else {"links": 0}
+            log["W_tool_protocol_rows"] = len(_trows)
+        except Exception as e:
+            log["W_tool_links"] = f"ERR:{str(e)[:160]}"
         _r(s, "X_fabric_hints", """
 UNWIND [
   {id:'F1',dry_hint_vi:'Say may OK neu sach; uu tien bong mat + quat',iron_hint_vi:'Ui 180-200C khi con am'},

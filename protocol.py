@@ -210,6 +210,14 @@ CHEM_META: dict[str, dict[str, str]] = {
     },
 }
 
+# Authoritative dilution/safety overwrite (v9) — single table for owner answers
+try:
+    from education_gaps_v9 import apply_dilution_to_chem_meta as _apply_dil_v9
+
+    _apply_dil_v9(CHEM_META)
+except Exception:
+    pass
+
 
 ITEM_PRIMARY_IDS = frozenset({
     "I_NECKTIE", "I_SUIT", "I_AO_DAI", "I_HANBOK",
@@ -484,12 +492,12 @@ def _tpl_cooking_oil() -> Protocol:
 def _tpl_blood_fresh() -> Protocol:
     return Protocol(
         stain_id="S_BLOOD_FRESH",
-        why_ko="[왜 이 순서] 신선 혈액=단백질. 찬물만. 온수·건조=열고착. 효소→흰면 산소. 실크·울: 효소·산소 금지.",
-        why_vi="GIAO DUC: Máu tươi = protein. CHỈ lạnh. Enzyme rồi oxy trắng. Len/lụa: S1.",
+        why_ko="[왜 이 순서] 신선 혈액=단백질·바이오하자드. PPE(장갑·마스크)→찬물만. 온수·건조=열고착. 효소→흰면 산소. 실크·울: 효소·산소 금지.",
+        why_vi="GIAO DUC: Máu tươi = protein + biohazard. PPE → CHỈ lạnh. Enzyme rồi oxy trắng. Len/lụa: S1.",
         water_temp_ko="찬물만 (온수 금지)",
         water_temp_vi="CHỈ nước lạnh",
         steps=[
-            Step("id", "신선 핏자국·원단 확인", "Nhận máu tươi", force="Cap1"),
+            Step("id", "신선 핏자국·PPE·원단 확인", "Nhận máu tươi + PPE", tool_ids=["T_GLOVE_NITRILE", "T_MASK"], force="Cap1"),
             Step("rinse", "안쪽 찬물 헹굼 2–3분", "Xả lạnh mặt trái 2-3 phút", tool_ids=["T_CLOTH"], force="Cap1"),
             Step(
                 "enzyme",
@@ -520,12 +528,12 @@ def _tpl_blood_fresh() -> Protocol:
 def _tpl_blood_dry() -> Protocol:
     return Protocol(
         stain_id="S_BLOOD_DRY",
-        why_ko="[왜 이 순서] 마른 피=섬유 고착 단백질. 효소 장침지. 열 금지. 흰 면만 과산화/산소(테스트). 갈색 고착 시 성공률 낮음 고지.",
-        why_vi="GIAO DUC: Máu khô = protein bám. Enzyme dài. CAM nhiệt. Oxy trắng test.",
+        why_ko="[왜 이 순서] 마른 피=섬유 고착 단백질·바이오하자드. PPE→효소 장침지. 열 금지. 흰 면만 과산화/산소(테스트). 갈색 고착 시 성공률 낮음 고지.",
+        why_vi="GIAO DUC: Máu khô = protein + biohazard. PPE → enzyme dài. CAM nhiệt. Oxy trắng test.",
         water_temp_ko="찬물만",
         water_temp_vi="CHỈ lạnh",
         steps=[
-            Step("id", "마른 핏자국·원단 확인", "Nhận máu khô", force="Cap1"),
+            Step("id", "마른 핏자국·PPE·원단 확인", "Nhận máu khô + PPE", tool_ids=["T_GLOVE_NITRILE", "T_MASK"], force="Cap1"),
             Step("brush", "마른 가루 Cap1 제거", "Cạo bột khô Cap1", tool_ids=["T_CLOTH"], force="Cap1"),
             Step("rinse", "찬물 30–60분 담금", "Ngâm lạnh 30-60 phút", tool_ids=["T_SOAK_BIN", "T_TIMER"], minutes_lo=30, minutes_hi=60, soak=True, force="Cap1"),
             Step(
@@ -867,12 +875,24 @@ def _tpl_collar() -> Protocol:
 def _tpl_shirt_yellow() -> Protocol:
     return Protocol(
         stain_id="S_SHIRT_YELLOW",
-        why_ko="[왜 이 순서] 흰 셔츠 황변=피지·땀 산화. 락스 금지. 효소→산소 장침지. 깃만이면 목때 SOP.",
-        why_vi="GIAO DUC: Áo trắng vàng = bã nhờn. CAM Javel. E → B1 dài.",
+        why_ko="[왜 이 순서] 흰 셔츠 황변=피지·땀 산화. 락스 금지. 효소→산소 장침지. 심한 흰 면만 환원표백(X1)·PPE. 깃만이면 목때 SOP.",
+        why_vi="GIAO DUC: Áo trắng vàng = bã nhờn. CAM Javel. E → B1 dài. Nặng: X1 PPE (cotton trắng).",
         steps=[
             Step("id", "흰 셔츠 황변(이염 아님)", "Nhận vàng áo trắng", force="Cap1"),
-            Step("enzyme", "황변 부위 효소 전처리", "Enzyme vùng vàng", chem="E1", force="Cap1–2"),
-            Step("oxygen", "산소 미온 1–6시간(병·테스트)", "B1 ấm 1-6 giờ", chem="B1", when="white_only", minutes_lo=60, minutes_hi=360, soak=True),
+            Step("enzyme", "황변 부위 효소 전처리", "Enzyme vùng vàng", chem="E1", tool_ids=["T_CLOTH", "T_BRUSH_SOFT", "T_SOAK_BIN", "T_TIMER"], force="Cap1–2", minutes_lo=15, minutes_hi=30, soak=True),
+            Step("oxygen", "산소 미온 1–6시간(병·테스트)", "B1 ấm 1-6 giờ", chem="B1", when="white_only", minutes_lo=60, minutes_hi=360, soak=True, tool_ids=["T_SOAK_BIN", "T_TIMER"]),
+            Step(
+                "reducing",
+                "심한 흰 면·린넨만: 환원표백 X1 즉석·15–30분·장갑(선택)",
+                "Nặng cotton trắng: X1 mới pha 15-30 phút + găng (tuỳ)",
+                chem="X1",
+                when="white_only",
+                optional=True,
+                minutes_lo=15,
+                minutes_hi=30,
+                soak=True,
+                tool_ids=["T_GLOVE_NITRILE", "T_TIMER", "T_SOAK_BIN"],
+            ),
             Step("wash", "세제 세탁", "Giặt", chem="D3", force="Cap2"),
             Step("light", "강광; 락스 금지; 황변 남은 채 건조·다림질 금지", "Ánh sáng; CAM Javel", force="Cap1"),
         ],
@@ -1014,11 +1034,11 @@ def _tpl_mildew() -> Protocol:
         why_ko="[왜 이 순서] 곰팡이=포자+색소. PPE·환기. 식초로 살균→산소로 색소→흰 면만 락스 신중. 맑아질 때까지 건조 금지.",
         why_vi="GIAO DUC: Mốc. PPE. A3 diệt → B1 màu → Javel chỉ trắng. CAM sấy khi còn.",
         steps=[
-            Step("id", "곰팡이·PPE·야외/환기", "Nhận mốc + PPE", force="Cap1"),
-            Step("brush", "마른 포자 털기(마스크)", "Chải khô + khẩu trang", tool_ids=["T_BRUSH_SOFT", "T_CLOTH"], force="Cap1"),
-            Step("vinegar", "식초 1:4 침지·살균", "Giấm 1:4 ngâm", chem="A3", minutes_lo=15, minutes_hi=30, soak=True, spray=True),
-            Step("oxygen", "색소: 산소", "Màu: B1", chem="B1", soak=True, minutes_lo=30, minutes_hi=120),
-            Step("chlorine", "흰 면만 희석 락스(선택)", "Trắng: Javel loãng", chem="B2", when="white_only", optional=True),
+            Step("id", "곰팡이·PPE·야외/환기", "Nhận mốc + PPE", tool_ids=["T_GLOVE_NITRILE", "T_MASK"], force="Cap1"),
+            Step("brush", "마른 포자 털기(마스크)", "Chải khô + khẩu trang", tool_ids=["T_BRUSH_SOFT", "T_CLOTH", "T_MASK"], force="Cap1"),
+            Step("vinegar", "식초 1:4 침지·살균", "Giấm 1:4 ngâm", chem="A3", minutes_lo=15, minutes_hi=30, soak=True, spray=True, tool_ids=["T_SPRAY", "T_SOAK_BIN", "T_TIMER"]),
+            Step("oxygen", "색소: 산소", "Màu: B1", chem="B1", soak=True, minutes_lo=30, minutes_hi=120, tool_ids=["T_SOAK_BIN", "T_TIMER"]),
+            Step("chlorine", "흰 면만 희석 락스(선택)", "Trắng: Javel loãng", chem="B2", when="white_only", optional=True, tool_ids=["T_GLOVE_NITRILE"]),
             Step("wash", "세탁; 맑아질 때까지 건조 금지", "Giặt; CAM sấy khi còn mốc", force="Cap2"),
             Step("light", "강광·통풍 건조", "Ánh sáng + thoáng", force="Cap1"),
         ],
@@ -1028,13 +1048,13 @@ def _tpl_mildew() -> Protocol:
 def _tpl_gum() -> Protocol:
     return Protocol(
         stain_id="S_GUM",
-        why_ko="[왜 이 순서] 껌=끈적 폴리머. 핵심은 냉동. 바삭할 때 깨기→잔여 아세톤 극소(아세테이트 금지)→세제.",
-        why_vi="GIAO DUC: Kẹo cao su. ĐÔNG lạnh → bẻ → A2 ít → D2.",
+        why_ko="[왜 이 순서] 껌=끈적 폴리머. 핵심은 냉동. 바삭할 때 깨기→잔여 아세톤 극소(아세테이트 금지)·PPE→세제.",
+        why_vi="GIAO DUC: Kẹo cao su. ĐÔNG lạnh → bẻ → A2 ít + PPE → D2.",
         steps=[
             Step("id", "껌·원단", "Nhận kẹo cao su", force="Cap1"),
-            Step("freeze", "비닐+냉동 30–60분 단단해질 때까지", "Túi + đông 30-60 phút", minutes_lo=30, minutes_hi=60, force="Cap1"),
+            Step("freeze", "비닐+냉동 30–60분 단단해질 때까지", "Túi + đông 30-60 phút", minutes_lo=30, minutes_hi=60, tool_ids=["T_TIMER"], force="Cap1"),
             Step("break", "바삭할 때 Cap2로 깨서 제거", "Bẻ khi giòn Cap2", tool_ids=["T_CLOTH"], force="Cap2"),
-            Step("acetone", "잔여 유분: 아세톤 극소(테스트)", "Còn dầu: A2 rất ít", chem="A2", optional=True, force="Cap1"),
+            Step("acetone", "잔여 유분: 아세톤 극소(테스트·장갑)", "Còn dầu: A2 rất ít + găng", chem="A2", optional=True, force="Cap1", tool_ids=["T_CLOTH", "T_GLOVE_NITRILE"]),
             Step("dish", "주방세제+미온 세탁", "D2 + giặt ấm nhẹ", chem="D2", force="Cap2"),
             Step("light", "건조 전 확인", "Kiểm trước sấy", force="Cap1"),
         ],
@@ -1048,9 +1068,9 @@ def _tpl_candle_wax() -> Protocol:
         why_vi="GIAO DUC: Sáp nến. Đông bẻ → giấy+ủi thấp hút → D2.",
         steps=[
             Step("id", "촛농·원단", "Nhận sáp nến", force="Cap1"),
-            Step("freeze", "얼리거나 차게 해 깨기", "Làm lạnh rồi bẻ", force="Cap2"),
+            Step("freeze", "얼리거나 차게 해 깨기", "Làm lạnh rồi bẻ", force="Cap2", tool_ids=["T_TIMER"], minutes_lo=20, minutes_hi=40),
             Step("iron", "흡수지 위아래+낮은 열로 왁스 흡수(반복)", "Giấy + ủi thấp hút sáp", tool_ids=["T_CLOTH", "T_STEAM_IRON"], force="Cap1"),
-            Step("dish", "잔여: 주방세제", "Còn: D2", chem="D2", force="Cap2"),
+            Step("dish", "잔여: 주방세제", "Còn: D2", chem="D2", force="Cap2", tool_ids=["T_CLOTH"]),
             Step("wash", "세탁", "Giặt", force="Cap2"),
             Step("light", "건조 전 확인", "Kiểm trước sấy", force="Cap1"),
         ],
@@ -1686,6 +1706,10 @@ HOME_TEXTILE_ITEM_IDS = frozenset({
     "I_BED_SHEET", "I_TOWEL",
 })
 
+BIOHAZARD_FOR_NARRATE = frozenset({
+    "S_BLOOD_FRESH", "S_BLOOD_DRY", "S_VOMIT", "S_URINE", "S_FECES",
+})
+
 
 def _stain_family(stain_id: str, sc: Optional[dict] = None) -> str:
     """Coarse chemistry family for tool howto (not a second truth source)."""
@@ -2143,43 +2167,62 @@ def narrate_tools_for_context(
                 "Rubber/cleat outsole only: dry mud then D2. Never mesh/silk upper.",
             )
         elif tid == "T_GLOVE_NITRILE":
-            if family in {"mildew", "ink", "oil"} or stain_id in {
-                "S_RUST", "S_ENGINE_OIL", "S_MOTORBIKE_OIL", "S_TAR", "S_HAIR_DYE",
-            }:
+            if (
+                family in {"mildew", "ink", "oil", "protein"}
+                or stain_id in BIOHAZARD_FOR_NARRATE
+                or stain_id in {
+                    "S_RUST", "S_LATERITE", "S_ENGINE_OIL", "S_MOTORBIKE_OIL", "S_TAR",
+                    "S_HAIR_DYE", "S_GUM", "S_NAIL_POLISH", "S_SHIRT_YELLOW",
+                }
+            ):
                 t = _apply_howto(
                     t,
-                    f"이 오염({family or stain_id}): 약품·포자 취급 전 니트릴 장갑 필수. 병 열기 전 착용.",
-                    f"Vết này ({family or stain_id}): BẮT BUỘC găng nitrile trước hóa chất/bào tử.",
-                    f"For this stain: nitrile gloves before chemicals/spores.",
+                    f"이 오염({family or stain_id}): 약품·체액·포자 취급 전 니트릴 장갑 필수. 병 열기 전 착용. 산에 얇은 장갑 금지.",
+                    f"Vết này ({family or stain_id}): BẮT BUỘC găng nitrile trước hóa chất/dịch cơ thể/bào tử.",
+                    f"For this stain: nitrile gloves before chemicals/body fluids/spores.",
                 )
         elif tid == "T_MASK":
-            if family == "mildew" or stain_id == "S_MILDEW":
+            if family == "mildew" or stain_id in BIOHAZARD_FOR_NARRATE or stain_id == "S_MILDEW":
                 t = _apply_howto(
                     t,
-                    "곰팡이: 야외·환기 + 마스크 필수(포자). 장갑·환기와 함께.",
-                    "Mốc: ngoài trời/thoáng + khẩu trang (bào tử).",
-                    "Mildew: outdoors/ventilate + mask for spores.",
+                    "바이오하자드·곰팡이·용제: 야외·환기 + 마스크. 장갑과 함께.",
+                    "Biohazard/mốc/dung môi: ngoài trời/thoáng + khẩu trang + găng.",
+                    "Biohazard/mold/solvent: ventilate + mask + gloves.",
+                )
+        elif tid == "T_STEAM_IRON":
+            if stain_id == "S_CANDLE_WAX":
+                t = _apply_howto(
+                    t,
+                    "촛농: 흡수지 위·아래 + 다리미 낮은 열로 왁스만 흡수(반복). 얼룩 위 강한 스팀·고열 금지. 색이음 테스트.",
+                    "Sáp nến: giấy trên/dưới + ủi thấp hút sáp. CẤM hơi/nhiệt cao lên vết.",
+                    "Wax: blotter paper + low heat to absorb wax only. No high heat on stain.",
+                )
+            else:
+                t = _apply_howto(
+                    t,
+                    "얼룩이 다 빠진 뒤에만. 케어라벨 다림질 온도. 넥타이: 세워 스팀만.",
+                    "Chỉ sau khi hết vết. Nhiệt theo nhãn. Cà vạt: hơi đứng.",
+                    "Only after stain gone. Match care-label heat. Ties: upright steam.",
                 )
         out.append(t)
     return out
 
 
 def bind_tools_from_protocol(proto: Protocol, tools: list, *, item_id: str = "") -> list:
+    from protocol_equipment import hydrate_tool_list
+
+    tools = hydrate_tool_list(proto, tools)
     if not tools:
         return tools
     sp = proto.spray_step()
     codes = set(proto.chem_codes())
-    # Prefer A3 soak window over B1 15–45 when both exist
+    # Prefer first timed soak in Protocol order (enzyme before vinegar when both exist).
+    # Fall back: any timed step, then spray step.
     minute_step = None
     for s in proto.active_steps():
-        if s.soak and s.chem == "A3" and s.minutes_lo is not None:
+        if s.soak and s.minutes_lo is not None:
             minute_step = s
             break
-    if minute_step is None:
-        for s in proto.active_steps():
-            if s.soak and s.minutes_lo is not None:
-                minute_step = s
-                break
     if minute_step is None:
         for s in proto.active_steps():
             if s.minutes_lo is not None:
@@ -2205,6 +2248,11 @@ def bind_tools_from_protocol(proto: Protocol, tools: list, *, item_id: str = "")
     spray_name_vi = "dung dịch pha"
     spray_dil_vi = "theo pha"
     spray_chem = (sp.chem.upper() if sp and sp.chem else "")
+    soak_chem = (
+        minute_step.chem.upper()
+        if minute_step and minute_step.chem
+        else spray_chem
+    )
     delicate_s1 = "S1" in codes and "A3" not in codes
     if spray_chem:
         meta = CHEM_META.get(spray_chem, {})
@@ -2216,10 +2264,17 @@ def bind_tools_from_protocol(proto: Protocol, tools: list, *, item_id: str = "")
         # Acid/enzyme → S1 rewrite cleared spray=True; do not leave Neo4j vinegar howto
         meta = CHEM_META["S1"]
         spray_chem = "S1"
+        soak_chem = "S1"
         spray_name_ko = meta["name_ko"]
         spray_dil_ko = meta["dilution_ko"]
         spray_name_vi = meta["name_vi"]
         spray_dil_vi = meta["dilution_vi"]
+
+    soak_meta = CHEM_META.get(soak_chem, {}) if soak_chem else {}
+    soak_name_ko = soak_meta.get("name_ko") or spray_name_ko
+    soak_dil_ko = soak_meta.get("dilution_ko") or spray_dil_ko
+    soak_name_vi = soak_meta.get("name_vi") or spray_name_vi
+    soak_dil_vi = soak_meta.get("dilution_vi") or spray_dil_vi
 
     bound = []
     for t in tools:
@@ -2269,28 +2324,42 @@ def bind_tools_from_protocol(proto: Protocol, tools: list, *, item_id: str = "")
         elif tid == "T_SOAK_BIN":
             if delicate_s1:
                 t["use_for_ko"] = (
-                    f"실크·울: 통담금보다 국소·찬물 헹굼 우선. 담그면 「{spray_name_ko}」만·짧게, "
+                    f"실크·울: 통담금보다 국소·찬물 헹굼 우선. 담그면 「{soak_name_ko}」만·짧게, "
                     f"타이머 {min_ko}. 식초·효소 담금 금지."
                 )
                 t["use_for_vi"] = (
-                    f"Len/lụa: ưu tiên chấm/xả lạnh. Nếu ngâm: chỉ 「{spray_name_vi}」 ngắn ({min_vi}). "
+                    f"Len/lụa: ưu tiên chấm/xả lạnh. Nếu ngâm: chỉ 「{soak_name_vi}」 ngắn ({min_vi}). "
                     f"CAM giấm/enzyme."
                 )
-            elif spray_chem:
+            elif soak_chem and soak_chem == spray_chem and spray_chem:
                 t["use_for_ko"] = (
-                    f"분무기와 같은 약: 「{spray_name_ko}」을 「{spray_dil_ko}」로 통에 만들어 "
+                    f"분무기와 같은 약: 「{soak_name_ko}」을 「{soak_dil_ko}」로 통에 만들어 "
                     f"{min_ko}만 담근다(분무·담금 중 하나 또는 병행). "
-                    f"통 겉에 「{spray_name_ko} / {spray_dil_ko}」라고 적는다. "
+                    f"통 겉에 「{soak_name_ko} / {soak_dil_ko}」라고 적는다. "
                     f"정장·넥타이·얇은 실크는 SOP에서 금하면 통담금 하지 말 것."
                 )
                 t["use_for_vi"] = (
-                    f"Cùng thuốc với bình xịt: pha 「{spray_name_vi}」 theo 「{spray_dil_vi}」 vào chậu, "
-                    f"ngâm đúng {min_vi} (xịt hoặc ngâm). Dán 「{spray_name_vi} / {spray_dil_vi}」. "
+                    f"Cùng thuốc với bình xịt: pha 「{soak_name_vi}」 theo 「{soak_dil_vi}」 vào chậu, "
+                    f"ngâm đúng {min_vi} (xịt hoặc ngâm). Dán 「{soak_name_vi} / {soak_dil_vi}」. "
                     f"Cấm ngâm suit/cà vạt/lụa mỏng nếu SOP cấm."
                 )
                 t["use_for_en"] = (
-                    f"Same chem as spray: mix 「{spray_name_ko}」 at 「{spray_dil_ko}」 in the bin, "
+                    f"Same chem as spray: mix 「{soak_name_ko}」 at 「{soak_dil_ko}」 in the bin, "
                     f"soak only {min_ko}. Label the bin. Skip full soak if SOP forbids."
+                )
+            elif soak_chem:
+                t["use_for_ko"] = (
+                    f"담금용: 「{soak_name_ko}」을 「{soak_dil_ko}」로 통에 만들어 {min_ko}만 담근다. "
+                    f"통 겉에 「{soak_name_ko} / {soak_dil_ko}」. "
+                    f"분무 약이 다르면 섞지 말 것. 정장·넥타이·얇은 실크는 SOP에서 금하면 통담금 금지."
+                )
+                t["use_for_vi"] = (
+                    f"Ngâm: pha 「{soak_name_vi}」 theo 「{soak_dil_vi}」, đúng {min_vi}. "
+                    f"Dán nhãn. Không trộn với thuốc xịt khác. Cấm ngâm suit/cà vạt/lụa mỏng nếu SOP cấm."
+                )
+                t["use_for_en"] = (
+                    f"Soak chem 「{soak_name_ko}」 at 「{soak_dil_ko}」 for {min_ko}. "
+                    f"Do not mix with a different spray chem. Skip soak if SOP forbids."
                 )
             else:
                 t["use_for_ko"] = (
