@@ -60,13 +60,14 @@ def detect_stain_age(message: str) -> AgeBucket:
     if not raw:
         return "unknown"
     t = raw.lower()
-    # Unsigned VI for matching
+    # Unsigned VI for matching (strip tones + map đ→d; đ is a letter, not a tone mark)
     try:
         from unicodedata import normalize
 
         t_n = "".join(c for c in normalize("NFD", t) if not (0x300 <= ord(c) <= 0x36F))
+        t_n = t_n.replace("đ", "d").replace("Đ", "d")
     except Exception:
-        t_n = t
+        t_n = t.replace("đ", "d").replace("Đ", "d")
 
     if any(k in raw for k in _HARD_KO) or any(k in t_n for k in _HARD_VI) or any(k in t for k in _HARD_EN):
         return "hard"
