@@ -3972,6 +3972,7 @@ def _generate_response_core(
         "토" in user_message
         and any(k in user_message for k in ("얼룩", "묻", "쏟", "세탁"))
         and "토마토" not in user_message
+        and "아나토" not in user_message
     ) or "vomit" in raw_n or "chat non" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_VOMIT"
