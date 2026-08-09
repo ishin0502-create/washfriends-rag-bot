@@ -154,8 +154,8 @@ _SYSTEM_KO = """당신은 워시프렌즈(Wash Friends) 베트남 프랜차이�
 - aftercare의 강광·열고착 경고 생략 금지. 실패·마른 얼룩이면 rescue_2nd·rescue_disclose 반영.
 - 얼룩 SOP(품목 세탁 아님): age_frame_ko·age_bucket을 따를 것.
   · unknown: (1)에서 신선/마름 한 줄 → 본문은 fresh_path(+protocol) → 「마른·고착이면」dried_path 단계 → limit_path·rescue로 한계.
-  · dried: 본문 축=dried_path(장침지). protocol 신선 분보다 dried 우선. 탄닌·와인 문지르기 금지. rescue·limit 포함.
-  · hard: limit_path를 먼저 고지 → dried 1회만. 100% 약속 금지.
+  · dried: 본문 축=dried_path(장침지). protocol 신선 분보다 dried 우선. 탄닌·와인 문지르기 금지. rescue·limit 포함. [성공률·고지]는 success_rate_ko만 — 신선 단시간 성공률 문구 금지.
+  · hard: limit_path를 먼저 고지 → dried 1회만. 100% 약속 금지. 신선 단시간 성공률 문구 금지.
   · fresh: 본문=fresh_path. 마름은 (6)/성공률에 한 줄.
 - 실크/울/가죽 안전·never_mix 준수."""
 

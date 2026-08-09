@@ -96,12 +96,28 @@ def test_hard_overrides_fresh_minutes():
     assert "path_lock_ko" in sc
     assert "15–30" in sc["soak_minutes_ko"]
     assert out["protocol_minutes_ko"] == "15–30분"
+    assert "1시간 내" not in sc["success_rate_ko"]
+    assert "100%" in sc["success_rate_ko"] or "불가" in sc["success_rate_ko"]
     soak = out["protocol"]["steps"][1]
     assert soak["minutes_lo"] == 15 and soak["minutes_hi"] == 30
     timer = next(t for t in out["tools"] if t["id"] == "T_TIMER")
     assert "15–30" in timer["use_for_ko"]
     assert "5–15분을 쓰지 말" in timer["use_for_ko"]
     assert not any(t.get("id") == "T_BRUSH_SOFT" for t in out["tools"])
+
+
+def test_dried_overrides_fresh_success_rate():
+    g = {
+        "stain_context": {
+            "id": "S_RED_WINE",
+            "success_rate_ko": "1시간 내: 양호. 하룻밤·건조 후: 낮음.",
+            "dried_path_ko": "짧음",
+        }
+    }
+    out = apply_stain_age_buckets(g, "오래된 와인", {"stain_age": "dried"})
+    sc = out["stain_context"]
+    assert "1시간 내" not in sc["success_rate_ko"]
+    assert "마른" in sc["success_rate_ko"] or "고착" in sc["success_rate_ko"]
 
 
 def test_item_care_skipped():

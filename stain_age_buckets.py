@@ -267,6 +267,31 @@ LIMIT_EN = (
 DRIED_SOAK_LO = 15
 DRIED_SOAK_HI = 30
 
+# Graph success_rate_* is often fresh-biased ("1시간 내: 양호"). Override when dried/hard.
+# Do not embed the forbidden phrase itself — LLM may echo it.
+SUCCESS_RATE_DRIED_KO = (
+    "이미 마른·고착: 성공률 낮음~중간. 잔색·완전 제거 비보장. "
+    "신선·즉시처리용 단시간 성공률 문구는 쓰지 말 것."
+)
+SUCCESS_RATE_HARD_KO = (
+    "수개월·열고착: 성공률 낮음. dried 경로 1회 후 한계 고지. "
+    "100% 불가. 신선·즉시처리용 단시간 성공률 문구 금지."
+)
+SUCCESS_RATE_DRIED_VI = (
+    "Da kho: ty le thap-TB. Bao khong sach 100%. CAM ty le tuoi/ngan gio."
+)
+SUCCESS_RATE_HARD_VI = (
+    "Nhieu thang/khoa nhiet: ty le thap. 1 lan dried + gioi han. CAM 100%. CAM ty le tuoi."
+)
+SUCCESS_RATE_DRIED_EN = (
+    "Already dried/set: low–fair success. Residual color possible. "
+    "Do not quote fresh short-window success rates."
+)
+SUCCESS_RATE_HARD_EN = (
+    "Months/heat-set: low success. One dried path then disclose limits. "
+    "No 100%. Do not quote fresh short-window success rates."
+)
+
 
 def _min_label(lo: int, hi: int) -> tuple[str, str, str]:
     if lo == hi:
@@ -479,23 +504,35 @@ def apply_stain_age_buckets(
         sc2["soak_minutes_ko"] = min_ko
         sc2["soak_minutes_vi"] = min_vi
         sc2["soak_minutes_en"] = min_en
+        # Replace fresh-biased graph success rates so LLM cannot echo "1시간 내 양호".
+        if bucket == "hard":
+            sc2["success_rate_ko"] = SUCCESS_RATE_HARD_KO
+            sc2["success_rate_vi"] = SUCCESS_RATE_HARD_VI
+            sc2["success_rate_en"] = SUCCESS_RATE_HARD_EN
+        else:
+            sc2["success_rate_ko"] = SUCCESS_RATE_DRIED_KO
+            sc2["success_rate_vi"] = SUCCESS_RATE_DRIED_VI
+            sc2["success_rate_en"] = SUCCESS_RATE_DRIED_EN
         sc2["path_lock_ko"] = (
             f"LOCKED: age_bucket={bucket}. (2)(4)(6)은 dried_path_ko·침지 {min_ko}만. "
-            f"protocol/fresh_path의 5–15분·「신선」본문·「1시간 내 성공률 양호」 금지. "
+            f"protocol/fresh_path의 5–15분·「신선」본문 금지. "
+            f"[성공률·고지]는 success_rate_ko만 사용(그래프 신선 성공률·단시간 양호 무시). "
             f"타이머·담금통 use_for도 {min_ko}."
             + (" (1)에서 limit_path_ko 먼저." if bucket == "hard" else "")
         )
         sc2["path_lock_vi"] = (
-            f"LOCKED age={bucket}: dried_path_vi + ngam {min_vi}. CAM phut tuoi 5-15."
+            f"LOCKED age={bucket}: dried_path_vi + ngam {min_vi}. CAM phut tuoi 5-15. "
+            f"Dung success_rate_vi (CAM ty le tuoi)."
         )
         sc2["path_lock_en"] = (
-            f"LOCKED age={bucket}: dried_path + soak {min_en}. No fresh 5–15 body."
+            f"LOCKED age={bucket}: dried_path + soak {min_en}. No fresh 5–15 body. "
+            f"Use success_rate_en only (no fresh short-window line)."
         )
         if bucket == "hard":
             prev = str(sc2.get("must_include_ko") or "").strip()
             hard_must = (
                 "한계 고지 먼저(수개월·고착·100% 불가), dried 1회만, "
-                f"식초 침지 {min_ko}, 문지르기 금지"
+                f"식초 침지 {min_ko}, 문지르기 금지, 신선 단시간 성공률 문구 금지"
             )
             sc2["must_include_ko"] = f"{prev}, {hard_must}".strip(", ") if prev else hard_must
     else:
