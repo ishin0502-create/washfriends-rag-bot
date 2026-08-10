@@ -255,6 +255,71 @@ _ITEM_FABRIC_TOKEN = {
     "I_RINSE": "cotton",
     "I_QC_HANDOVER": "cotton",
 }
+
+# Offline Item stubs when Neo4j Item node is missing (specialty owner cards still answer).
+_ITEM_OFFLINE_NAMES = {
+    "I_DUVET_GOOSE": {
+        "name": "Goose / duck down duvet",
+        "name_vi": "Chăn lông ngỗng / vịt (down)",
+        "name_ko": "구스이불·거위털·다운 이불",
+    },
+    "I_DUVET_COTTON": {
+        "name": "Cotton / synthetic fill comforter",
+        "name_vi": "Chăn bông / chăn poly",
+        "name_ko": "솜이불·폴리이불",
+    },
+    "I_DOWN_JACKET": {
+        "name": "Down / padded jacket",
+        "name_vi": "Áo phao / áo lông",
+        "name_ko": "다운·패딩 점퍼",
+    },
+}
+
+
+def _offline_item_rows(item_id: str) -> list:
+    """Synthesize a Neo4j-shaped item row for specialty items missing from the graph."""
+    if not item_id:
+        return []
+    try:
+        from specialty_item_care import SPECIALTY_CARE_IDS
+    except Exception:
+        return []
+    if item_id not in SPECIALTY_CARE_IDS:
+        return []
+    names = _ITEM_OFFLINE_NAMES.get(item_id) or {
+        "name": item_id,
+        "name_vi": item_id,
+        "name_ko": item_id,
+    }
+    return [
+        {
+            "item_context": {"id": item_id, **names},
+            "fabric_context": None,
+            "chemicals": [],
+            "tools": [],
+            "washfriends_supply": [],
+            "never_use_on_fabric": [],
+        }
+    ]
+
+
+def _try_recover_item_graph(entities: dict) -> dict:
+    """Last chance before empty_graph: infer specialty item + offline/Neo4j fetch."""
+    entities = dict(entities or {})
+    raw = str(entities.get("_raw") or entities.get("_user_caption") or "")
+    item_id = str(entities.get("item_id") or "") or _infer_item_from_text(raw)
+    if not item_id:
+        return {}
+    entities["item_id"] = item_id
+    entities["stain_id"] = ""
+    entities["stain_type"] = ""
+    # Clear accidental stain_input so item-only path runs
+    entities.pop("stain_input", None)
+    ctx = _fetch_graph_context(entities)
+    g = ctx.get("graph")
+    return ctx if isinstance(g, dict) and g else {}
+
+
 Q_RESCUE = """
 MATCH (s:Stain)
 WHERE s.id = $stain_id
@@ -558,6 +623,10 @@ def _fetch_graph_context(entities: dict) -> dict:
         context["graph"] = []
         context["query_type"] = "empty"
         item_rows = _run_query(Q_ITEM_CONTEXT, {"item_id": item_id})
+        if not item_rows:
+            item_rows = _offline_item_rows(item_id)
+            if item_rows:
+                context["query_type"] = "item_offline_specialty"
         if item_rows:
             context = _merge_item_into_context(context, item_rows[0])
             if isinstance(context.get("graph"), dict):
@@ -619,6 +688,8 @@ def _fetch_graph_context(entities: dict) -> dict:
     item_id = entities.get("item_id")
     if item_id:
         item_rows = _run_query(Q_ITEM_CONTEXT, {"item_id": item_id})
+        if not item_rows:
+            item_rows = _offline_item_rows(item_id)
         if item_rows:
             context = _merge_item_into_context(context, item_rows[0])
             if isinstance(context.get("graph"), dict):
@@ -1577,7 +1648,7 @@ def _infer_item_from_text(text: str) -> str:
         return "I_BED_SHEET"
     if any(k in raw for k in ("호텔", "hotel")) and any(k in raw for k in ("수건", "타월", "towel")):
         return "I_TOWEL"
-    if any(k in raw for k in ("구스이불", "구스이블", "거위털", "다운이불", "오리털이불")) or "goose" in t or "down duvet" in t or "chan long" in t:
+    if any(k in raw for k in ("구스이불", "구스이블", "거위털", "다운이불", "오리털이불", "거위털이불", "오리털이불")) or "goose" in t or "down duvet" in t or "chan long" in t or "long ngong" in t or "long vit" in t:
         return "I_DUVET_GOOSE"
     if any(k in raw for k in ("솜이불", "폴리이불", "충전 이불")) or (
         "이불" in raw and any(k in raw for k in ("세탁", "빨래", "방법", "어떻게"))
@@ -3510,6 +3581,17 @@ def generate_response_from_entities(
     graph_data    = graph_context.get("graph")
 
     if not graph_data or graph_data in ({}, []):
+        recovered = _try_recover_item_graph(entities)
+        if recovered:
+            graph_context = recovered
+            graph_data = graph_context.get("graph")
+            entities = dict(entities)
+            if recovered.get("graph") and isinstance(recovered["graph"], dict):
+                ic = (recovered["graph"].get("item_context") or {})
+                if ic.get("id"):
+                    entities["item_id"] = ic["id"]
+                    _generate_response_core.last_entities = dict(entities)  # type: ignore[attr-defined]
+    if not graph_data or graph_data in ({}, []):
         return _empty_graph_reply(
             entities,
             image=bool(entities.get("_image_analysis")),
@@ -3813,11 +3895,18 @@ def _generate_response_core(
         entities["item_id"] = "I_CURTAIN_FABRIC"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
-    elif any(k in user_message for k in ("구스이불", "구스이블", "거위털이불", "다운이불", "오리털이불", "구스 이불")) or "goose duvet" in raw_n:
+    elif any(
+        k in user_message
+        for k in (
+            "구스이불", "구스이블", "거위털이불", "거위털", "다운이불", "다운 이불",
+            "오리털이불", "오리털 이불", "구스 이불",
+        )
+    ) or "goose duvet" in raw_n or "down duvet" in raw_n or "chan long" in raw_n or "long ngong" in raw_n or "long vit" in raw_n:
         entities["intent"] = "treatment"
         entities["item_id"] = "I_DUVET_GOOSE"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
+        entities["stain_input"] = ""
     elif any(k in user_message for k in ("호텔", "hotel")) and any(
         k in user_message for k in ("시트", "침대", "린넨", "침구")
     ):
@@ -4330,6 +4419,16 @@ def _generate_response_core(
     graph_context = _fetch_graph_context(entities)
     graph_data = graph_context.get("graph")
 
+    if not graph_data or graph_data == {} or graph_data == []:
+        recovered = _try_recover_item_graph(entities)
+        if recovered:
+            graph_context = recovered
+            graph_data = graph_context.get("graph")
+            if isinstance(graph_data, dict):
+                ic = graph_data.get("item_context") or {}
+                if ic.get("id"):
+                    entities["item_id"] = ic["id"]
+                    _generate_response_core.last_entities = dict(entities)  # type: ignore[attr-defined]
     if not graph_data or graph_data == {} or graph_data == []:
         return _empty_graph_reply(entities)
 

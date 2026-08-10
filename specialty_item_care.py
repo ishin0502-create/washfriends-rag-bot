@@ -349,7 +349,9 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
                 {
                     "code": "D3",
                     "name_ko": "일반 세탁세제(이불·소량)",
+                    "name_vi": "Nước giặt thường (chăn · ít)",
                     "dilution_ko": "소량. 과다·유연제 금지(잔여·뭉침).",
+                    "dilution_vi": "Ít thôi. CẤM dư bột / xả vải (cặn → cục).",
                 }
             ]
             out["empty_chems_ok"] = False
@@ -358,9 +360,12 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
                 {
                     "code": "S1",
                     "name_ko": "워시프렌즈 중성세제(다운·섬세용)",
-                    "name_vi": "Nuoc giat trung tinh / down-wash",
+                    "name_vi": "Nước giặt trung tính Wash Friends (down / tinh tế)",
+                    "shop_name_vi": "Nước giặt trung tính Wash Friends (down)",
                     "dilution_ko": "병 안내·소량만. 일반 강세제·유연제·표백 금지. 반드시 추가 헹굼.",
+                    "dilution_vi": "Theo chai · ít thôi. CẤM bột mạnh / xả vải / tẩy. Bắt buộc xả thêm.",
                     "when_use_ko": "다운·구스·패딩 물세탁 시 우선.",
+                    "when_use_vi": "Ưu tiên khi giặt nước down / chăn lông / áo phao.",
                 }
             ]
             out["empty_chems_ok"] = False
@@ -369,17 +374,27 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
             {
                 "id": "T_WASHER_LARGE",
                 "name_ko": "대형 전면투입 세탁기(약 7kg+·상업용)",
+                "name_vi": "Máy giặt lớn cửa trước (~7kg+ / tiệm)",
                 "use_for_ko": (
                     "섬세/이불 코스, 찬물~≤30℃(솜이불은 30–40℃), 탈수 약. "
                     "소형 가정기는 용량 부족 — 거절/대형기 안내. 추가 헹굼 1회 필수."
+                ),
+                "use_for_vi": (
+                    "Chương trình tinh tế/chăn, lạnh~≤30℃ (chăn bông 30–40℃), vắt nhẹ. "
+                    "Máy nhỏ thiếu dung tích — từ chối / hướng máy lớn. Bắt buộc thêm 1 lần xả."
                 ),
             },
             {
                 "id": "T_DRYER_LOW",
                 "name_ko": "건조기(저온) + 테니스볼/건조볼 2–3개",
+                "name_vi": "Máy sấy (thấp) + 2–3 bóng tennis / dryer ball",
                 "use_for_ko": (
                     "저온 건조. 20–30분마다 꺼내 손으로 뭉친 털 풀기. 총 2–4시간. "
                     "가운데 차가움 없을 때까지. 고온건조 금지."
+                ),
+                "use_for_vi": (
+                    "Sấy thấp. Mỗi 20–30 phút lấy ra, dùng tay xoa cục lông. Tổng 2–4 giờ. "
+                    "Đến khi giữa không còn lạnh. CẤM sấy nóng."
                 ),
             },
         ]
@@ -389,9 +404,14 @@ def apply_specialty_item_education(graph: dict, entities: Optional[dict] = None)
                 {
                     "id": "T_CLOTH",
                     "name_ko": "흰 천(겉커버 국소만)",
+                    "name_vi": "Khăn trắng (chỉ vỏ cục bộ)",
                     "use_for_ko": (
                         "오염이 있을 때만: 겉커버·표면 국소 얼룩만 Cap1 닦기. "
                         "속통 전체를 스포팅하듯 문지르지 말 것. 옥살산·락스 PPE는 해당 얼룩 SOP에서만."
+                    ),
+                    "use_for_vi": (
+                        "Chỉ khi có vết: lau Cap1 vỏ/mặt ngoài. "
+                        "CẤM chà cả lõi như spotting. Oxalic/Javel PPE chỉ theo SOP vết."
                     ),
                 },
             )
@@ -538,6 +558,18 @@ def _goose_duvet(*, has_stain: bool = False) -> dict[str, str]:
         if has_stain
         else "【오염 없음 — 일반 세탁】얼룩 지우기가 아니라 속통 통세탁·건조 절차.\n"
     )
+    branch_vi = (
+        "【Có vết】Chỉ pretreat vỏ/mặt ngoài (khăn trắng Cap1). CẤM spotting/chà cả lõi. "
+        "Sau đó giặt thường bên dưới. Mốc nặng / biohazard → SOP riêng hoặc từ chối.\n"
+        if has_stain
+        else "【Không vết — giặt thường】Không phải tẩy vết: quy trình giặt + sấy cả lõi down.\n"
+    )
+    branch_en = (
+        "【Stain present】Pretreat cover/surface only (white cloth Cap1). Do not spot/rub the whole fill. "
+        "Then follow general wash below. Heavy mold/biohazard → separate SOP or refuse.\n"
+        if has_stain
+        else "【No stain — general wash】Not stain removal: wash + dry the whole down insert.\n"
+    )
     return {
         "precheck_ko": (
             "구스·오리털(다운) 이불 일반 세탁. "
@@ -575,6 +607,76 @@ def _goose_duvet(*, has_stain: bool = False) -> dict[str, str]:
         "success_rate_ko": "대형기+다운세제+테니스볼 완전건조: 높음. 소형기·미건조: 뭉침·곰팡이 위험.",
         "refuse_when_ko": "용량 부족 소형기 강제, 퍼크 드라이 요구, 찢긴 채 세탁 → 거절/대형기·수선 안내.",
         "must_include_ko": "대형 전면투입, 추가 헹굼, 테니스볼, 퍼크 금지",
+        "precheck_vi": (
+            "Chăn lông ngỗng/vịt (down) — giặt thường. "
+            "Hỏi trước: có vết rõ, mốc, mùi nặng không? "
+            "Không → giặt thường; có → pretreat cục bộ rồi giặt thường. "
+            "Đọc nhãn; vá rách trước. Máy nhỏ → máy lớn cửa trước (~7kg+)/tiệm. "
+            "Vỏ chăn giặt thường; lõi down thường 1–3 năm/lần."
+        ),
+        "why_vi": (
+            "[Tại sao] Câu hỏi = giặt phẩm. Down giữ dầu tự nhiên → không khuyến khích PERC. "
+            "Nước giặt trung tính/down ít + xả thêm + sấy thấp + bóng tennis. "
+            "Chỉ pretreat vỏ khi có vết — không kéo oxalic/Javel vào giặt thường."
+        ),
+        "fresh_path_vi": (
+            f"{branch_vi}"
+            "(1) Kiểm lỗ/đường may; khóa kéo/nút. "
+            "(2) Máy lớn cửa trước: tinh tế/chăn, lạnh~≤30℃, S1/down-wash ít, "
+            "vắt nhẹ, BẮT BUỘC thêm 1 lần xả. CẤM vắt xoắn. "
+            "(3) Sấy thấp + 2–3 bóng tennis/dryer ball sạch. "
+            "Mỗi 20–30 phút lấy ra, dùng tay xoa cục lông. Tổng 2–4 giờ. "
+            "(4) Sờ giữa chăn — hết lạnh/ẩm; chưa khô thì sấy thêm. "
+            "(5) CẤM xả vải, tẩy oxy/clo, nóng, PERC."
+        ),
+        "dried_path_vi": (
+            "Đã cục/mùi: sấy lại thấp + bóng tennis. "
+            "Mốc/vết nặng → SOP vết + PPE — không trộn với giặt thường."
+        ),
+        "motion_vi": "Cap0–1 — máy tinh tế. CẤM vắt xoắn / chà cả lõi.",
+        "water_temp_vi": "Lạnh / ≤30℃. CẤM nước nóng/luộc. Sấy chỉ thấp.",
+        "aftercare_vi": (
+            "Sấy thấp + 2–3 bóng tennis, mỗi 20–30 phút xoa cục → "
+            "khô giữa rồi bảo quản. Dùng vỏ. Hút ẩm/thoáng."
+        ),
+        "sense_check_vi": "Tay: giữa không lạnh. Mắt: hết cục, loft tốt. Mũi: không mốc/mùi bột.",
+        "success_rate_vi": "Máy lớn + down-wash + bóng tennis + khô hết: cao. Máy nhỏ/chưa khô: cục + mốc.",
+        "refuse_when_vi": "Ép máy nhỏ thiếu dung tích, đòi PERC, giặt khi còn rách → từ chối / hướng máy lớn·vá.",
+        "must_include_vi": "máy lớn cửa trước, xả thêm, bóng tennis, cấm PERC",
+        "precheck_en": (
+            "Goose/duck down duvet — general wash. Ask: visible stain, mold, strong odor? "
+            "None → wash; yes → local pretreat then wash. Label + mend tears. "
+            "Small washer → large front-load (~7kg+)/laundromat. Cover often; insert every 1–3 years."
+        ),
+        "why_en": (
+            "[Why] Item wash. Down = natural oils → PERC dry-clean not preferred. "
+            "Mild/down detergent small dose + extra rinse + low dry + tennis balls. "
+            "Pretreat cover only when stained — do not pull oxalic/bleach PPE into general wash."
+        ),
+        "fresh_path_en": (
+            f"{branch_en}"
+            "(1) Check holes/baffles; zip/buttons. "
+            "(2) Large front-load: delicate/bedding, cold~≤30℃, S1/down detergent small dose, "
+            "gentle spin, mandatory extra rinse. No wringing. "
+            "(3) Low dryer + 2–3 clean tennis/dryer balls. "
+            "Every 20–30 min break clumps by hand. Total 2–4h. "
+            "(4) Feel center until not cold/damp. "
+            "(5) No softener, oxygen/chlorine bleach, high heat, or PERC."
+        ),
+        "dried_path_en": (
+            "Already clumped/odorous: re-dry low + tennis balls. "
+            "Mold/heavy soil → stain SOP + PPE — do not mix with general wash."
+        ),
+        "motion_en": "Cap0–1 — machine delicate. No wringing / rubbing whole fill.",
+        "water_temp_en": "Cold / ≤30℃. No hot boil. Dryer low only.",
+        "aftercare_en": (
+            "Low dry + 2–3 tennis balls, fluff every 20–30 min → "
+            "confirm center dry, then store. Use cover. Dehumidify/ventilate."
+        ),
+        "sense_check_en": "Hand: center not cold. Eye: loft restored. Nose: no mold/detergent smell.",
+        "success_rate_en": "Large washer + down detergent + tennis balls + full dry: high. Small/undried: clump + mold risk.",
+        "refuse_when_en": "Force undersized washer, demand PERC, wash while torn → refuse / large washer·mend.",
+        "must_include_en": "large front-load, extra rinse, tennis balls, no PERC",
     }
 
 
@@ -583,6 +685,11 @@ def _cotton_duvet(*, has_stain: bool = False) -> dict[str, str]:
         "【오염 있음】겉만 국소 전처리 후 아래 세탁.\n"
         if has_stain
         else "【오염 없음 — 일반 세탁】\n"
+    )
+    branch_vi = (
+        "【Có vết】Pretreat vỏ rồi giặt bên dưới.\n"
+        if has_stain
+        else "【Không vết — giặt thường】\n"
     )
     return {
         "precheck_ko": (
@@ -606,6 +713,28 @@ def _cotton_duvet(*, has_stain: bool = False) -> dict[str, str]:
         "success_rate_ko": "대형기+완전건조: 높음.",
         "refuse_when_ko": "용량 부족으로 억지 세탁 → 대형기 안내.",
         "must_include_ko": "대형기, 추가 헹굼, 테니스볼",
+        "precheck_vi": (
+            "Chăn bông/poly (không phải down). Phân biệt với chăn lông. "
+            "Hỏi vết. Máy nhỏ → máy lớn."
+        ),
+        "why_vi": (
+            "[Tại sao] Giặt phẩm. Bông/poly dễ cục nếu dư bột / thiếu xả. "
+            "Bột ít + xả thêm + sấy thấp~vừa + bóng tennis."
+        ),
+        "fresh_path_vi": (
+            f"{branch_vi}"
+            "(1) So size vs máy. (2) Tinh tế/chăn 30–40℃, bột ít, xả thêm. "
+            "(3) Sấy thấp~vừa + bóng tennis, 20–30 phút xoa. "
+            "(4) Khô giữa. (5) CẤM xả vải quá nhiều."
+        ),
+        "dried_path_vi": "Cục: sấy lại + bóng. Mốc: SOP mốc + PPE.",
+        "motion_vi": "Máy Cap0. Có vết mới Cap2 cục bộ.",
+        "water_temp_vi": "30–40℃ (không luộc).",
+        "aftercare_vi": "Vỏ giặt thường. Lõi 2–4 lần/năm. Khô hết rồi bảo quản.",
+        "sense_check_vi": "Tay: giữa khô. Mắt: không cục.",
+        "success_rate_vi": "Máy lớn + khô hết: cao.",
+        "refuse_when_vi": "Ép máy thiếu dung tích → hướng máy lớn.",
+        "must_include_vi": "máy lớn, xả thêm, bóng tennis",
     }
 
 

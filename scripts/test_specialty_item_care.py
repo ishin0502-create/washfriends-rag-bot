@@ -17,6 +17,46 @@ from specialty_item_care import apply_specialty_item_education, education_for
 def test_goose_typo_maps():
     assert _infer_item_from_text("구스이블 세탁방법 알려줘") == "I_DUVET_GOOSE"
     assert _infer_item_from_text("구스이불 세탁방법") == "I_DUVET_GOOSE"
+    assert _infer_item_from_text("Chan long ngong giat the nao?") == "I_DUVET_GOOSE"
+    assert _infer_item_from_text("거위털 이불 세탁") == "I_DUVET_GOOSE"
+
+
+def test_goose_vi_education_and_tools():
+    edu = education_for("I_DUVET_GOOSE")
+    assert "bóng tennis" in edu["fresh_path_vi"].lower() or "tennis" in edu["fresh_path_vi"].lower()
+    assert "PERC" in edu["why_vi"] or "perc" in edu["why_vi"].lower()
+    assert "máy lớn" in edu["must_include_vi"].lower() or "cua truoc" in edu["must_include_vi"].lower() or "cửa trước" in edu["must_include_vi"]
+
+    g = {
+        "item_context": {"id": "I_DUVET_GOOSE", "name_ko": "구스이불", "name_vi": "Chăn lông ngỗng"},
+        "stain_context": {"group": "item_care", "id": "I_DUVET_GOOSE"},
+        "tools": [],
+        "chemicals": [],
+    }
+    out = apply_specialty_item_education(
+        g, entities={"item_id": "I_DUVET_GOOSE", "_raw": "Chan long ngong giat the nao?"}
+    )
+    tools = out.get("tools") or []
+    assert any("tennis" in f"{t.get('name_vi') or ''} {t.get('name_ko') or ''}".lower() for t in tools)
+    assert any("7kg" in f"{t.get('name_vi') or ''} {t.get('name_ko') or ''}" for t in tools)
+    assert (out.get("stain_context") or {}).get("fresh_path_vi")
+
+
+def test_offline_goose_graph_without_neo4j():
+    from graphrag_engine import _offline_item_rows, _merge_item_into_context, _refine_tools_for_context
+
+    rows = _offline_item_rows("I_DUVET_GOOSE")
+    assert rows and rows[0]["item_context"]["id"] == "I_DUVET_GOOSE"
+    ctx = {"graph": [], "query_type": "empty"}
+    ctx = _merge_item_into_context(ctx, rows[0])
+    g = _refine_tools_for_context(
+        ctx["graph"],
+        entities={"item_id": "I_DUVET_GOOSE", "_raw": "구스이블 세탁방법 알려줘"},
+    )
+    assert isinstance(g, dict)
+    path = (g.get("stain_context") or {}).get("fresh_path_ko") or ""
+    assert "테니스" in path or "건조볼" in path
+    assert any(t.get("id") == "T_WASHER_LARGE" for t in (g.get("tools") or []))
 
 
 def test_hotel_sheet_not_cotton_duvet():
@@ -268,6 +308,8 @@ def test_sneaker_has_vi_en():
 
 if __name__ == "__main__":
     test_goose_typo_maps()
+    test_goose_vi_education_and_tools()
+    test_offline_goose_graph_without_neo4j()
     test_hotel_sheet_not_cotton_duvet()
     test_empty_reply_item_care_not_stain()
     test_goose_sop_has_tennis_and_no_perc()
