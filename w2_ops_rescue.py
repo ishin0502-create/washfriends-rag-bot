@@ -281,6 +281,13 @@ def rescue_card_for_stain(sc: dict) -> dict:
             stain_card = RESCUE_BY_STAIN_V8.get(sid)
         except Exception:
             pass
+    if not stain_card:
+        try:
+            from education_dried_parity_v11 import rescue_for_stain
+
+            stain_card = rescue_for_stain(sid)
+        except Exception:
+            pass
 
     gid = ""
     grp = sc.get("group_id") or sc.get("group")

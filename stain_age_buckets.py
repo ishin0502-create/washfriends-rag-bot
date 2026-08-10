@@ -286,6 +286,12 @@ try:
         DRIED_PATH_VI[_sid] = _vi
 except Exception:
     pass
+try:
+    from education_dried_parity_v11 import merge_dried_paths
+
+    merge_dried_paths(DRIED_PATH_KO, DRIED_PATH_VI)
+except Exception:
+    pass
 
 
 LIMIT_KO = (
@@ -540,6 +546,12 @@ def apply_stain_age_buckets(
     sc2.update(_frame_for(bucket))
 
     lo, hi = DRIED_SOAK_LO, DRIED_SOAK_HI
+    try:
+        from education_dried_parity_v11 import soak_minutes_for_stain
+
+        lo, hi = soak_minutes_for_stain(sid)
+    except Exception:
+        pass
     min_ko, min_vi, min_en = _min_label(lo, hi)
 
     if bucket in ("dried", "hard"):
