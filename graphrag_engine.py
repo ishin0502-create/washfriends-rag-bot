@@ -507,6 +507,15 @@ def _fetch_graph_context(entities: dict) -> dict:
             fabric_input = _ITEM_FABRIC_TOKEN.get(item_id, "")
             if fabric_input:
                 entities["fabric_type"] = fabric_input
+        if item_id in {
+            "I_INTAKE_SCRIPT", "I_CLAIM_SCRIPT", "I_PRICING_SCRIPT",
+            "I_QUIZ_STAINS", "I_QUIZ_FABRIC", "I_CARE_LABEL", "I_DRY_VS_WET",
+            "I_WATER_HARDNESS", "I_MACHINE_PROFILE", "I_SORT", "I_RINSE", "I_QC_HANDOVER",
+        }:
+            entities["stain_id"] = ""
+            entities["stain_type"] = ""
+            stain_id = ""
+            stain_input = ""
         # Item-care questions must not early-exit as price/safety/mystery with empty graph
         if intent in ("price", "safety", "mystery", "browse", "rescue", "hardest", "daily"):
             intent = "treatment"
@@ -1309,6 +1318,35 @@ def _wants_qc_handover(raw: str, t: str) -> bool:
     ) or ("qc" in raw.lower() and any(k in raw for k in ("점검", "체크", "인도", "출고")))
 
 
+def _wants_intake_script(raw: str, t: str) -> bool:
+    """Store check-in / dried-stain disclosure scripts (KO/VI/EN)."""
+    if any(
+        k in raw
+        for k in ("접수", "체크인", "인수인계", "사진 동의", "견적 스크립트", "접수 스크립트")
+    ):
+        return True
+    if any(
+        k in t
+        for k in (
+            "check-in", "check in", "tiep nhan", "intake script",
+            "nhan do", "nhan hang", "nhan quan ao", "script tiep nhan",
+            "script nhan do", "dong y vet kho", "thong bao vet kho",
+        )
+    ):
+        return True
+    if "intake" in t and any(k in t for k in ("script", "check", "photo", "consent", "receipt")):
+        return True
+    if ("vet kho" in t or "vet kho" in raw.lower()) and any(
+        k in t or k in raw for k in ("nhan do", "nhan hang", "100%", "khong het", "dong y", "khong cam ket", "tiep nhan")
+    ):
+        return True
+    if any(k in raw for k in ("마른 얼룩", "건조 얼룩", "마른얼룩")) and any(
+        k in raw for k in ("접수", "동의", "고지", "100%", "체크인")
+    ):
+        return True
+    return False
+
+
 def _curriculum_blocked(raw: str, t: str) -> bool:
     """True when a named garment/stain should win over fabric/chem curriculum."""
     return _process_stage_blocked(raw, t) or any(
@@ -1547,7 +1585,7 @@ def _infer_item_from_text(text: str) -> str:
         return "I_QUIZ_FABRIC"
     if any(k in raw for k in ("퀴즈", "연습문제", "테스트 문제", "단원 문제")) or "quiz" in t:
         return "I_QUIZ_STAINS"
-    if any(k in raw for k in ("접수", "체크인", "인수인계", "사진 동의", "견적 스크립트")) or "check-in" in t or "check in" in t or "tiep nhan" in t or "intake script" in t:
+    if _wants_intake_script(raw, t):
         return "I_INTAKE_SCRIPT"
     if any(k in raw for k in ("경수", "센물", "수돗물 경도", "물때")) or "hard water" in t or "nuoc cung" in t:
         return "I_WATER_HARDNESS"
@@ -1669,7 +1707,7 @@ def _infer_item_from_text(text: str) -> str:
         return "I_CARE_LABEL"
     if any(k in raw for k in ("드라이클리닝", "드라이 클리닝", "물세탁인가", "드라이인가")) or "dry clean" in t or "dry-clean" in t or "dry vs wet" in t or "giat kho" in t:
         return "I_DRY_VS_WET"
-    if any(k in raw for k in ("접수", "체크인", "인수인계", "사진 동의", "견적 스크립트")) or "check-in" in t or "check in" in t or "tiep nhan" in t or "intake script" in t:
+    if _wants_intake_script(raw, t):
         return "I_INTAKE_SCRIPT"
 
     # Hats (non-golf)
@@ -4008,7 +4046,7 @@ def _generate_response_core(
         entities["item_id"] = "I_CHEM_BLEACH"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
-    elif any(k in user_message for k in ("접수", "체크인", "사진 동의", "견적 말하는법", "접수 스크립트")) or "check-in" in raw_n or "intake" in raw_n or "tiep nhan" in raw_n:
+    elif _wants_intake_script(user_message, raw_n):
         entities["intent"] = "treatment"
         entities["item_id"] = "I_INTAKE_SCRIPT"
         entities["stain_id"] = ""

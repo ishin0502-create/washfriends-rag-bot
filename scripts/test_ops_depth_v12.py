@@ -58,3 +58,6 @@ def test_infer_claim_intake():
     assert _infer_item_from_text("손님 항의 보상 어떻게") == "I_CLAIM_SCRIPT"
     assert _infer_item_from_text("접수 때 마른 얼룩 고지") == "I_INTAKE_SCRIPT"
     assert _infer_item_from_text("khiếu nại khách") == "I_CLAIM_SCRIPT"
+    assert _infer_item_from_text("vet kho nhan do khong het 100%") == "I_INTAKE_SCRIPT"
+    assert _infer_item_from_text("tiep nhan vet kho dong y khach") == "I_INTAKE_SCRIPT"
+    assert _infer_item_from_text("nhan do script anh phieu") == "I_INTAKE_SCRIPT"
