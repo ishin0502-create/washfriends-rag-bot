@@ -43,20 +43,23 @@ def _never_mix() -> dict[str, str]:
         "success_rate_ko": "규칙 준수=사고↓. 위반=급성 위험.",
         "refuse_when_ko": "락스+암모니아 혼합 요구 → 즉시 거절.",
         "must_include_ko": "B2+A5 금지, 헹굼 후 다음 약, 환기, 혼합 거절",
-        "precheck_vi": "CAM pha tron hoa chat. Mot loai mot luc.",
-        "why_vi": "[Tai sao] Javel(B2)+ammonia(A5)=khi doc. Acid+chlorine nguy hiem. Tu choi pha tron.",
-        "fresh_path_vi": (
-            "(1)Doc ma. (2)CAM B2+A5. (3)Xu ly 1 → xa ky → moi dung tiep. "
-            "(4)Thong gio. (5)Script: khong pha — xa giua cac buoc."
+        "precheck_vi": "CẤM pha trộn hóa chất. Một loại một lúc.",
+        "why_vi": (
+            "[Tại sao] Javel (tẩy clo) + amoniac = khí độc. "
+            "Acid + clo cũng nguy hiểm. Từ chối yêu cầu pha trộn."
         ),
-        "dried_path_vi": "Da hit hon hop: thong gio, ra ngoai, rua nuoc, den BV. Dung viec.",
-        "motion_vi": "Cap0 — an toan",
-        "water_temp_vi": "N/A",
-        "aftercare_vi": "Rua dung cu. Dan CAM tron.",
-        "sense_check_vi": "Mui cay → dung ngay + thong gio.",
-        "success_rate_vi": "Tuan thu = an toan.",
-        "refuse_when_vi": "Bat tron Javel+ammonia → tu choi.",
-        "must_include_vi": "CAM B2+A5, xa giua buoc, thong gio, tu choi tron",
+        "fresh_path_vi": (
+            "(1)Đọc nhãn. (2)CẤM Javel cùng amoniac. (3)Xử lý 1 loại → xả kỹ → mới dùng tiếp. "
+            "(4)Thông gió. (5)Nói với khách: không pha — xả giữa các bước."
+        ),
+        "dried_path_vi": "Đã hít hỗn hợp: thông gió, ra ngoài, rửa nước, đến bệnh viện. Dừng việc.",
+        "motion_vi": "Cap0 — an toàn",
+        "water_temp_vi": "Không áp dụng (quy tắc an toàn)",
+        "aftercare_vi": "Rửa dụng cụ. Dán nhãn CẤM trộn.",
+        "sense_check_vi": "Mùi cay → dừng ngay + thông gió.",
+        "success_rate_vi": "Tuân thủ = an toàn.",
+        "refuse_when_vi": "Bắt trộn Javel + amoniac → từ chối.",
+        "must_include_vi": "CẤM Javel+amoniac, xả giữa bước, thông gió, từ chối trộn",
         "precheck_en": "Never mix open chemicals. One product at a time.",
         "why_en": (
             "[Why] Chlorine bleach (B2) + ammonia (A5) = toxic gas. "
@@ -94,21 +97,24 @@ def _bleach() -> dict[str, str]:
         "success_rate_ko": "흰 면+라벨 OK: 양호. 유색 염소: 사고.",
         "refuse_when_ko": "유색·실크·울에 B2 요구 → 거절.",
         "must_include_ko": "B2=흰 면만, 1:10–20, A5·식초 혼합 금지, 헹굼",
-        "precheck_vi": "B1 oxy (mau than), B2 Javel (CHI cotton trang). Doc tam giac nhan.",
-        "why_vi": "[Tai sao] B2 chi trang. Mau/len/lua + Javel = hong. B1 CAM len/lua.",
-        "fresh_path_vi": (
-            "(1)Doc nhan + cotton trang. (2)B2: dac 1 : nuoc 10–20 (uu tien nhan), ngam ngan, xa ngay. "
-            "(3)Mau = B1/cam. (4)CAM Javel nong len protein. "
-            "(5)CAM tron giấm/A5. (6)Xa ky."
+        "precheck_vi": "Bột tẩy oxy (cẩn thận màu), Javel (CHỈ cotton trắng). Đọc ký hiệu tam giác trên nhãn.",
+        "why_vi": (
+            "[Tại sao] Javel chỉ đồ trắng. Màu/len/lụa + Javel = hỏng. "
+            "Bột oxy cũng CẤM len/lụa."
         ),
-        "dried_path_vi": "Da mat mau: bao khong phuc. CAM them Javel.",
-        "motion_vi": "Cap0-1 ngam deu",
-        "water_temp_vi": "Theo nhan san pham",
-        "aftercare_vi": "Xa ky. Con clo = hong.",
-        "sense_check_vi": "Mat: deu. Mui cay → xa lai.",
-        "success_rate_vi": "Trang+nhan OK: tot. Javel mau: tai nan.",
-        "refuse_when_vi": "Bat B2 mau/lua/len → tu choi.",
-        "must_include_vi": "B2 chi trang, B1 CAM len/lua, CAM A5, xa ky",
+        "fresh_path_vi": (
+            "(1)Đọc nhãn + xác nhận cotton trắng. (2)Javel: đặc 1 : nước 10–20 (ưu tiên nhãn), ngâm ngắn, xả ngay. "
+            "(3)Đồ màu = bột oxy hoặc không tẩy. (4)CẤM Javel nóng lên vết protein. "
+            "(5)CẤM trộn giấm/amoniac. (6)Xả kỹ."
+        ),
+        "dried_path_vi": "Đã mất màu: báo không phục hồi. CẤM thêm Javel.",
+        "motion_vi": "Cap0–1 ngâm đều",
+        "water_temp_vi": "Theo nhãn sản phẩm",
+        "aftercare_vi": "Xả kỹ. Còn clo = hỏng.",
+        "sense_check_vi": "Mắt: đều. Mùi cay → xả lại.",
+        "success_rate_vi": "Trắng+nhãn OK: tốt. Javel lên màu: tai nạn.",
+        "refuse_when_vi": "Bắt Javel lên màu/lụa/len → từ chối.",
+        "must_include_vi": "Javel chỉ trắng, bột oxy CẤM len/lụa, CẤM amoniac, xả kỹ",
         "precheck_en": "B1 oxygen (colors careful), B2 chlorine (white cotton ONLY). Read triangle symbol.",
         "why_en": "[Why] B2 whites only. Chlorine on color/wool/silk/protein = damage. B1 also banned on wool/silk.",
         "fresh_path_en": (
@@ -142,20 +148,23 @@ def _solvent() -> dict[str, str]:
         "success_rate_ko": "국소+테스트: 중간~양호. 무환기 담금: 위험.",
         "refuse_when_ko": "밀폐 공간 대량 사용·아세톤 레이온 → 거절.",
         "must_include_ko": "환기, 패치 테스트, A2≠레이온, 국소만",
-        "precheck_vi": "A1/A2/D1: thong gio, CAM lua. CAM acetone tren rayon/acetate.",
-        "why_vi": "[Tai sao] Hoi doc/chay. Acetone tan mot so vai/nhua. PPE + cuc bo.",
-        "fresh_path_vi": (
-            "(1)Thong gio. (2)Test goc. (3)Cham tren khan Cap1. "
-            "(4)A2 CAM rayon/acetate. (5)Trung tinh + xa."
+        "precheck_vi": "Cồn / acetone / dung môi tẩy dầu: thông gió, CẤM lửa. CẤM acetone trên rayon/acetate.",
+        "why_vi": (
+            "[Tại sao] Hơi độc/cháy. Acetone làm tan một số vải/nhựa. "
+            "Bắt buộc găng + chỉ xử lý cục bộ."
         ),
-        "dried_path_vi": "Tan/hong bong: dung, bao.",
-        "motion_vi": "Cap1 cuc bo; CAM ngam",
-        "water_temp_vi": "Phong + thong gio",
-        "aftercare_vi": "Giu nap. Thong gio.",
-        "sense_check_vi": "Mat: hong vai. Mui nang → dung.",
-        "success_rate_vi": "Test+cuc bo: TB-tot. Ngam kin: nguy.",
-        "refuse_when_vi": "Bat A2 rayon / kin khi → tu choi.",
-        "must_include_vi": "thong gio, test, A2 CAM rayon, cuc bo",
+        "fresh_path_vi": (
+            "(1)Thông gió. (2)Test góc khuất. (3)Chấm trên khăn Cap1. "
+            "(4)Acetone CẤM rayon/acetate. (5)Giặt trung tính + xả."
+        ),
+        "dried_path_vi": "Tan/hỏng bóng: dừng, báo khách.",
+        "motion_vi": "Cap1 cục bộ; CẤM ngâm",
+        "water_temp_vi": "Nhiệt phòng + thông gió",
+        "aftercare_vi": "Giữ nắp. Tiếp tục thông gió.",
+        "sense_check_vi": "Mắt: hỏng vải. Mùi nặng → dừng.",
+        "success_rate_vi": "Test + cục bộ: trung bình–tốt. Ngâm kín: nguy hiểm.",
+        "refuse_when_vi": "Bắt acetone trên rayon / phòng kín → từ chối.",
+        "must_include_vi": "thông gió, test, acetone CẤM rayon, cục bộ",
         "precheck_en": "Solvents A1/A2/D1: ventilate, no flame. No acetone on rayon/acetate.",
         "why_en": "[Why] Vapor = inhalation/fire risk. Acetone melts some synthetics/trim. PPE + spot only.",
         "fresh_path_en": (
@@ -189,20 +198,23 @@ def _acid_ppe() -> dict[str, str]:
         "success_rate_ko": "PPE+희석: 안전. 원액·무PPE: 사고.",
         "refuse_when_ko": "원액 피부 도포·무장갑 요구 → 거절.",
         "must_include_ko": "장갑·환기, 희석, 울/실크 주의, B2 혼합 금지",
-        "precheck_vi": "A3/A5/X2: gang tay + bao mat. Kiem an toan vai.",
-        "why_vi": "[Tai sao] Acid/ki → da/mat/vai. X2 than. Sau xu ly: xa / trung hoa.",
-        "fresh_path_vi": (
-            "(1)Gang nitrile + thong gio. (2)Pha dung (A3 1:4). (3)CAM acid manh len/lua. "
-            "(4)Xa ky. (5)CAM tron B2."
+        "precheck_vi": "Giấm / amoniac / acid oxalic: găng tay + bảo vệ mắt. Kiểm an toàn vải.",
+        "why_vi": (
+            "[Tại sao] Acid/kiềm → da/mắt/vải. Acid oxalic đặc biệt thận trọng. "
+            "Sau xử lý: xả / trung hòa."
         ),
-        "dried_path_vi": "Dinh da/mat: rua 15 phut + y te. Bao hong vai.",
-        "motion_vi": "Cap0-1; CAM vung",
-        "water_temp_vi": "Pha o nhiet phong",
-        "aftercare_vi": "Rua gang. Kiem het acid.",
-        "sense_check_vi": "Tay: het tron/kich → xa OK.",
-        "success_rate_vi": "PPE+pha: an toan. Nguyen chat: nguy.",
-        "refuse_when_vi": "Bat bo gang / bo nguyen chat → tu choi.",
-        "must_include_vi": "gang+thong gio, pha dung, than len/lua, CAM B2",
+        "fresh_path_vi": (
+            "(1)Găng nitrile + thông gió. (2)Pha đúng (giấm 1:4). (3)CẤM acid mạnh trên len/lụa. "
+            "(4)Xả kỹ. (5)CẤM trộn Javel."
+        ),
+        "dried_path_vi": "Dính da/mắt: rửa 15 phút + y tế. Báo hỏng vải.",
+        "motion_vi": "Cap0–1; CẤM văng",
+        "water_temp_vi": "Pha ở nhiệt phòng",
+        "aftercare_vi": "Rửa găng. Kiểm hết acid.",
+        "sense_check_vi": "Tay: hết trơn/kích → xả OK.",
+        "success_rate_vi": "PPE + pha đúng: an toàn. Nguyên chất: nguy.",
+        "refuse_when_vi": "Bắt bỏ găng / bôi nguyên chất → từ chối.",
+        "must_include_vi": "găng+thông gió, pha đúng, thận len/lụa, CẤM Javel",
         "precheck_en": "Acids/alkalis (A3/A5/X2…): gloves + eye protection. Check fabric safety.",
         "why_en": "[Why] Skin/eye/fiber damage. X2 especially careful. Rinse/neutralize after.",
         "fresh_path_en": (

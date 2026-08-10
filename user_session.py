@@ -67,26 +67,34 @@ def set_pending_treatment(
     channel: str,
     user_id: str,
     *,
-    stain_id: str,
+    stain_id: str = "",
     stain_type: str = "",
     lang: str = "ko",
     raw_question: str = "",
+    last_chem_codes: Optional[list[str]] = None,
+    last_tool_ids: Optional[list[str]] = None,
 ) -> None:
-    """Remember last stain so fabric/weight-only follow-ups can continue SOP."""
-    if not channel or not user_id or not stain_id:
+    """Remember last stain/chems so fabric or chem follow-ups continue education."""
+    if not channel or not user_id:
+        return
+    if not stain_id and not last_chem_codes:
         return
     _prune()
     prev = dict(_store.get(_key(channel, user_id)) or {})
     # Do not clobber an active care-label wait
     if prev.get("awaiting") == "care_label":
         return
+    chems = [str(c).upper() for c in (last_chem_codes or prev.get("last_chem_codes") or []) if c]
+    tools = [str(t) for t in (last_tool_ids or prev.get("last_tool_ids") or []) if t]
     _store[_key(channel, user_id)] = {
         "ts": time.time(),
         "awaiting": "treatment_clarify",
-        "stain_id": stain_id,
-        "stain_type": stain_type or "",
-        "lang": lang or "ko",
-        "raw_question": raw_question or "",
+        "stain_id": stain_id or prev.get("stain_id") or "",
+        "stain_type": stain_type or prev.get("stain_type") or "",
+        "lang": lang or prev.get("lang") or "ko",
+        "raw_question": raw_question or prev.get("raw_question") or "",
+        "last_chem_codes": chems,
+        "last_tool_ids": tools,
     }
 
 

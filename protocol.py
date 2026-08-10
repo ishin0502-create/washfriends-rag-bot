@@ -218,6 +218,14 @@ try:
 except Exception:
     pass
 
+# Owner-facing VI shop names (v12) — override English-only chem labels
+try:
+    from chem_owner_vi import apply_owner_vi_to_chem_meta as _apply_owner_vi
+
+    _apply_owner_vi(CHEM_META)
+except Exception:
+    pass
+
 
 ITEM_PRIMARY_IDS = frozenset({
     "I_NECKTIE", "I_SUIT", "I_AO_DAI", "I_HANBOK",
@@ -325,7 +333,7 @@ def _tpl_red_wine() -> Protocol:
     return Protocol(
         stain_id="S_RED_WINE",
         why_ko="[왜 이 순서] 레드와인=안토시아닌+탄닌+산/당. 즉시·찬물. 흡수→식초 1:4→흰옷 산소. 건조하면 적자색 고착. 유색: 테스트, 락스 금지.",
-        why_vi="GIAO DUC: Ruou vang do = anthocyanin + tannin. SOM + LANH. Tham → giấm 1:4 → oxy trang. CAM say khoa mau.",
+        why_vi="[Tại sao] Ruou vang do = anthocyanin + tannin. SOM + LANH. Tham → giấm 1:4 → oxy trang. CAM say khoa mau.",
         water_temp_ko="찬물 (미온은 식초·세탁 이후만)",
         water_temp_vi="Lạnh (ấm chỉ sau giấm/giặt)",
         steps=[
@@ -382,7 +390,7 @@ def _tpl_tannin_simple(stain_id: str, name_ko: str, name_vi: str) -> Protocol:
     return Protocol(
         stain_id=stain_id,
         why_ko=ow.get("why_ko") or f"[왜 이 순서] {name_ko}=탄닌·색소. 즉시·찬물. 식초 1:4 → 흰옷 산소. 열·건조 고착.",
-        why_vi=ow.get("why_vi") or f"GIAO DUC: {name_vi}=tannin. SOM+LANH → giấm 1:4 → oxy trắng.",
+        why_vi=ow.get("why_vi") or f"[Tại sao] {name_vi}=tannin. SOM+LANH → giấm 1:4 → oxy trắng.",
         steps=[
             Step("id", f"{name_ko}·신선·원단·색 확인", f"Nhận: {name_vi}", force="Cap1"),
             Step("rinse", "찬물 흡수·헹굼(안쪽) — 문지르기 금지", "Xả/thấm lạnh — không chà", tool_ids=["T_CLOTH"], force="Cap1"),
@@ -419,7 +427,7 @@ def _tpl_kimchi() -> Protocol:
     return Protocol(
         stain_id="S_KIMCHI",
         why_ko="[왜 이 순서] 김치=고추색소+기름+염/산. 고형 제거→찬물→주방세제(기름)→식초(색소)→흰옷 산소.",
-        why_vi="GIAO DUC: Kimchi = màu ớt + dầu + muối/acid. D2 rồi A3 rồi B1 trắng.",
+        why_vi="[Tại sao] Kimchi = màu ớt + dầu + muối/acid. D2 rồi A3 rồi B1 trắng.",
         steps=[
             Step("id", "김치·건더기·원단·색 확인", "Nhận kimchi", force="Cap1"),
             Step("scrape", "고춧가루·건더기 제거", "Cạo phần đặc", tool_ids=["T_CLOTH"], force="Cap1"),
@@ -464,7 +472,7 @@ def _tpl_cooking_oil() -> Protocol:
     return Protocol(
         stain_id="S_COOKING_OIL",
         why_ko="[왜 이 순서] 식용유=소수성 오일. 전분 흡착→주방세제. 미끄럼 남은 채 건조=열고착.",
-        why_vi="GIAO DUC: Dầu ăn = hydrophobic. N3 hút → D2. CAM sấy khi còn nhờn.",
+        why_vi="[Tại sao] Dầu ăn = hydrophobic. N3 hút → D2. CAM sấy khi còn nhờn.",
         steps=[
             Step("id", "식용유(오토바이 오일 아님)·원단 확인", "Nhận dầu ăn", force="Cap1"),
             Step(
@@ -496,7 +504,7 @@ def _tpl_blood_fresh() -> Protocol:
     return Protocol(
         stain_id="S_BLOOD_FRESH",
         why_ko="[왜 이 순서] 신선 혈액=단백질·바이오하자드. PPE(장갑·마스크)→찬물만. 온수·건조=열고착. 효소→흰면 산소. 실크·울: 효소·산소 금지.",
-        why_vi="GIAO DUC: Máu tươi = protein + biohazard. PPE → CHỈ lạnh. Enzyme rồi oxy trắng. Len/lụa: S1.",
+        why_vi="[Tại sao] Máu tươi = protein + biohazard. PPE → CHỈ lạnh. Enzyme rồi oxy trắng. Len/lụa: S1.",
         water_temp_ko="찬물만 (온수 금지)",
         water_temp_vi="CHỈ nước lạnh",
         steps=[
@@ -532,7 +540,7 @@ def _tpl_blood_dry() -> Protocol:
     return Protocol(
         stain_id="S_BLOOD_DRY",
         why_ko="[왜 이 순서] 마른 피=섬유 고착 단백질·바이오하자드. PPE→효소 장침지. 열 금지. 흰 면만 과산화/산소(테스트). 갈색 고착 시 성공률 낮음 고지.",
-        why_vi="GIAO DUC: Máu khô = protein + biohazard. PPE → enzyme dài. CAM nhiệt. Oxy trắng test.",
+        why_vi="[Tại sao] Máu khô = protein + biohazard. PPE → enzyme dài. CAM nhiệt. Oxy trắng test.",
         water_temp_ko="찬물만",
         water_temp_vi="CHỈ lạnh",
         steps=[
@@ -561,7 +569,7 @@ def _tpl_milk_coffee() -> Protocol:
     return Protocol(
         stain_id="S_MILK_COFFEE",
         why_ko="[왜 이 순서] 라떼=탄닌+우유 단백질/지방. 필수: 효소·주방세제(단백질·지방) 먼저 → 식초(탄닌) 나중. 순서 바꾸면 색소 고착.",
-        why_vi="GIAO DUC: Latte = tannin + protein/mỡ sữa. Enzyme/D2 TRƯỚC → giấm SAU.",
+        why_vi="[Tại sao] Latte = tannin + protein/mỡ sữa. Enzyme/D2 TRƯỚC → giấm SAU.",
         steps=[
             Step("id", "라떼·우유커피·원단 확인", "Nhận cà phê sữa", force="Cap1"),
             Step("rinse", "찬물 헹굼", "Xả lạnh", tool_ids=["T_CLOTH"], force="Cap1"),
@@ -599,7 +607,7 @@ def _tpl_lipstick() -> Protocol:
     return Protocol(
         stain_id="S_LIPSTICK",
         why_ko="[왜 이 순서] 립스틱=왁스→오일→색소 3층. 긁기→알코올 안쪽 블롯→주방세제→흰옷 산소. 문지르면 색소 확산.",
-        why_vi="GIAO DUC: Son = sáp→dầu→pigment. Cạo → A1 blot mặt trái → D2 → B1 trắng. CAM chà.",
+        why_vi="[Tại sao] Son = sáp→dầu→pigment. Cạo → A1 blot mặt trái → D2 → B1 trắng. CAM chà.",
         steps=[
             Step("id", "립스틱·원단·색 확인", "Nhận son môi", force="Cap1"),
             Step("scrape", "왁스·여분 Cap1 긁기", "Cạo sáp Cap1", tool_ids=["T_CLOTH"], force="Cap1"),
@@ -627,7 +635,7 @@ def _tpl_grease_like(stain_id: str, name_ko: str, name_vi: str) -> Protocol:
     return Protocol(
         stain_id=stain_id,
         why_ko=ow.get("why_ko") or f"[왜 이 순서] {name_ko}=소수성 오일/지방. 전분 흡착→주방세제. 미끄럼 남은 채 건조=열고착.",
-        why_vi=ow.get("why_vi") or f"GIAO DUC: {name_vi}=dầu. N3 → D2. CAM sấy khi còn nhờn.",
+        why_vi=ow.get("why_vi") or f"[Tại sao] {name_vi}=dầu. N3 → D2. CAM sấy khi còn nhờn.",
         steps=[
             Step("id", f"{name_ko}·원단 확인", f"Nhận {name_vi}", force="Cap1"),
             Step("absorb", "전분 10–30분 덮고 털기", "Phủ N3 10-30 phút", chem="N3", tool_ids=["T_CLOTH"], minutes_lo=10, minutes_hi=30, force="Cap1"),
@@ -643,7 +651,7 @@ def _tpl_motorbike_oil() -> Protocol:
     return Protocol(
         stain_id="S_MOTORBIKE_OIL",
         why_ko="[왜 이 순서] 오토바이 오일=중질유+색소. 전분 흡착→용제(환기)→알코올 스팟→일반세제. 미끄럼·냄새 남은 채 건조 금지.",
-        why_vi="GIAO DUC: Dầu nhớt xe = dầu nặng + màu. N3 → D1 thông gió → A1 → D3. CAM sấy khi còn nhờn.",
+        why_vi="[Tại sao] Dầu nhớt xe = dầu nặng + màu. N3 → D1 thông gió → A1 → D3. CAM sấy khi còn nhờn.",
         steps=[
             Step("id", "오토바이 오일(식용유 아님)·원단", "Nhận dầu nhớt xe", force="Cap1"),
             Step("absorb", "전분 두껍게 10–30분×가능하면 2회", "N3 dày 10-30 phút x2", chem="N3", minutes_lo=10, minutes_hi=30, force="Cap1"),
@@ -667,7 +675,7 @@ def _tpl_ink_pen() -> Protocol:
     return Protocol(
         stain_id="S_INK_PEN",
         why_ko="[왜 이 순서] 볼펜 잉크=염료. 알코올 안쪽 블롯만 — 문지르면 번짐. 흰옷 잔색 산소.",
-        why_vi="GIAO DUC: Mực bút = dye. A1 blot mặt trái — CAM chà. B1 trắng nếu cần.",
+        why_vi="[Tại sao] Mực bút = dye. A1 blot mặt trái — CAM chà. B1 trắng nếu cần.",
         steps=[
             Step("id", "볼펜·잉크·원단", "Nhận mực bút", force="Cap1"),
             Step(
@@ -690,7 +698,7 @@ def _tpl_rust() -> Protocol:
     return Protocol(
         stain_id="S_RUST",
         why_ko="[왜 이 순서] 녹=산화철. 면·폴리: 옥살산+장갑. 실크·울: 옥살산 금지→식초 약하게. 락스로 철 고착 금지. 사용 후 헹굼·중화.",
-        why_vi="GIAO DUC: Rỉ = Fe oxide. Cotton: X2 + găng. Len/lụa: A3 nhẹ. CAM Javel.",
+        why_vi="[Tại sao] Rỉ = Fe oxide. Cotton: X2 + găng. Len/lụa: A3 nhẹ. CAM Javel.",
         steps=[
             Step("id", "녹·원단·장갑 준비", "Nhận rỉ + PPE", force="Cap1"),
             Step(
@@ -715,7 +723,7 @@ def _tpl_bubble_tea() -> Protocol:
     return Protocol(
         stain_id="S_BUBBLE_TEA",
         why_ko="[왜 이 순서] 버블티=탄닌+우유 단백질+전분+설탕. 찬물→효소→주방세제→식초→흰옷 산소. 처음부터 온수 금지.",
-        why_vi="GIAO DUC: Trà sữa = tannin+protein+tinh bột+đường. Lạnh → E → D2 → A3 → B1 trắng.",
+        why_vi="[Tại sao] Trà sữa = tannin+protein+tinh bột+đường. Lạnh → E → D2 → A3 → B1 trắng.",
         steps=[
             Step("id", "버블티·펄 제거·원단", "Nhận trà sữa, bỏ trân châu", force="Cap1"),
             Step("rinse", "즉시 찬물", "Xả lạnh ngay", tool_ids=["T_CLOTH"], force="Cap1"),
@@ -737,7 +745,7 @@ def _tpl_sauce_oil_tannin(stain_id: str, name_ko: str, name_vi: str) -> Protocol
     return Protocol(
         stain_id=stain_id,
         why_ko=ow.get("why_ko") or f"[왜 이 순서] {name_ko}=색소+기름막. 긁기→주방세제→식초→흰옷 산소. 문질러 번짐 금지.",
-        why_vi=ow.get("why_vi") or f"GIAO DUC: {name_vi}=màu+dầu. Cạo → D2 → A3 → B1 trắng.",
+        why_vi=ow.get("why_vi") or f"[Tại sao] {name_vi}=màu+dầu. Cạo → D2 → A3 → B1 trắng.",
         steps=[
             Step("id", f"{name_ko}·원단", f"Nhận {name_vi}", force="Cap1"),
             Step("scrape", "고형 제거", "Cạo đặc", tool_ids=["T_CLOTH"], force="Cap1"),
@@ -754,7 +762,7 @@ def _tpl_mud() -> Protocol:
     return Protocol(
         stain_id="S_MUD",
         why_ko="[왜 이 순서] 진흙=흙입자. 완전히 마른 뒤 털기 — 젖은 채로 문지르면 섬유에 박힘. 그다음 세탁·필요 시 식초.",
-        why_vi="GIAO DUC: Bùn = đất. Để KHÔ rồi chải — CAM chà khi ướt.",
+        why_vi="[Tại sao] Bùn = đất. Để KHÔ rồi chải — CAM chà khi ướt.",
         steps=[
             Step("id", "진흙·원단", "Nhận bùn", force="Cap1"),
             Step("dry", "완전히 마를 때까지 대기", "Để khô hoàn toàn", force="Cap1"),
@@ -770,7 +778,7 @@ def _tpl_foundation() -> Protocol:
     p = _tpl_lipstick()
     p.stain_id = "S_FOUNDATION"
     p.why_ko = "[왜 이 순서] 파운데이션=오일 베이스+색소. 블롯→주방세제→잔색 알코올→흰옷 산소. 실크·울: 중성만."
-    p.why_vi = "GIAO DUC: Kem nền = dầu+pigment. Blot → D2 → A1 → B1 trắng. Len/lụa: S1."
+    p.why_vi = "[Tại sao] Kem nền = dầu+pigment. Blot → D2 → A1 → B1 trắng. Len/lụa: S1."
     p.steps[0] = Step("id", "파운데이션·쿠션·원단", "Nhận kem nền", force="Cap1")
     return p
 
@@ -784,7 +792,7 @@ def _tpl_protein_then_vinegar(stain_id: str, name_ko: str, name_vi: str) -> Prot
     return Protocol(
         stain_id=stain_id,
         why_ko=ow.get("why_ko") or f"[왜 이 순서] {name_ko}=단백질(+냄새). 찬물·효소 먼저→식초. 온수 금지.",
-        why_vi=ow.get("why_vi") or f"GIAO DUC: {name_vi}=protein. Enzyme rồi giấm. CAM nóng.",
+        why_vi=ow.get("why_vi") or f"[Tại sao] {name_vi}=protein. Enzyme rồi giấm. CAM nóng.",
         water_temp_ko="찬물 우선",
         water_temp_vi="Ưu tiên lạnh",
         steps=[
@@ -809,7 +817,7 @@ def _tpl_protein_simple(stain_id: str, name_ko: str, name_vi: str, *, minutes=(1
     return Protocol(
         stain_id=stain_id,
         why_ko=ow.get("why_ko") or f"[왜 이 순서] {name_ko}=단백질. 찬물·효소. 온수·건조=고착. 흰면 잔색만 산소.",
-        why_vi=ow.get("why_vi") or f"GIAO DUC: {name_vi}=protein. Lạnh + enzyme. CAM nóng/sấy sớm.",
+        why_vi=ow.get("why_vi") or f"[Tại sao] {name_vi}=protein. Lạnh + enzyme. CAM nóng/sấy sớm.",
         water_temp_ko="찬물 우선",
         water_temp_vi="Ưu tiên lạnh",
         steps=[
@@ -828,7 +836,7 @@ def _tpl_mayo() -> Protocol:
     return Protocol(
         stain_id="S_MAYO",
         why_ko="[왜 이 순서] 마요=오일+계란 단백질. 기름(주방세제) 먼저→효소(단백질). 순서 바꾸면 지방이 단백질 고착.",
-        why_vi="GIAO DUC: Mayo = dầu + trứng. D2 TRƯỚC → E1 SAU.",
+        why_vi="[Tại sao] Mayo = dầu + trứng. D2 TRƯỚC → E1 SAU.",
         steps=[
             Step("id", "마요네즈·원단", "Nhận mayonnaise", force="Cap1"),
             Step("scrape", "고형 제거", "Cạo", tool_ids=["T_CLOTH"], force="Cap1"),
@@ -844,7 +852,7 @@ def _tpl_bbq() -> Protocol:
     return Protocol(
         stain_id="S_BBQ_SAUCE",
         why_ko="[왜 이 순서] BBQ=당/토마토 색소+기름+단백질. 효소→주방세제→식초→흰옷 산소. 잔여 채 열·건조 금지.",
-        why_vi="GIAO DUC: BBQ = đường/màu + dầu + protein. E → D2 → A3 → B1.",
+        why_vi="[Tại sao] BBQ = đường/màu + dầu + protein. E → D2 → A3 → B1.",
         steps=[
             Step("id", "BBQ 소스·원단", "Nhận sốt BBQ", force="Cap1"),
             Step("scrape", "고형 제거", "Cạo", force="Cap1"),
@@ -862,7 +870,7 @@ def _tpl_collar() -> Protocol:
     return Protocol(
         stain_id="S_COLLAR_STAIN",
         why_ko="[왜 이 순서] 목때=피지+땀 산화. 마른 깃에 효소 먼저. 락스 금지(더 누렇게). 이후 산소. 잔여 다림질 금지.",
-        why_vi="GIAO DUC: Vòng cổ = bã nhờn+mồ hôi. Enzyme khô trước. CAM Javel. Rồi B1.",
+        why_vi="[Tại sao] Vòng cổ = bã nhờn+mồ hôi. Enzyme khô trước. CAM Javel. Rồi B1.",
         steps=[
             Step("id", "와이셔츠 깃·목때", "Nhận vòng cổ", force="Cap1"),
             Step("enzyme", "마른 깃에 효소 5–15분", "Enzyme trên cổ khô 5-15", chem="E1", minutes_lo=5, minutes_hi=15, force="Cap1–2"),
@@ -878,7 +886,7 @@ def _tpl_shirt_yellow() -> Protocol:
     return Protocol(
         stain_id="S_SHIRT_YELLOW",
         why_ko="[왜 이 순서] 흰 셔츠 황변=피지·땀 산화. 락스 금지. 효소→산소 장침지. 심한 흰 면만 환원표백(X1)·PPE. 깃만이면 목때 SOP.",
-        why_vi="GIAO DUC: Áo trắng vàng = bã nhờn. CAM Javel. E → B1 dài. Nặng: X1 PPE (cotton trắng).",
+        why_vi="[Tại sao] Áo trắng vàng = bã nhờn. CAM Javel. E → B1 dài. Nặng: X1 PPE (cotton trắng).",
         steps=[
             Step("id", "흰 셔츠 황변(이염 아님)", "Nhận vàng áo trắng", force="Cap1"),
             Step("enzyme", "황변 부위 효소 전처리", "Enzyme vùng vàng", chem="E1", tool_ids=["T_CLOTH", "T_BRUSH_SOFT", "T_SOAK_BIN", "T_TIMER"], force="Cap1–2", minutes_lo=15, minutes_hi=30, soak=True),
@@ -905,7 +913,7 @@ def _tpl_sweat_yellow() -> Protocol:
     return Protocol(
         stain_id="S_SWEAT_YELLOW",
         why_ko="[왜 이 순서] 겨드랑이 황변=땀+데오 잔여. 효소→산소(흰). 락스 금지. 냄새는 식초.",
-        why_vi="GIAO DUC: Nách vàng = mồ hôi+deo. E → B1 trắng. CAM Javel. Mùi: A3.",
+        why_vi="[Tại sao] Nách vàng = mồ hôi+deo. E → B1 trắng. CAM Javel. Mùi: A3.",
         steps=[
             Step("id", "겨드랑이 황변·원단", "Nhận nách vàng", force="Cap1"),
             Step("enzyme", "효소 15–30분", "Enzyme 15-30", chem="E1", minutes_lo=15, minutes_hi=30, soak=True),
@@ -921,7 +929,7 @@ def _tpl_grass() -> Protocol:
     return Protocol(
         stain_id="S_GRASS",
         why_ko="[왜 이 순서] 잔디=엽록소+단백질. 알코올 먼저→효소→흰옷 산소. 문지르면 녹색 번짐.",
-        why_vi="GIAO DUC: Cỏ = chlorophyll+protein. A1 → E → B1 trắng.",
+        why_vi="[Tại sao] Cỏ = chlorophyll+protein. A1 → E → B1 trắng.",
         steps=[
             Step("id", "잔디·풀물·원단", "Nhận cỏ xanh", force="Cap1"),
             Step("alcohol", "알코올 바깥→안 블롯", "A1 blot NGOÀI→TRONG", chem="A1", tool_ids=["T_CLOTH"], force="Cap1", spray=True),
@@ -937,7 +945,7 @@ def _tpl_chocolate() -> Protocol:
     return Protocol(
         stain_id="S_CHOCOLATE",
         why_ko="[왜 이 순서] 초코=지방+단백질+탄닌. 긁기→찬물→효소→주방세제→식초→흰옷 산소.",
-        why_vi="GIAO DUC: Socola = mỡ+protein+tannin. Cạo → E → D2 → A3 → B1.",
+        why_vi="[Tại sao] Socola = mỡ+protein+tannin. Cạo → E → D2 → A3 → B1.",
         steps=[
             Step("id", "초콜릿·원단", "Nhận socola", force="Cap1"),
             Step("scrape", "고형 긁기", "Cạo", force="Cap1"),
@@ -959,7 +967,7 @@ def _tpl_curry_mustard(stain_id: str, name_ko: str, name_vi: str) -> Protocol:
     return Protocol(
         stain_id=stain_id,
         why_ko=ow.get("why_ko") or f"[왜 이 순서] {name_ko}=커큐민 색소(+기름). 긁기→주방세제→베이킹소다→흰옷 산소. 이른 열 고착.",
-        why_vi=ow.get("why_vi") or f"GIAO DUC: {name_vi}=curcumin. Cạo → D2 → N1 → B1.",
+        why_vi=ow.get("why_vi") or f"[Tại sao] {name_vi}=curcumin. Cạo → D2 → N1 → B1.",
         steps=[
             Step("id", f"{name_ko}·원단·색", f"Nhận {name_vi}", force="Cap1"),
             Step("scrape", "여분 제거", "Cạo", force="Cap1"),
@@ -976,7 +984,7 @@ def _tpl_ink_permanent() -> Protocol:
     return Protocol(
         stain_id="S_INK_PERMANENT",
         why_ko="[왜 이 순서] 유성매직=강한 염료. 아세톤/알코올 테스트 후 안쪽 블롯. 100% 비보장. 아세테이트·레이온+아세톤 금지.",
-        why_vi="GIAO DUC: Bút lông = dye mạnh. A2/A1 test + blot. Không cam kết 100%.",
+        why_vi="[Tại sao] Bút lông = dye mạnh. A2/A1 test + blot. Không cam kết 100%.",
         steps=[
             Step("id", "유성매직·원단 테스트", "Nhận bút lông + test", force="Cap1"),
             Step("acetone", "아세톤 극소량 안쪽 블롯(환기·테스트)", "A2 rất ít mặt trái", chem="A2", tool_ids=["T_CLOTH", "T_GLOVE_NITRILE"], force="Cap1", spray=True),
@@ -992,7 +1000,7 @@ def _tpl_nail_polish() -> Protocol:
     return Protocol(
         stain_id="S_NAIL_POLISH",
         why_ko="[왜 이 순서] 매니큐어=용제+색소. 아세톤 안쪽만 — 문질러 섬유에 박지 말 것. 아세테이트 금지.",
-        why_vi="GIAO DUC: Sơn móng = dung môi+màu. A2 mặt trái — CAM chà. CAM acetate.",
+        why_vi="[Tại sao] Sơn móng = dung môi+màu. A2 mặt trái — CAM chà. CAM acetate.",
         steps=[
             Step("id", "매니큐어·원단", "Nhận sơn móng", force="Cap1"),
             Step("acetone", "아세톤 안쪽 Cap1 블롯(환기)", "A2 thấm mặt trái", chem="A2", tool_ids=["T_CLOTH", "T_GLOVE_NITRILE"], force="Cap1", spray=True),
@@ -1006,7 +1014,7 @@ def _tpl_dye_transfer() -> Protocol:
     return Protocol(
         stain_id="S_DYE_TRANSFER",
         why_ko="[왜 이 순서] 이염=타 옷 색소 전이. 건조·다림질 금지. 산소 장침지→재세탁. 흰 면만 희석 락스 신중. 100% 비보장.",
-        why_vi="GIAO DUC: Lo màu. CAM sấy/ủi. B1 ngâm dài → giặt. Javel chỉ trắng cẩn thận.",
+        why_vi="[Tại sao] Lo màu. CAM sấy/ủi. B1 ngâm dài → giặt. Javel chỉ trắng cẩn thận.",
         steps=[
             Step("id", "이염·흰/유색·원단 구분 — 건조 금지", "Nhận lo màu — CAM sấy", force="Cap1"),
             Step("oxygen", "산소 장침지(병 최대, 종종 수시간)", "B1 ngâm dài", chem="B1", minutes_lo=120, minutes_hi=480, soak=True),
@@ -1021,7 +1029,7 @@ def _tpl_laterite() -> Protocol:
     return Protocol(
         stain_id="S_LATERITE",
         why_ko="[왜 이 순서] 라테라이트=철 산화 적토. 마른 뒤 털기→면은 옥살산+장갑. 실크·울: 옥살산 금지→식초 약. 락스로 철 고착 금지.",
-        why_vi="GIAO DUC: Laterite = Fe đất đỏ. Khô chải → X2 cotton. Len/lụa: A3. CAM Javel.",
+        why_vi="[Tại sao] Laterite = Fe đất đỏ. Khô chải → X2 cotton. Len/lụa: A3. CAM Javel.",
         steps=[
             Step("id", "적토·라테라이트·원단", "Nhận đất đỏ laterite", force="Cap1"),
             Step("dry", "마른 뒤 흙 털기", "Để khô rồi phủi", tool_ids=["T_BRUSH_HARD", "T_CLOTH"], force="Cap2"),
@@ -1037,7 +1045,7 @@ def _tpl_mildew() -> Protocol:
     return Protocol(
         stain_id="S_MILDEW",
         why_ko="[왜 이 순서] 곰팡이=포자+색소. PPE·환기. 식초로 살균→산소로 색소→흰 면만 락스 신중. 맑아질 때까지 건조 금지.",
-        why_vi="GIAO DUC: Mốc. PPE. A3 diệt → B1 màu → Javel chỉ trắng. CAM sấy khi còn.",
+        why_vi="[Tại sao] Mốc. PPE. A3 diệt → B1 màu → Javel chỉ trắng. CAM sấy khi còn.",
         steps=[
             Step("id", "곰팡이·PPE·야외/환기", "Nhận mốc + PPE", tool_ids=["T_GLOVE_NITRILE", "T_MASK"], force="Cap1"),
             Step("brush", "마른 포자 털기(마스크)", "Chải khô + khẩu trang", tool_ids=["T_BRUSH_SOFT", "T_CLOTH", "T_MASK"], force="Cap1"),
@@ -1054,7 +1062,7 @@ def _tpl_gum() -> Protocol:
     return Protocol(
         stain_id="S_GUM",
         why_ko="[왜 이 순서] 껌=끈적 폴리머. 핵심은 냉동. 바삭할 때 깨기→잔여 아세톤 극소(아세테이트 금지)·PPE→세제.",
-        why_vi="GIAO DUC: Kẹo cao su. ĐÔNG lạnh → bẻ → A2 ít + PPE → D2.",
+        why_vi="[Tại sao] Kẹo cao su. ĐÔNG lạnh → bẻ → A2 ít + PPE → D2.",
         steps=[
             Step("id", "껌·원단", "Nhận kẹo cao su", force="Cap1"),
             Step("freeze", "비닐+냉동 30–60분 단단해질 때까지", "Túi + đông 30-60 phút", minutes_lo=30, minutes_hi=60, tool_ids=["T_TIMER"], force="Cap1"),
@@ -1070,7 +1078,7 @@ def _tpl_candle_wax() -> Protocol:
     return Protocol(
         stain_id="S_CANDLE_WAX",
         why_ko="[왜 이 순서] 촛농=왁스. 얼려 깨기→흡수지+낮은 다리미로 흡수→잔여 세제. 얼룩 위 강한 다림질 금지.",
-        why_vi="GIAO DUC: Sáp nến. Đông bẻ → giấy+ủi thấp hút → D2.",
+        why_vi="[Tại sao] Sáp nến. Đông bẻ → giấy+ủi thấp hút → D2.",
         steps=[
             Step("id", "촛농·원단", "Nhận sáp nến", force="Cap1"),
             Step("freeze", "얼리거나 차게 해 깨기", "Làm lạnh rồi bẻ", force="Cap2", tool_ids=["T_TIMER"], minutes_lo=20, minutes_hi=40),
@@ -1086,7 +1094,7 @@ def _tpl_sunscreen() -> Protocol:
     return Protocol(
         stain_id="S_SUNSCREEN",
         why_ko="[왜 이 순서] 선크림=실리콘 오일+UV필터. 전분→주방세제. 락스 금지(영구 황변). 미끄럼 남은 채 건조 금지.",
-        why_vi="GIAO DUC: Kem chống nắng = silicone+UV. N3 → D2. CAM Javel (vàng vĩnh viễn).",
+        why_vi="[Tại sao] Kem chống nắng = silicone+UV. N3 → D2. CAM Javel (vàng vĩnh viễn).",
         steps=[
             Step("id", "선크림·원단", "Nhận kem chống nắng", force="Cap1"),
             Step("absorb", "전분 10–30분", "N3 10-30", chem="N3", minutes_lo=10, minutes_hi=30),
@@ -1101,7 +1109,7 @@ def _tpl_tar() -> Protocol:
     p = _tpl_motorbike_oil()
     p.stain_id = "S_TAR"
     p.why_ko = "[왜 이 순서] 타르=초고점도 오일+탄소. 얼려 긁기→전분→용제 다회(환기). 인내. 미끄럼 남은 채 건조 금지."
-    p.why_vi = "GIAO DUC: Nhựa đường = dầu cực đặc. Đông cạo → N3 → D1 nhiều lần."
+    p.why_vi = "[Tại sao] Nhựa đường = dầu cực đặc. Đông cạo → N3 → D1 nhiều lần."
     p.steps[0] = Step("id", "타르·아스팔트·원단", "Nhận nhựa đường", force="Cap1")
     return p
 
@@ -1110,7 +1118,7 @@ def _tpl_engine_oil() -> Protocol:
     p = _tpl_motorbike_oil()
     p.stain_id = "S_ENGINE_OIL"
     p.why_ko = "[왜 이 순서] 엔진오일=탄화수소+검정 탄소 — 최난. 전분 반복→용제+환기→알코올→면/폴리 세제. 미끄럼 남은 채 건조 금지."
-    p.why_vi = "GIAO DUC: Dầu động cơ = hydrocarbon+carbon. N3 lặp → D1 → A1 → D3."
+    p.why_vi = "[Tại sao] Dầu động cơ = hydrocarbon+carbon. N3 lặp → D1 → A1 → D3."
     p.steps[0] = Step("id", "엔진오일·원단·환기", "Nhận dầu động cơ", force="Cap1")
     return p
 
@@ -1119,7 +1127,7 @@ def _tpl_deodorant() -> Protocol:
     return Protocol(
         stain_id="S_DEODORANT",
         why_ko="[왜 이 순서] 데오 흰 잔여=염/왁스 → 식초. 겨드랑이 황변이면 황변 SOP(효소→산소).",
-        why_vi="GIAO DUC: Cặn deo trắng → giấm. Nách vàng → SOP vàng.",
+        why_vi="[Tại sao] Cặn deo trắng → giấm. Nách vàng → SOP vàng.",
         steps=[
             Step("id", "데오 잔여 vs 황변 구분", "Nhận cặn deo vs vàng", force="Cap1"),
             Step("vinegar", "흰 잔여: 식초 1:4", "Cặn trắng: giấm 1:4", chem="A3", spray=True, minutes_lo=5, minutes_hi=15, soak=True),
@@ -1135,7 +1143,7 @@ def _tpl_perfume() -> Protocol:
     return Protocol(
         stain_id="S_PERFUME",
         why_ko="[왜 이 순서] 향수=알코올+향료(탄닌성). 식초 희석. 흰옷 나중에 황변 가능 — 산소 예방·고지.",
-        why_vi="GIAO DUC: Nước hoa = cồn+hương. Giấm loãng. Trắng có thể vàng sau.",
+        why_vi="[Tại sao] Nước hoa = cồn+hương. Giấm loãng. Trắng có thể vàng sau.",
         steps=[
             Step("id", "향수·원단", "Nhận nước hoa", force="Cap1"),
             Step("rinse", "찬물", "Xả lạnh", force="Cap1"),
@@ -1151,7 +1159,7 @@ def _tpl_mascara() -> Protocol:
     return Protocol(
         stain_id="S_MASCARA",
         why_ko="[왜 이 순서] 마스카라=왁스+색소. 블롯→주방세제→잔색 알코올→흰옷 산소. 문지르면 번짐.",
-        why_vi="GIAO DUC: Mascara = sáp+màu. Blot → D2 → A1 → B1.",
+        why_vi="[Tại sao] Mascara = sáp+màu. Blot → D2 → A1 → B1.",
         steps=[
             Step("id", "마스카라·원단", "Nhận mascara", force="Cap1"),
             Step("blot", "흰 천 블롯 Cap1", "Thấm khăn trắng", tool_ids=["T_CLOTH"], force="Cap1"),
@@ -1168,7 +1176,7 @@ def _tpl_hair_dye() -> Protocol:
     return Protocol(
         stain_id="S_HAIR_DYE",
         why_ko="[왜 이 순서] 염모제=강한 염료. 즉시 찬물→알코올→산소(흰). 유색·실크 위험 — 테스트·고지. 100% 비보장.",
-        why_vi="GIAO DUC: Thuốc nhuộm tóc = dye mạnh. Lạnh → A1 → B1 trắng. Báo không 100%.",
+        why_vi="[Tại sao] Thuốc nhuộm tóc = dye mạnh. Lạnh → A1 → B1 trắng. Báo không 100%.",
         steps=[
             Step("id", "염모제·즉시·원단", "Nhận thuốc nhuộm", force="Cap1"),
             Step("rinse", "즉시 찬물", "Xả lạnh ngay", force="Cap1"),
@@ -1184,7 +1192,7 @@ def _tpl_shoe_polish() -> Protocol:
     return Protocol(
         stain_id="S_SHOE_POLISH",
         why_ko="[왜 이 순서] 구두약=왁스/오일+색소. 환기. 긁기→용제 안쪽 블롯→주방세제→잔색 알코올→흰옷 산소.",
-        why_vi="GIAO DUC: Xi giày = sáp/dầu+màu. Cạo → D1 → D2 → A1 → B1.",
+        why_vi="[Tại sao] Xi giày = sáp/dầu+màu. Cạo → D1 → D2 → A1 → B1.",
         steps=[
             Step("id", "구두약·환기·원단", "Nhận xi giày + thông gió", force="Cap1"),
             Step("scrape", "여분 제거", "Cạo", force="Cap1"),
@@ -1368,7 +1376,7 @@ def _tpl_glue() -> Protocol:
     return Protocol(
         stain_id="S_GLUE",
         why_ko="[왜 이 순서] 접착제=종류 다양. 고형 제거→세제→알코올/아세톤(원단 테스트). 아세테이트+아세톤 금지.",
-        why_vi="GIAO DUC: Keo. Cạo → D2 → A1/A2 test. CAM acetate+A2.",
+        why_vi="[Tại sao] Keo. Cạo → D2 → A1/A2 test. CAM acetate+A2.",
         steps=[
             Step("id", "접착제·원단", "Nhận keo", force="Cap1"),
             Step("scrape", "고형 제거", "Cạo", force="Cap1"),
@@ -1385,7 +1393,7 @@ def _tpl_starch_transfer() -> Protocol:
     return Protocol(
         stain_id="S_STARCH_TRANSFER",
         why_ko="[왜 이 순서] 풀/전분 이염=전분+색소. 효소(전분)→산소(흰). 뜨거운 다림질로 고착 금지.",
-        why_vi="GIAO DUC: Hồ tinh bột lo màu. Enzyme tinh bột → B1 trắng.",
+        why_vi="[Tại sao] Hồ tinh bột lo màu. Enzyme tinh bột → B1 trắng.",
         steps=[
             Step("id", "전분·풀 이염·원단", "Nhận hồ tinh bột", force="Cap1"),
             Step("rinse", "찬물", "Xả lạnh", force="Cap1"),
@@ -1834,10 +1842,13 @@ def render_chemicals(proto: Protocol, graph_chems: Optional[list] = None) -> lis
         base = dict(by_code.get(code) or {})
         base["code"] = code
         base["name_ko"] = base.get("name_ko") or meta.get("name_ko") or code
-        base["name_vi"] = base.get("name_vi") or meta.get("name_vi") or code
+        base["name_vi"] = meta.get("name_vi") or base.get("name_vi") or code
+        base["shop_name_vi"] = meta.get("shop_name_vi") or base.get("shop_name_vi") or base["name_vi"]
+        base["buy_where_vi"] = meta.get("buy_where_vi") or base.get("buy_where_vi") or ""
+        base["when_use_vi"] = meta.get("when_use_vi") or base.get("when_use_vi") or ""
         base["name"] = base.get("name") or meta.get("name_en") or code
         base["dilution_ko"] = base.get("dilution_ko") or meta.get("dilution_ko") or ""
-        base["dilution_vi"] = base.get("dilution_vi") or meta.get("dilution_vi") or ""
+        base["dilution_vi"] = meta.get("dilution_vi") or base.get("dilution_vi") or ""
         base["protocol_order"] = len(out) + 1
         base["protocol_step"] = s.id
         out.append(base)

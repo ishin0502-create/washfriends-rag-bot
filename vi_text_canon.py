@@ -27,6 +27,18 @@ _PHRASES: list[tuple[str, str]] = [
     ("CAM ui", "CẤM ủi"),
     ("CAM clo", "CẤM clo"),
     ("CAM tron", "CẤM trộn"),
+    ("CAM nuoc", "CẤM nước"),
+    ("CAM enzyme", "CẤM enzyme"),
+    ("Chat non", "Chất nôn"),
+    ("chat non", "chất nôn"),
+    ("Enzyme protease", "Enzyme phân giải đạm (protease)"),
+    ("enzyme protease", "enzyme phân giải đạm (protease)"),
+    ("Sieu thi", "Siêu thị"),
+    ("sieu thi", "siêu thị"),
+    ("Cua hoa chat", "Cửa hóa chất"),
+    ("cua hoa chat", "cửa hóa chất"),
+    ("Nha thuoc", "Nhà thuốc"),
+    ("nha thuoc", "nhà thuốc"),
     ("nuoc rua chen", "nước rửa chén"),
     ("Nuoc rua chen", "Nước rửa chén"),
     ("bot tay oxy", "bột tẩy oxy"),
@@ -216,6 +228,58 @@ def apply_vi_canon_to_graph(graph: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(graph, dict):
         return graph
     return canon_vi_dict(graph)
+
+
+def sanitize_education_vi_fields(graph: dict[str, Any]) -> dict[str, Any]:
+    """Strip telegraphic GIAO DUC / English-only chem labels in education fields."""
+    if not isinstance(graph, dict):
+        return graph
+    out = dict(graph)
+
+    def _fix(s: str) -> str:
+        if not s:
+            return s
+        t = s
+        t = re.sub(r"(?i)\bGIAO\s*DUC\s*DRILL\s*:\s*", "[Tại sao] ", t)
+        t = re.sub(r"(?i)\bGIAO\s*DUC\s*:\s*", "[Tại sao] ", t)
+        t = t.replace("Enzyme protease", "Enzyme phân giải đạm (protease)")
+        t = t.replace("enzyme protease", "enzyme phân giải đạm (protease)")
+        t = t.replace("Enzyme amylase", "Enzyme phân giải tinh bột (amylase)")
+        t = t.replace("Enzyme lipase", "Enzyme phân giải dầu mỡ (lipase)")
+        t = t.replace("Chat non", "Chất nôn")
+        t = t.replace("chat non", "chất nôn")
+        return canon_vi_text(t)
+
+    sc = out.get("stain_context")
+    if isinstance(sc, dict):
+        sc2 = dict(sc)
+        for k, v in list(sc2.items()):
+            if isinstance(v, str) and (k.endswith("_vi") or k in {"tip", "why_vi"}):
+                sc2[k] = _fix(v)
+        out["stain_context"] = sc2
+
+    for key in ("why_vi", "fresh_path_vi", "dried_path_vi"):
+        if isinstance(out.get(key), str):
+            out[key] = _fix(out[key])
+
+    proto = out.get("protocol")
+    if isinstance(proto, dict):
+        p2 = dict(proto)
+        if isinstance(p2.get("why_vi"), str):
+            p2["why_vi"] = _fix(p2["why_vi"])
+        steps = []
+        for st in p2.get("steps") or []:
+            if isinstance(st, dict):
+                st2 = dict(st)
+                if isinstance(st2.get("action_vi"), str):
+                    st2["action_vi"] = _fix(st2["action_vi"])
+                steps.append(st2)
+            else:
+                steps.append(st)
+        p2["steps"] = steps
+        out["protocol"] = p2
+
+    return out
 
 
 _VI_FIELD_KEYS = (

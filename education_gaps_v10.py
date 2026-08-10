@@ -13,79 +13,79 @@ from __future__ import annotations
 THIN_SOP_WHY: dict[str, dict[str, str]] = {
     "S_BLACK_COFFEE": {
         "why_ko": "[왜 이 순서] 블랙커피=탄닌+갈색 색소(우유 없음). 즉시 찬물→식초 1:4→흰/면 산소. 라떼면 우유커피 SOP.",
-        "why_vi": "GIAO DUC: Cà phê đen = tannin (không sữa). Lạnh → giấm 1:4 → oxy trắng. Latte → S_MILK_COFFEE.",
+        "why_vi": "[Tại sao] Cà phê đen = tannin (không sữa). Lạnh → giấm 1:4 → oxy trắng. Latte → S_MILK_COFFEE.",
     },
     "S_TEA": {
         "why_ko": "[왜 이 순서] 차=탄닌. 녹차·홍차 모두 즉시 찬물→식초 1:4. 밀크티·버블티는 별도 SOP.",
-        "why_vi": "GIAO DUC: Trà = tannin. Lạnh → giấm 1:4. Trà sữa/boba → SOP riêng.",
+        "why_vi": "[Tại sao] Trà = tannin. Lạnh → giấm 1:4. Trà sữa/boba → SOP riêng.",
     },
     "S_FRUIT_JUICE": {
         "why_ko": "[왜 이 순서] 과일주스=과일산+색소(탄닌성). 즉시 찬물·문지르기 금지→식초 1:4→흰옷 산소. 열·건조 고착.",
-        "why_vi": "GIAO DUC: Nước trái cây = acid+màu. Lạnh, không chà → giấm → oxy trắng.",
+        "why_vi": "[Tại sao] Nước trái cây = acid+màu. Lạnh, không chà → giấm → oxy trắng.",
     },
     "S_SOFT_DRINK": {
         "why_ko": "[왜 이 순서] 탄산·콜라=색소+당+산. 당이 남으면 끈적·재오염. 찬물→식초→흰옷 산소. 잔당 채 건조 금지.",
-        "why_vi": "GIAO DUC: Nước ngọt = màu+đường+acid. Lạnh → giấm → oxy. CAM sấy khi còn dính.",
+        "why_vi": "[Tại sao] Nước ngọt = màu+đường+acid. Lạnh → giấm → oxy. CAM sấy khi còn dính.",
     },
     "S_WHITE_WINE_BEER": {
         "why_ko": "[왜 이 순서] 화이트와인·맥주=탄닌 약·당/단백질 흔적. 레드와인과 다름. 찬물→식초→흰옷 산소. 맥주 거품 단백질은 효소 추가 가능.",
-        "why_vi": "GIAO DUC: Rượu trắng/bia ≠ đỏ. Lạnh → giấm → oxy. Bia: thêm enzyme nếu cần.",
+        "why_vi": "[Tại sao] Rượu trắng/bia ≠ đỏ. Lạnh → giấm → oxy. Bia: thêm enzyme nếu cần.",
     },
     "S_GREASE": {
         "why_ko": "[왜 이 순서] 기름때·그리즈=주방·기계 주변 고착 유지방. 식용유와 유사하나 더 끈적. 전분 흡착→주방세제 Cap2→리파아제. 미끄럼 남은 채 건조 금지.",
-        "why_vi": "GIAO DUC: Mỡ/grease bám. N3 → D2 Cap2 → E3. CAM sấy khi còn nhờn.",
+        "why_vi": "[Tại sao] Mỡ/grease bám. N3 → D2 Cap2 → E3. CAM sấy khi còn nhờn.",
     },
     "S_BUTTER": {
         "why_ko": "[왜 이 순서] 버터=유지방+유단백 흔적. 차게 긁기→전분→주방세제→필요 시 효소. 녹여 문지르면 번짐.",
-        "why_vi": "GIAO DUC: Bơ = mỡ sữa. Cạo lạnh → N3 → D2 → enzyme nếu cần.",
+        "why_vi": "[Tại sao] Bơ = mỡ sữa. Cạo lạnh → N3 → D2 → enzyme nếu cần.",
     },
     "S_KETCHUP": {
         "why_ko": "[왜 이 순서] 케첩=토마토 색소+당+식초+약간 기름. 고형 제거→찬물→주방세제→식초→흰옷 산소. 토마토 파스타소스와 구분(소스 쪽이 기름·향신 더 많음).",
-        "why_vi": "GIAO DUC: Ketchup = màu cà+đường. D2 → A3 → B1 trắng. Khác sốt cà pasta.",
+        "why_vi": "[Tại sao] Ketchup = màu cà+đường. D2 → A3 → B1 trắng. Khác sốt cà pasta.",
     },
     "S_TOMATO_SAUCE": {
         "why_ko": "[왜 이 순서] 토마토소스·파스타소스=리코펜 색소+오일+허브. 케첩보다 기름 많음. 긁기→찬물→주방세제(기름)→식초(색소)→흰옷 산소.",
-        "why_vi": "GIAO DUC: Sốt cà/pasta = lycopene+dầu. D2 TRƯỚC → A3 → B1 trắng.",
+        "why_vi": "[Tại sao] Sốt cà/pasta = lycopene+dầu. D2 TRƯỚC → A3 → B1 trắng.",
     },
     "S_EGG": {
         "why_ko": "[왜 이 순서] 계란=알부민 단백질. 찬물만·온수 금지(응고). 고형 긁기→효소 15–30분→흰면 산소. 노른자 기름 많으면 주방세제 선행.",
-        "why_vi": "GIAO DUC: Trứng = albumin. CHỈ lạnh. Enzyme 15-30. Lòng đỏ nhiều mỡ: D2 trước.",
+        "why_vi": "[Tại sao] Trứng = albumin. CHỈ lạnh. Enzyme 15-30. Lòng đỏ nhiều mỡ: D2 trước.",
     },
     "S_MILK": {
         "why_ko": "[왜 이 순서] 우유=카제인 단백질+지방. 찬물→효소. 커피·초코 우유는 해당 복합 SOP. 온수 금지.",
-        "why_vi": "GIAO DUC: Sữa = casein+mỡ. Lạnh → enzyme. Cà phê sữa → SOP latte.",
+        "why_vi": "[Tại sao] Sữa = casein+mỡ. Lạnh → enzyme. Cà phê sữa → SOP latte.",
     },
     "S_BABY_FORMULA": {
         "why_ko": "[왜 이 순서] 분유=단백질+유지방+당·철분 강화. 효소 장침지(20–40분). 철분 잔색은 흰면에만 산소·심하면 녹 SOP 검토.",
-        "why_vi": "GIAO DUC: Sữa công thức = protein+mỡ+sắt. Enzyme 20-40. Còn nâu: oxy / xem ri.",
+        "why_vi": "[Tại sao] Sữa công thức = protein+mỡ+sắt. Enzyme 20-40. Còn nâu: oxy / xem ri.",
     },
     "S_SWEAT_FRESH": {
         "why_ko": "[왜 이 순서] 신선 땀=염·요소·소량 피지. 찬물·효소. 겨드랑이 황변은 땀황변 SOP. 데오 잔여는 데오 SOP.",
-        "why_vi": "GIAO DUC: Mồ hôi tươi. Enzyme. Nách vàng → S_SWEAT_YELLOW.",
+        "why_vi": "[Tại sao] Mồ hôi tươi. Enzyme. Nách vàng → S_SWEAT_YELLOW.",
     },
     "S_FECES": {
         "why_ko": "[왜 이 순서] 대변=바이오하자드+단백질+색소. PPE(장갑·마스크)→고형 제거→찬물→효소 장침지. 락스 남용 금지(원단·가스).",
-        "why_vi": "GIAO DUC: Phân = biohazard+protein. PPE → enzyme dài. Không Javel lạm.",
+        "why_vi": "[Tại sao] Phân = biohazard+protein. PPE → enzyme dài. Không Javel lạm.",
     },
     "S_SOY_SAUCE": {
         "why_ko": "[왜 이 순서] 간장=아미노산·색소·염. 단백질성→효소 먼저→식초(색소)·흰옷 산소. 피시소스와 구분.",
-        "why_vi": "GIAO DUC: Nước tương. Enzyme → giấm → oxy. Khác nước mắm.",
+        "why_vi": "[Tại sao] Nước tương. Enzyme → giấm → oxy. Khác nước mắm.",
     },
     "S_VOMIT": {
         "why_ko": "[왜 이 순서] 구토=바이오하자드+위산+단백질·음식물. PPE→고형 제거→찬물→효소→식초(냄새·산). 열·건조 전 PPE·환기.",
-        "why_vi": "GIAO DUC: Chất nôn. PPE → enzyme → giấm khử mùi.",
+        "why_vi": "[Tại sao] Chất nôn. PPE → enzyme → giấm khử mùi.",
     },
     "S_URINE": {
         "why_ko": "[왜 이 순서] 소변=요소·염·냄새. PPE→찬물→효소→식초(냄새). 오래된 노란 자국은 장침지. 락스로 냄새만 가리지 말 것.",
-        "why_vi": "GIAO DUC: Nước tiểu. PPE → enzyme → giấm. Không chỉ Javel che mùi.",
+        "why_vi": "[Tại sao] Nước tiểu. PPE → enzyme → giấm. Không chỉ Javel che mùi.",
     },
     "S_CURRY": {
         "why_ko": "[왜 이 순서] 카레·강황=커큐민 색소(난제거). 주방세제→식초→흰면 산소·UV 잔색 확인. 유색은 테스트. 100% 비보장.",
-        "why_vi": "GIAO DUC: Cà ri/nghệ = curcumin. D2 → A3 → oxy + UV. Không 100%.",
+        "why_vi": "[Tại sao] Cà ri/nghệ = curcumin. D2 → A3 → oxy + UV. Không 100%.",
     },
     "S_MUSTARD": {
         "why_ko": "[왜 이 순서] 머스터드=강황·향신 색소+식초. 카레와 유사. 긁기→세제→식초→흰면 산소·UV.",
-        "why_vi": "GIAO DUC: Mù tạt ≈ nghệ. D2 → A3 → oxy + UV.",
+        "why_vi": "[Tại sao] Mù tạt ≈ nghệ. D2 → A3 → oxy + UV.",
     },
 }
 
@@ -151,7 +151,7 @@ NEW_STAIN_SEED_V10: list[dict] = [
             "[왜 이 순서] 된장=발효 대두 단백질+기름+갈색 색소·염. "
             "고형 긁기→찬물→주방세제→효소→흰/면 산소. 열고착·문지르기 금지."
         ),
-        "why_vi": "GIAO DUC: Doenjang = protein+dầu+màu nâu. Cạo → D2 → E1 → oxy trắng.",
+        "why_vi": "[Tại sao] Doenjang = protein+dầu+màu nâu. Cạo → D2 → E1 → oxy trắng.",
         "fresh_path_ko": (
             "(1)된장·원단 확인. (2)고형 Cap1 긁기·찬물. (3)주방세제 Cap2. "
             "(4)효소 15–40분. (5)흰/면 산소(테스트). (6)세탁·강광."
@@ -184,7 +184,7 @@ NEW_STAIN_SEED_V10: list[dict] = [
             "[왜 이 순서] 고추장=고춧가루 색소+기름+당·메주. 김치·칠리소스와 유사하나 페이스트가 진함. "
             "긁기→찬물→주방세제→식초→흰/면 산소. 유색 테스트."
         ),
-        "why_vi": "GIAO DUC: Gochujang = màu ớt+dầu+đường. Cạo → D2 → A3 → oxy trắng.",
+        "why_vi": "[Tại sao] Gochujang = màu ớt+dầu+đường. Cạo → D2 → A3 → oxy trắng.",
         "fresh_path_ko": (
             "(1)고추장·원단. (2)긁기·찬물. (3)주방세제 Cap2. (4)식초 1:4 5–15분. "
             "(5)흰/면 산소. (6)세탁·강광. 100% 비보장."
@@ -216,7 +216,7 @@ NEW_STAIN_SEED_V10: list[dict] = [
             "[왜 이 순서] 감물=강한 탄닌(감물 염색과 동일 계열). 공기·열에 갈변 고착 빠름. "
             "즉시 찬물→식초 1:4 반복→흰/면 산소. 지연 시 성공률 급락."
         ),
-        "why_vi": "GIAO DUC: Hồng = tannin mạnh. SOM lạnh → giấm lặp → oxy. Trễ = khó.",
+        "why_vi": "[Tại sao] Hồng = tannin mạnh. SOM lạnh → giấm lặp → oxy. Trễ = khó.",
         "fresh_path_ko": (
             "(1)감물·즉시 처리. (2)찬물 흡수(문지르기 금지). (3)식초 1:4 10–20분 반복. "
             "(4)흰/면 산소. (5)세탁·강광. 마른·열고착: 한계 고지."
@@ -248,7 +248,7 @@ NEW_STAIN_SEED_V10: list[dict] = [
             "[왜 이 순서] 크레용=왁스+안료. 촛농과 유사. 얼려 깨기→흡수지+낮은 열 흡수→잔여 주방세제·색소는 흰면 산소. "
             "얼룩 위 고열 다림질 금지."
         ),
-        "why_vi": "GIAO DUC: Sáp màu ≈ sáp nến. Đông bẻ → giấy+ủi thấp → D2 → oxy trắng.",
+        "why_vi": "[Tại sao] Sáp màu ≈ sáp nến. Đông bẻ → giấy+ủi thấp → D2 → oxy trắng.",
         "fresh_path_ko": (
             "(1)크레용. (2)얼리거나 차게 해 깨기. (3)흡수지+낮은 다리미로 왁스 흡수. "
             "(4)잔여 D2. (5)흰/면 색소 산소(테스트). (6)세탁·강광."
@@ -280,7 +280,7 @@ NEW_STAIN_SEED_V10: list[dict] = [
             "[왜 이 순서] 유연제 스팟=농축 양이온·오일 링. 표백으로 안 지워짐. "
             "주방세제로 탈지→재세탁. 미끄럼 남은 채 건조·다림질 금지."
         ),
-        "why_vi": "GIAO DUC: Vết softener = dầu. D2 khử → giặt lại. CAM sấy/ủi khi còn nhờn.",
+        "why_vi": "[Tại sao] Vết softener = dầu. D2 khử → giặt lại. CAM sấy/ủi khi còn nhờn.",
         "fresh_path_ko": (
             "(1)유연제 링 확인. (2)주방세제 Cap2 문질러 탈지 5–15분. (3)미온 재세탁. "
             "(4)필요 시 식초 1:4 헹굼 보조. (5)미끄럼 없어진 뒤 건조."

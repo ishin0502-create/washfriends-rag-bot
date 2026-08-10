@@ -24,6 +24,14 @@ _VI_ASCII_HINTS = (
     "cach ", "ao ", "quan ", "vai ", "nuoc ", "bot ", "pha loang",
     "cham soc", "cua hang", "nhuong quyen", "ca phe", "tra sua",
     "kim chi", "mau ", "ui ", "say ", "phoi ", "ngam ",
+    # Chem / follow-up questions (unsigned VI — critical)
+    "hoa chat", "hóa chất", "la gi", "là gì", "la hoa chat", "cai gi",
+    "nghia la", "nghĩa là", "dung de gi", "dùng để", "chat lieu", "chất liệu",
+    "enzyme", "protease", "amylase", "lipase", "javel", "acetone",
+    "giam trang", "giấm", "oxy gia", "tay oxy", "chat non", "chất nôn",
+    "mau tuoi", "máu", "cotton", "lua ", "lụa", "len ",
+    "dung cu", "dụng cụ", "gang tay", "găng", "binh xit", "khan trang",
+    "tiep tuc", "tiếp tục", "con gi", "còn gì",
 )
 
 _VI_LEAK = re.compile(
@@ -47,10 +55,14 @@ _HANGUL = re.compile(r"[가-힣]")
 _LATIN_WORD = re.compile(r"[A-Za-z]{3,}")
 
 
-def detect_reply_lang(text: str) -> str:
-    """Return 'ko' | 'vi' | 'en' from user text. Hangul wins; then VI; else EN."""
+def detect_reply_lang(text: str, *, session_lang: str = "") -> str:
+    """Return 'ko' | 'vi' | 'en' from user text. Hangul wins; then VI; else EN.
+
+    session_lang: if prior turn was vi/ko, keep it for short Latin follow-ups
+    (e.g. 「Enzyme protease la hoa chat gi」 must stay VI).
+    """
     if not text or not str(text).strip():
-        return "vi"
+        return session_lang if session_lang in {"vi", "ko", "en"} else "vi"
     t = str(text)
     if _HANGUL.search(t):
         return "ko"
@@ -59,9 +71,17 @@ def detect_reply_lang(text: str) -> str:
     low = unicodedata_normalize_lower(t)
     if any(h in low for h in _VI_ASCII_HINTS):
         return "vi"
+    # Sticky language for short follow-ups after a VI/KO turn
+    if session_lang in {"vi", "ko"} and len(t.strip()) <= 120:
+        # Pure Hangul already handled; Latin chem names after VI stay VI
+        if session_lang == "vi" and _LATIN_WORD.search(t):
+            return "vi"
+        if session_lang == "ko" and _LATIN_WORD.search(t) and not _VI_DIACRITICS.search(t):
+            # KO session + English chem word → still KO education
+            return "ko"
     if _LATIN_WORD.search(t):
         return "en"
-    return "vi"
+    return session_lang if session_lang in {"vi", "ko", "en"} else "vi"
 
 
 def unicodedata_normalize_lower(t: str) -> str:
@@ -211,7 +231,9 @@ NGÔN NGỮ BẮT BUỘC:
 - Dùng why_vi / fresh_path_vi / sense_check_vi nếu có. CẤM name_ko, why_ko.
 
 Nội dung:
-- Không markdown. Không mã A3/B1/T_CLOTH. Hóa chất: shop_name_vi/name_vi. Dụng cụ: name_vi + use_for_vi.
+- Không markdown. Không mã A3/B1/T_CLOTH. Hóa chất: BẮT BUỘC shop_name_vi (tên cửa hàng), kèm name_vi nếu cần — CẤM chỉ viết tên Anh trần như 「Enzyme protease」.
+- Khi chủ hỏi 「hóa chất này là gì」sau SOP: giải thích ngay tên cửa hàng + pha + cấm — CẤM hỏi lại loại vết/vải.
+- Dụng cụ: name_vi + use_for_vi.
 - Cap1–4 + ngoài→trong. Vải mỏng chỉ Cap1–2. Không mẹo dân gian. Tối đa ~900 từ; không bỏ khối giáo dục.
 - Không bỏ cảnh báo ánh sáng mạnh / cố định nhiệt trong aftercare. Nếu thất bại/vết khô: dùng rescue_2nd + rescue_disclose.
 - SOP vết (không phải giặt món): theo age_frame_vi / age_bucket.
@@ -219,7 +241,9 @@ Nội dung:
   · dried: body = dried_path; fresh một dòng; kèm rescue/limit.
   · hard: limit_path trước → dried 1 lần. CẤM hứa 100%.
   · fresh: body = fresh_path; khô một dòng ở sau xử lý.
-- Tuân thủ an toàn lụa/len/da và never_mix. Dùng color_note_vi nếu có."""
+- Tuân thủ an toàn lụa/len/da và never_mix. Dùng color_note_vi nếu có.
+- CẤM cụm rỗng kiểu 「để đảm bảo hiệu quả」 không giải thích thành phần. why_vi phải nói vì sao thứ tự (protein→enzyme, tannin→giấm…).
+- CẤM gộp hai lệnh cấm khác nhau thành một câu khó hiểu (tách: CẤM lụa/len. CẤM trộn Javel.)."""
 
 
 _SYSTEM_EN = """You are a laundry process expert for Wash Friends Vietnam franchise store owners (peers), not retail customer service.

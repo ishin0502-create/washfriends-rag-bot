@@ -3163,11 +3163,11 @@ def _empty_graph_reply(entities: dict, *, image: bool = False) -> str:
             "• How old is the stain?"
         )
     return (
-        "Xin loi, toi khong tim thay thong tin cho cau hoi nay.\n\n"
-        "De tra loi chinh xac hon, vui long cho biet:\n"
-        "• Loai vet ban la gi? (vi du: dau an, mau, ca phe)\n"
-        "• Chat lieu vai la gi? (vi du: cotton, lua, polyester)\n"
-        "• Vet ban bi bao lau roi?"
+        "Xin lỗi, tôi không tìm thấy thông tin cho câu hỏi này.\n\n"
+        "Để trả lời chính xác hơn, vui lòng cho biết:\n"
+        "• Loại vết bẩn là gì? (ví dụ: dầu ăn, máu, cà phê)\n"
+        "• Chất liệu vải là gì? (ví dụ: cotton, lụa, polyester)\n"
+        "• Vết bẩn bị bao lâu rồi?"
     )
 
 
@@ -3526,19 +3526,55 @@ def generate_response_from_entities(
 def generate_response(user_message: str, channel: str = "", user_id: str = "") -> str:
     """Main entry point: reply in the same language as the user (vi or ko).
 
-    Optional channel/user_id: fabric/weight-only follow-ups reuse last stain via session.
+    Optional channel/user_id: fabric/weight or chem follow-ups reuse last SOP via session.
     """
     from user_session import clear_session, get_session, set_pending_treatment
 
     pending = get_session(channel, user_id) if channel and user_id else {}
+    session_lang = str(pending.get("lang") or "")
+    lang = detect_reply_lang(user_message, session_lang=session_lang)
+
+    # Chem follow-up: explain shop-language card without empty-graph EN Sorry
+    try:
+        from chem_explain import looks_like_chem_question, try_explain_chem
+
+        if looks_like_chem_question(user_message) or (
+            pending.get("awaiting") == "treatment_clarify"
+            and pending.get("last_chem_codes")
+            and _looks_like_chem_or_tool_followup(user_message)
+        ):
+            explained = try_explain_chem(
+                user_message,
+                list(pending.get("last_chem_codes") or []),
+                lang=lang if lang in {"vi", "ko", "en"} else "vi",
+            )
+            if explained:
+                if channel and user_id:
+                    set_pending_treatment(
+                        channel,
+                        user_id,
+                        stain_id=str(pending.get("stain_id") or ""),
+                        stain_type=str(pending.get("stain_type") or ""),
+                        lang=lang,
+                        raw_question=str(pending.get("raw_question") or user_message),
+                        last_chem_codes=list(pending.get("last_chem_codes") or []),
+                        last_tool_ids=list(pending.get("last_tool_ids") or []),
+                    )
+                return explained
+    except Exception as e:
+        print(f"[CHEM_EXPLAIN] skip: {e}")
+
     merge_pending = (
         pending.get("awaiting") == "treatment_clarify"
         and bool(pending.get("stain_id"))
-        and _looks_like_fabric_weight_followup(user_message)
+        and (
+            _looks_like_fabric_weight_followup(user_message)
+            or _looks_like_chem_or_tool_followup(user_message)
+        )
     )
     # Prepend prior question so stain keyword routers still fire (볼펜 등)
     effective = user_message
-    if merge_pending:
+    if merge_pending and _looks_like_fabric_weight_followup(user_message):
         prior = (pending.get("raw_question") or "").strip()
         effective = f"{prior}\n고객 추가정보: {user_message}".strip() if prior else user_message
     elif channel and user_id and pending.get("awaiting") == "treatment_clarify" and _message_has_new_stain_topic(user_message):
@@ -3548,25 +3584,61 @@ def generate_response(user_message: str, channel: str = "", user_id: str = "") -
         effective,
         cache_question=user_message if not merge_pending else effective,
         compact_followup=bool(merge_pending),
+        forced_lang=lang,
     )
 
-    # Remember stain for next fabric/weight clarify turn
-    if channel and user_id and answer and "찾을 수 없" not in answer:
+    # Remember stain + chems for next clarify / chem-explain turn
+    if channel and user_id and answer and "찾을 수 없" not in answer and "could not find matching" not in answer.lower():
         try:
             last_ent = getattr(_generate_response_core, "last_entities", {}) or {}
+            last_graph = getattr(_generate_response_core, "last_graph", {}) or {}
             sid = str(last_ent.get("stain_id") or pending.get("stain_id") or "")
-            if sid:
+            chem_codes = []
+            for c in last_graph.get("chemicals") or []:
+                code = str((c or {}).get("code") or "").upper()
+                if code:
+                    chem_codes.append(code)
+            tool_ids = []
+            for t in last_graph.get("tools") or []:
+                tid = str((t or {}).get("id") or "")
+                if tid:
+                    tool_ids.append(tid)
+            if sid or chem_codes:
                 set_pending_treatment(
                     channel,
                     user_id,
                     stain_id=sid,
                     stain_type=str(last_ent.get("stain_type") or pending.get("stain_type") or ""),
-                    lang=detect_reply_lang(user_message),
+                    lang=lang,
                     raw_question=(pending.get("raw_question") if merge_pending else user_message) or user_message,
+                    last_chem_codes=chem_codes or list(pending.get("last_chem_codes") or []),
+                    last_tool_ids=tool_ids or list(pending.get("last_tool_ids") or []),
                 )
         except Exception as e:
             print(f"[SESSION] pending treatment skip: {e}")
     return answer
+
+
+def _looks_like_chem_or_tool_followup(msg: str) -> bool:
+    raw = (msg or "").strip()
+    if not raw or len(raw) > 160:
+        return False
+    if _message_has_new_stain_topic(raw):
+        return False
+    try:
+        from chem_explain import looks_like_chem_question
+
+        if looks_like_chem_question(raw):
+            return True
+    except Exception:
+        pass
+    hints = (
+        "hoa chat", "hóa chất", "la gi", "là gì", "enzyme", "protease", "dung cu",
+        "dụng cụ", "gang tay", "găng", "khan", "khăn", "binh xit", "bình xịt",
+        "tiep", "tiếp", "con gi", "còn gì", "약품", "뭐야", "효소",
+    )
+    t = _normalize_text(raw)
+    return any(k in raw for k in hints) or any(k in t for k in hints if str(k).isascii())
 
 
 def _looks_like_fabric_weight_followup(msg: str) -> bool:
@@ -3579,7 +3651,7 @@ def _looks_like_fabric_weight_followup(msg: str) -> bool:
         "면", "폴리", "실크", "울", "린넨", "데님", "레이온", "아세테이트", "나일론",
         "얇", "두껍", "두툼", "보통", "두께", "코튼",
         "cotton", "poly", "silk", "wool", "linen", "denim", "thin", "thick", "medium",
-        "mong", "day", "dày",
+        "mong", "day", "dày", "chat lieu", "chất liệu", "vai ", "vải",
     )
     t = _normalize_text(raw)
     return any(k in raw for k in hints) or any(k in t for k in hints if str(k).isascii())
@@ -3600,9 +3672,12 @@ def _generate_response_core(
     user_message: str,
     cache_question: str | None = None,
     compact_followup: bool = False,
+    forced_lang: str | None = None,
 ) -> str:
     """Core GraphRAG answer (single-turn text)."""
-    lang = detect_reply_lang(user_message)
+    lang = forced_lang or detect_reply_lang(user_message)
+    if lang not in {"vi", "ko", "en"}:
+        lang = detect_reply_lang(user_message)
     cq = cache_question or user_message
     # Fast path — lang in context so KO/VI caches never mix; reject contaminated hits
     cached = cache_lookup(cq, build_context_key({"lang": lang, "compact": compact_followup}))
@@ -4257,6 +4332,29 @@ def _generate_response_core(
 
     if not graph_data or graph_data == {} or graph_data == []:
         return _empty_graph_reply(entities)
+
+    if isinstance(graph_data, dict):
+        try:
+            from chem_owner_vi import enrich_graph_chemicals_vi
+
+            graph_data = enrich_graph_chemicals_vi(graph_data)
+            graph_context = dict(graph_context)
+            graph_context["graph"] = graph_data
+        except Exception:
+            pass
+        # Sanitize education ASCII markers before LLM
+        try:
+            from vi_text_canon import sanitize_education_vi_fields
+
+            graph_data = sanitize_education_vi_fields(graph_data)
+            graph_context = dict(graph_context)
+            graph_context["graph"] = graph_data
+        except Exception:
+            pass
+
+    _generate_response_core.last_graph = (  # type: ignore[attr-defined]
+        dict(graph_context.get("graph") or {}) if isinstance(graph_context.get("graph"), dict) else {}
+    )
 
     if compact_followup and isinstance(graph_context.get("graph"), dict):
         g = dict(graph_context["graph"])

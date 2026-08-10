@@ -173,7 +173,7 @@ def _smooth_card(item_id: str, *, mold: bool) -> dict[str, str]:
                 f"{kind}: phan biet da bong vs suede. Ngoai troi+PPE. Anh+dong y (khong 100%)."
             ),
             "why_vi": (
-                "GIAO DUC: Moc tren da — CAM ngam giấm/oxy/Javel/may. "
+                "[Tại sao] Moc tren da — CAM ngam giấm/oxy/Javel/may. "
                 "PPE → phui kho → L1/con Cap1 → kho → L2 kem da → L3 tuy chon."
             ),
             "fresh_path_vi": (
@@ -314,7 +314,7 @@ def _suede_card(item_id: str, *, mold: bool) -> dict[str, str]:
             "success_rate_ko": "가벼운 표면: 중간. 젖음·침투: 낮음.",
             "refuse_when_ko": "물세탁·알코올 과다·가정 강처리 요구 → 거절.",
             "precheck_vi": "Suede: CAM nuoc. PPE. Rong → chuyen.",
-            "why_vi": "GIAO DUC: Suede + nuoc = vet. Chi chai kho.",
+            "why_vi": "[Tại sao] Suede + nuoc = vet. Chi chai kho.",
             "fresh_path_vi": "(1)PPE. (2)Chai kho Cap1. (3)Chi san pham suede. (4)CAM nuoc/kem da. (5)Chuyen.",
             "dried_path_vi": "Uot/rong → chuyen.",
             "motion_vi": "Cap1 chai kho.",
@@ -342,7 +342,7 @@ def _suede_card(item_id: str, *, mold: bool) -> dict[str, str]:
         "success_rate_ko": "마른 관리: 양호. 물 사고: 전문.",
         "refuse_when_ko": "물세탁 요구 → 거절.",
         "precheck_vi": "Suede: CAM nuoc.",
-        "why_vi": "GIAO DUC: Chi chai kho / san pham suede.",
+        "why_vi": "[Tại sao] Chi chai kho / san pham suede.",
         "fresh_path_vi": "(1)Chai kho. (2)Eraser. (3)Protector suede. (4)CAM nuoc/L1.",
         "dried_path_vi": "Vet nuoc → chuyen.",
         "motion_vi": "Cap1 kho.",
