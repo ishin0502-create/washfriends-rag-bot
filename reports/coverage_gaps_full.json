@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-09T15:56:23.448574+00:00",
+  "generated_at": "2026-08-10T05:25:46.000649+00:00",
   "meta": {
     "protocols": 71,
     "fabrics": [
@@ -23,9 +23,9 @@
       ],
       "tool_ids": [],
       "chem_codes": [],
-      "weight": 12,
+      "weight": 13,
       "message": "구스이블 세탁방법 알려줘",
-      "hits": 12
+      "hits": 13
     },
     {
       "kind": "local_topic",
@@ -79,6 +79,21 @@
       "fabric_id": "",
       "severity": 40,
       "reasons": [
+        "topic:구스"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 2,
+      "message": "구스",
+      "hits": 2
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
         "topic:아세테이트"
       ],
       "tool_ids": [],
@@ -109,12 +124,12 @@
       "fabric_id": "",
       "severity": 40,
       "reasons": [
-        "topic:구스"
+        "topic:goose"
       ],
       "tool_ids": [],
       "chem_codes": [],
       "weight": 1,
-      "message": "구스",
+      "message": "goose",
       "hits": 1
     },
     {
@@ -160,9 +175,9 @@
       ],
       "tool_ids": [],
       "chem_codes": [],
-      "weight": 12,
+      "weight": 13,
       "message": "구스이블 세탁방법 알려줘",
-      "hits": 12
+      "hits": 13
     },
     {
       "kind": "local_topic",
@@ -216,6 +231,21 @@
       "fabric_id": "",
       "severity": 40,
       "reasons": [
+        "topic:구스"
+      ],
+      "tool_ids": [],
+      "chem_codes": [],
+      "weight": 2,
+      "message": "구스",
+      "hits": 2
+    },
+    {
+      "kind": "local_topic",
+      "stain_id": "",
+      "fabric_type": "",
+      "fabric_id": "",
+      "severity": 40,
+      "reasons": [
         "topic:아세테이트"
       ],
       "tool_ids": [],
@@ -246,12 +276,12 @@
       "fabric_id": "",
       "severity": 40,
       "reasons": [
-        "topic:구스"
+        "topic:goose"
       ],
       "tool_ids": [],
       "chem_codes": [],
       "weight": 1,
-      "message": "구스",
+      "message": "goose",
       "hits": 1
     },
     {
@@ -286,7 +316,7 @@
     }
   ],
   "counts": {
-    "total": 9,
+    "total": 10,
     "matrix": 0,
     "missing_protocol": 0,
     "ask_failure": 1

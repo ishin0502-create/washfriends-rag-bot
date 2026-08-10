@@ -999,13 +999,28 @@ def _tpl_ink_permanent() -> Protocol:
 def _tpl_nail_polish() -> Protocol:
     return Protocol(
         stain_id="S_NAIL_POLISH",
-        why_ko="[왜 이 순서] 매니큐어=용제+색소. 아세톤 안쪽만 — 문질러 섬유에 박지 말 것. 아세테이트 금지.",
-        why_vi="[Tại sao] Sơn móng = dung môi+màu. A2 mặt trái — CAM chà. CAM acetate.",
+        why_ko=(
+            "[왜 이 순서] 매니큐어=용제+색소. 아세톤(매니큐어 리무버 무오일)은 안쪽에서만 "
+            "약하게 찍기 — 문질러 섬유에 박지 말 것. 아세테이트·레이온 금지. 환기·니트릴 장갑."
+        ),
+        why_vi=(
+            "[Tại sao] Sơn móng = dung môi + màu. "
+            "Acetone / nước tẩy sơn móng không dầu: chỉ thấm mặt trái, lực nhẹ — CẤM chà. "
+            "CẤM acetate / rayon / triacetate (làm tan sợi). Thông gió + găng nitrile. Test góc."
+        ),
         steps=[
-            Step("id", "매니큐어·원단", "Nhận sơn móng", force="Cap1"),
-            Step("acetone", "아세톤 안쪽 Cap1 블롯(환기)", "A2 thấm mặt trái", chem="A2", tool_ids=["T_CLOTH", "T_GLOVE_NITRILE"], force="Cap1", spray=True),
-            Step("wash", "세제 세탁", "Giặt", chem="D2", force="Cap2"),
-            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+            Step("id", "매니큐어·원단(아세테이트 확인)", "Nhận sơn móng + kiểm tra acetate", force="Cap1"),
+            Step(
+                "acetone",
+                "아세톤 안쪽 약하게 블롯(환기·장갑)",
+                "Acetone thấm mặt trái nhẹ + găng + thông gió",
+                chem="A2",
+                tool_ids=["T_CLOTH", "T_GLOVE_NITRILE"],
+                force="Cap1",
+                spray=True,
+            ),
+            Step("wash", "주방세제 세탁", "Giặt nước rửa chén", chem="D2", force="Cap2"),
+            Step("light", "건조 전 강광·100% 비보장", "Ánh sáng trước sấy — báo không 100%", force="Cap1"),
         ],
     )
 

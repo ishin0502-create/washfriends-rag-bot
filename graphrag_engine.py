@@ -2176,6 +2176,9 @@ def _chem_everyday_map(lang: str = "vi") -> dict[str, str]:
         "N2": "muối ăn",
         "N3": "bột ngô / phấn rôm",
         "S1": "nước giặt trung tính Wash Friends",
+        "L1": "dung dịch vệ sinh da",
+        "L2": "kem dưỡng da",
+        "L3": "xịt bảo vệ da / chống thấm",
         "WF_SOFT": "nước xả Wash Friends",
         "WF_FRAG": "xịt hương Wash Friends",
         "X1": "bột tẩy khử (sodium hydrosulfite) — chỉ cotton/linen TRẮNG",
@@ -2906,11 +2909,13 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             lang_rule = (
                 "한국어만. 베트남어·영어 금지. "
                 "가죽·스웨이드 관리 — 얼룩 섬유 SOP·일반 통세탁 템플릿 금지. "
-                "단계: (1)품목·평활/스웨이드 구분 (2)도구 use_for_ko (3)Cap1 "
-                "(4)chemicals[]의 가죽 클리너·크림·프로텍터 (5)최소 수분 (6)건조·크림 후관리. "
+                "단계: (1)품목·평활/스웨이드 구분 (2)도구 use_for_ko "
+                "(3)약하게(닦기·찍기, 문지르기 금지) "
+                "(4)chemicals[]의 가죽 클리너·크림·프로텍터를 매장명으로(내부코드만 쓰지 말 것) "
+                "(5)최소 수분 (6)건조·크림 후관리. "
                 "fresh_path_ko·must_include_ko 준수. 세탁기·통담금·표백 지어내기 금지. "
                 "[왜 이 순서] → [감각 체크] → [성공률·고지] → [거절·보내기]. "
-                "마크다운·코드/id 금지."
+                "마크다운·코드/id·Cap/PPE 은어 금지."
             )
         elif ops_script:
             lang_rule = (
@@ -3084,13 +3089,16 @@ Answer from this data only. Do not mix languages."""
         leather_vi = isinstance(safe_graph, dict) and safe_graph.get("leather_care")
         if leather_vi:
             lang_rule = (
-                "CHỈ tiếng Việt. CẤM Hàn/Anh. "
+                "CHỈ tiếng Việt CÓ DẤU. CẤM Hàn/Anh. CẤM trộn ngôn ngữ. "
                 "Đây là chăm sóc da/suede — KHÔNG phải SOP vết vải, CẤM giặt máy/ngâm. "
-                "Bước: (1) Món + da bong vs suede (2) Dụng cụ use_for_vi (3) Cap1 "
-                "(4) L1/L2/L3 trong chemicals[] (5) Ít nước (6) Kem dưỡng. "
-                "Theo fresh_path_vi/why_vi. CẤM bịa máy/ngâm/tẩy. "
+                "Bước: (1) Món + da bóng vs suede (2) Dụng cụ use_for_vi "
+                "(3) Lực nhẹ (lau/chấm, không chà) "
+                "(4) Hóa chất trong chemicals[] dùng shop_name_vi/name_vi "
+                "(dung dịch vệ sinh da, kem dưỡng, xịt bảo vệ — CẤM chỉ viết L1/L2/L3) "
+                "(5) Ít nước (6) Kem dưỡng / bảo quản. "
+                "Theo fresh_path_vi/why_vi. CẤM bịa máy/ngâm/tẩy/giấm lên da. "
                 "[Tại sao thứ tự này] [Kiểm tra giác quan] [Tỷ lệ & báo khách] [Từ chối / chuyển]. "
-                "Không markdown. Không mã nội bộ."
+                "Không markdown. Không mã nội bộ Cap/PPE."
             )
         elif item_wash_vi:
             lang_rule = (

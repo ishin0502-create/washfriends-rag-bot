@@ -136,10 +136,60 @@ def test_mildew_chemistry_not_protein():
 def test_leather_shoe_has_ko_vi_en_and_no_machine():
     edu = education_for("I_LEATHER_SHOE", stain_id="", entities={"_raw": "구두 세탁"})
     assert "세탁기" in edu["refuse_when_ko"] or "세탁기" in edu["fresh_path_ko"]
-    assert edu.get("fresh_path_vi") and "CAM may" in edu["fresh_path_vi"]
+    assert edu.get("fresh_path_vi")
+    assert "CẤM" in edu["fresh_path_vi"] or "máy giặt" in edu["fresh_path_vi"].lower()
+    assert "máy" in edu["fresh_path_vi"].lower() or "CẤM" in edu.get("refuse_when_vi", "")
+    # Diacritics required — unsigned ASCII telegram is banned
+    assert "bóng" in edu["precheck_vi"] or "bóng" in edu["why_vi"] or "dưỡng" in edu["fresh_path_vi"]
+    assert "Cap" not in edu["fresh_path_vi"]
+    assert "PPE" not in edu["fresh_path_vi"]
     assert edu.get("fresh_path_en") and "washer" in edu["fresh_path_en"].lower()
     assert "newspaper" in edu["fresh_path_en"].lower() or "paper" in edu["fresh_path_en"].lower()
     assert edu.get("must_include_en")
+
+
+def test_leather_vi_mold_has_diacritics_no_cap():
+    edu = education_for(
+        "I_LEATHER_GARMENT",
+        stain_id="S_MILDEW",
+        entities={"_raw": "Ao da bi nam moc"},
+    )
+    why = (edu.get("why_vi") or "").lower()
+    path = (edu.get("fresh_path_vi") or "").lower()
+    blob = why + " " + path
+    assert "mốc" in blob or "móc" in blob or "nấm" in blob
+    assert "găng" in blob or "khẩu" in blob or "bảo hộ" in blob
+    assert "cap" not in blob and "ppe" not in blob
+    assert "kem dưỡng" in blob or "dưỡng da" in blob
+
+
+def test_nail_polish_protocol_and_acetate_block():
+    from protocol import PROTOCOL_BUILDERS, apply_protocol_to_graph, _fabric_flags
+
+    p = PROTOCOL_BUILDERS["S_NAIL_POLISH"]()
+    assert "acetate" in (p.why_vi or "").lower() or "Acetate" in (p.why_vi or "")
+    assert "acetone" in (p.why_vi or "").lower() or "tẩy sơn móng" in (p.why_vi or "")
+    assert "Cap" not in (p.why_vi or "") or "lực" in (p.why_vi or "").lower()
+
+    flags = _fabric_flags(
+        {"fabric_context": {"id": "F11", "name": "Acetate", "name_vi": "Acetate"}},
+        {"fabric_type": "acetate"},
+    )
+    assert flags.get("no_acetone") is True
+
+    out = apply_protocol_to_graph(
+        {
+            "stain_context": {"id": "S_NAIL_POLISH"},
+            "fabric_context": {"id": "F1", "name": "Cotton", "enzyme_safe": True},
+            "chemicals": [],
+            "tools": [],
+        },
+        entities={"stain_id": "S_NAIL_POLISH", "fabric_type": "cotton", "_raw": "매니큐어 면"},
+    )
+    codes = [c.get("code") for c in out.get("chemicals") or []]
+    assert "A2" in codes
+    a2 = next(c for c in out["chemicals"] if c.get("code") == "A2")
+    assert a2.get("shop_name_vi") or "acetone" in (a2.get("name_vi") or "").lower()
 
 
 if __name__ == "__main__":
@@ -149,4 +199,6 @@ if __name__ == "__main__":
     test_shoe_glove_same_framework()
     test_mildew_chemistry_not_protein()
     test_leather_shoe_has_ko_vi_en_and_no_machine()
+    test_leather_vi_mold_has_diacritics_no_cap()
+    test_nail_polish_protocol_and_acetate_block()
     print("OK leather_care tests")

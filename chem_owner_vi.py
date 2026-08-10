@@ -101,16 +101,16 @@ CHEM_OWNER_VI: dict[str, dict[str, str]] = {
         "aliases": ("con isopropyl", "cồn", "alcohol", "a1", "con y te"),
     },
     "A2": {
-        "name_vi": "Acetone (tẩy sơn móng)",
+        "name_vi": "Acetone / nước tẩy sơn móng không dầu",
         "shop_name_vi": "Acetone / nước tẩy sơn móng không dầu",
-        "buy_where_vi": "Nhà thuốc, cửa hóa chất",
+        "buy_where_vi": "Nhà thuốc, siêu thị — kệ làm đẹp",
         "dilution_vi": (
-            "Nguyên rất ít — thấm khăn mặt trái Cap1 (giấy thấm dưới). "
-            "CẤM vải acetate/rayon/triacetate. Thông gió + găng."
+            "Nguyên rất ít — thấm khăn mặt trái, lực nhẹ (giấy thấm dưới). "
+            "CẤM vải acetate/rayon/triacetate. Thông gió + găng nitrile."
         ),
         "when_use_vi": "Kẹo cao su, sơn móng, một số keo — không dùng trên acetate.",
         "forbid_vi": "CẤM acetate, rayon, triacetate. CẤM lụa/len nếu có lựa chọn khác.",
-        "aliases": ("acetone", "a2", "tay son mong", "nail polish remover"),
+        "aliases": ("acetone", "a2", "tay son mong", "nail polish remover", "son mong"),
     },
     "A4": {
         "name_vi": "Oxy già 3% (hydrogen peroxide)",

@@ -248,6 +248,9 @@ def shop_speak_vi(text: str) -> str:
         ("S1", "nước giặt trung tính Wash Friends"),
         ("N1", "bột baking soda"),
         ("X2", "acid oxalic / bột tẩy rỉ"),
+        ("L1", "dung dịch vệ sinh da"),
+        ("L2", "kem dưỡng da"),
+        ("L3", "xịt bảo vệ da"),
     )
     for code, name in _chem:
         t = re.sub(rf"(?<![A-Za-z0-9]){code}(?![A-Za-z0-9])", name, t)
