@@ -73,11 +73,23 @@ def format_chem_explain(code: str, *, lang: str = "vi") -> str:
         f"· Mua ở đâu: {card.get('buy_where_vi') or ''}",
         f"· Pha / dùng thế nào: {card.get('dilution_vi') or ''}",
         f"· Cấm / lưu ý: {card.get('forbid_vi') or ''}",
-        "Không trả lời bằng tên tiếng Anh trần (ví dụ chỉ nói 「Enzyme protease」). "
-        "Giải thích bằng tên cửa hàng ở trên.",
     ]
-    return "\n".join(lines)
-
+    # Keep forbid clauses split for staff (silk/wool vs Javel mix)
+    fixed = []
+    for line in lines:
+        if not line or line.endswith(": "):
+            continue
+        if "forbid" in line.lower() or line.startswith("· Cấm"):
+            line = line.replace(
+                "CẤM lụa/len — chuyển sang nước giặt trung tính. CẤM ngâm cùng Javel.",
+                "CẤM dùng trên lụa/len (chuyển sang nước giặt trung tính). Riêng: CẤM ngâm chung với Javel.",
+            )
+            line = line.replace(
+                "CẤM lụa, len. CẤM trộn Javel/amoniac.",
+                "CẤM dùng trên lụa, len. Riêng: CẤM trộn với Javel hoặc amoniac.",
+            )
+        fixed.append(line)
+    return "\n".join(fixed)
 
 def try_explain_chem(
     msg: str,

@@ -2159,25 +2159,25 @@ def _chem_everyday_map(lang: str = "vi") -> dict[str, str]:
             "X2": "oxalic acid (rust / laterite — gloves)",
         }
     return {
-        "E1": "nuoc giat / bot ngam enzyme (protease)",
-        "E2": "nuoc giat enzyme (tinh bot)",
-        "E3": "nuoc giat enzyme (dau mo)",
-        "D1": "dung moi tay dau / tay nhot",
-        "D2": "nuoc rua chen",
-        "D3": "nuoc giat / bot giat dam",
-        "B1": "bot tay oxy / tay mau an toan (oxyclean-type)",
-        "B2": "nuoc Javel / tay trang",
-        "A1": "con sat khuan / con y te 70-90%",
-        "A2": "acetone / dung moi son mong",
-        "A3": "giấm trắng 5%",
+        "E1": "nước giặt / bột ngâm enzyme (phân giải đạm)",
+        "E2": "nước giặt enzyme (tinh bột)",
+        "E3": "nước giặt enzyme (dầu mỡ)",
+        "D1": "dung môi tẩy dầu / tẩy nhớt",
+        "D2": "nước rửa chén",
+        "D3": "nước giặt / bột giặt đậm",
+        "B1": "bột tẩy oxy / tẩy màu an toàn",
+        "B2": "nước Javel / nước tẩy trắng",
+        "A1": "cồn sát khuẩn / cồn y tế 70–90%",
+        "A2": "acetone / nước tẩy sơn móng không dầu",
+        "A3": "giấm trắng khoảng 5%",
         "A4": "oxy già 3%",
-        "A5": "ammonia pha loãng",
-        "N1": "baking soda",
+        "A5": "nước amoniac / ammonia pha loãng",
+        "N1": "bột baking soda",
         "N2": "muối ăn",
         "N3": "bột ngô / phấn rôm",
         "S1": "nước giặt trung tính Wash Friends",
         "WF_SOFT": "nước xả Wash Friends",
-        "WF_FRAG": "xit hương Wash Friends",
+        "WF_FRAG": "xịt hương Wash Friends",
         "X1": "bột tẩy khử (sodium hydrosulfite) — chỉ cotton/linen TRẮNG",
         "X2": "acid oxalic — rỉ sét / đất đỏ (găng tay)",
     }
@@ -2228,6 +2228,16 @@ def _scrub_internal_codes(text: str, lang: str = "vi") -> str:
     text = text.replace("**", "")
     # Expand codes BEFORE deleting (owner must see salt / enzyme names)
     text = _expand_chem_codes_in_text(text, lang=lang)
+    # Cap / PPE jargon → shop language (VI + KO)
+    try:
+        from vi_text_canon import shop_speak_ko, shop_speak_vi
+
+        if lang == "vi":
+            text = shop_speak_vi(text)
+        elif lang == "ko":
+            text = shop_speak_ko(text)
+    except Exception:
+        pass
     # Parenthetical leftovers after expansion rare; strip empty ()
     text = re.sub(r"\s*\(\s*\)", "", text)
     # Tool / node ids leaked by the model

@@ -204,7 +204,81 @@ def canon_vi_text(text: str | None) -> str:
     out = re.sub(r"\bphut\b", "phút", out)
     out = re.sub(r"\bsay\b", "sấy", out)
     out = re.sub(r"\bgiat\b", "giặt", out)
-    return out
+    return shop_speak_vi(out)
+
+
+def shop_speak_vi(text: str) -> str:
+    """Franchise-facing VI: no Cap/PPE jargon, no jammed forbid blobs."""
+    if not text:
+        return text
+    t = text
+    # Force bands → plain Vietnamese (longest first)
+    t = re.sub(r"(?i)\bCap\s*1\s*[–\-~]\s*2\b", "lực nhẹ–vừa (thấm/chấm, không chà mạnh)", t)
+    t = re.sub(r"(?i)\bCap\s*0\s*[–\-~]\s*1\b", "lực rất nhẹ–nhẹ", t)
+    t = re.sub(r"(?i)\bCap\s*2\s*[–\-~]\s*3\b", "lực vừa–mạnh (có kiểm soát)", t)
+    t = re.sub(r"(?i)\bCap\s*0\b", "lực rất nhẹ (chỉ máy / không chà)", t)
+    t = re.sub(r"(?i)\bCap\s*1\b", "lực nhẹ (chỉ thấm/chấm, không chà)", t)
+    t = re.sub(r"(?i)\bCap\s*2\b", "lực vừa (cạo/massage nhẹ)", t)
+    t = re.sub(r"(?i)\bCap\s*3\b", "lực mạnh hơn (có kiểm soát)", t)
+    # PPE → concrete kit
+    t = re.sub(
+        r"(?i)\bPPE\s*NANG\b",
+        "bảo hộ nặng (găng dày + khẩu trang + khu riêng)",
+        t,
+    )
+    t = re.sub(
+        r"(?i)\bđúng\s*PPE\b",
+        "đúng bảo hộ (găng nitrile; khẩu trang nếu mùi nặng)",
+        t,
+    )
+    t = re.sub(r"(?i)\bPPE\b", "bảo hộ (găng nitrile; khẩu trang nếu cần)", t)
+    # Chem codes often left in education paths
+    _chem = (
+        ("E1", "nước giặt/bột ngâm enzyme (phân giải đạm)"),
+        ("E2", "nước giặt enzyme (tinh bột)"),
+        ("E3", "nước giặt enzyme (dầu mỡ)"),
+        ("A3", "giấm trắng khoảng 5%"),
+        ("A1", "cồn y tế 70–90%"),
+        ("A2", "acetone / nước tẩy sơn móng không dầu"),
+        ("A5", "nước amoniac / ammonia pha"),
+        ("B1", "bột tẩy oxy"),
+        ("B2", "nước Javel / nước tẩy trắng"),
+        ("D2", "nước rửa chén"),
+        ("D3", "nước giặt / bột giặt thường"),
+        ("S1", "nước giặt trung tính Wash Friends"),
+        ("N1", "bột baking soda"),
+        ("X2", "acid oxalic / bột tẩy rỉ"),
+    )
+    for code, name in _chem:
+        t = re.sub(rf"(?<![A-Za-z0-9]){code}(?![A-Za-z0-9])", name, t)
+    # Split jammed silk/wool + Javel forbid into two clear clauses when stuck together
+    t = re.sub(
+        r"(?i)CẤM\s+lụa/len\s+cùng\s+ngâm\s+với\s+Javel",
+        "CẤM dùng trên lụa/len. CẤM ngâm chung với Javel",
+        t,
+    )
+    t = re.sub(
+        r"(?i)CẤM\s+lụa/len\s*[—\-–]\s*chuyển\s+sang",
+        "CẤM trên lụa/len — chuyển sang",
+        t,
+    )
+    return t
+
+
+def shop_speak_ko(text: str) -> str:
+    """Franchise-facing KO: Cap/PPE → plain shop language."""
+    if not text:
+        return text
+    t = text
+    t = re.sub(r"(?i)\bCap\s*1\s*[–\-~]\s*2\b", "약~중간(흡수·찍기, 세게 문지르지 말 것)", t)
+    t = re.sub(r"(?i)\bCap\s*0\s*[–\-~]\s*1\b", "아주 약~약하게", t)
+    t = re.sub(r"(?i)\bCap\s*2\s*[–\-~]\s*3\b", "중간~강하게(통제)", t)
+    t = re.sub(r"(?i)\bCap\s*0\b", "아주 약하게(기계/문지르기 없음)", t)
+    t = re.sub(r"(?i)\bCap\s*1\b", "약하게(흡수·찍기만, 문지르기 금지)", t)
+    t = re.sub(r"(?i)\bCap\s*2\b", "중간(긁기·가볍게 문지르기)", t)
+    t = re.sub(r"(?i)\bCap\s*3\b", "강하게(통제하며)", t)
+    t = re.sub(r"(?i)\bPPE\b", "보호구(니트릴 장갑·필요시 마스크)", t)
+    return t
 
 
 def canon_vi_dict(d: dict[str, Any]) -> dict[str, Any]:

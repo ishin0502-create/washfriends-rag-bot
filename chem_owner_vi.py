@@ -16,14 +16,14 @@ CHEM_OWNER_VI: dict[str, dict[str, str]] = {
         "buy_where_vi": "Siêu thị — kệ giặt",
         "dilution_vi": (
             "1 muỗng / 1L nước lạnh (hoặc theo nhãn) → ngâm 15–60 phút. "
-            "CẤM lụa/len — chuyển sang nước giặt trung tính. "
-            "CẤM ngâm cùng Javel."
+            "CẤM dùng trên lụa/len — chuyển sang nước giặt trung tính. "
+            "Riêng: CẤM ngâm chung với Javel."
         ),
         "when_use_vi": (
             "Vết protein: máu, chất nôn, trứng, sữa, mồ hôi… "
             "Phá chuỗi đạm để dễ giặt. Không phải thuốc tẩy màu."
         ),
-        "forbid_vi": "CẤM lụa, len. CẤM trộn Javel/amoniac.",
+        "forbid_vi": "CẤM dùng trên lụa, len. Riêng: CẤM trộn với Javel hoặc amoniac.",
         "aliases": (
             "enzyme protease", "protease", "enzyme phan giai dam", "e1",
             "bot ngam enzyme", "nuoc giat enzyme", "enzyme đạm", "enzyme dam",
@@ -35,10 +35,10 @@ CHEM_OWNER_VI: dict[str, dict[str, str]] = {
         "buy_where_vi": "Siêu thị — kệ giặt",
         "dilution_vi": (
             "1 muỗng canh / 1L nước lạnh (hoặc theo nhãn) → ngâm 15–60 phút. "
-            "CẤM lụa/len. CẤM cùng Javel."
+            "CẤM dùng trên lụa/len. Riêng: CẤM ngâm chung với Javel."
         ),
         "when_use_vi": "Vết tinh bột: sốt, cơm, bột… Hỗ trợ giặt sau khi làm sạch bề mặt.",
-        "forbid_vi": "CẤM lụa, len. CẤM trộn Javel.",
+        "forbid_vi": "CẤM dùng trên lụa, len. Riêng: CẤM trộn với Javel.",
         "aliases": ("enzyme amylase", "amylase", "e2", "tinh bot"),
     },
     "E3": {

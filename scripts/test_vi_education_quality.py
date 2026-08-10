@@ -19,6 +19,8 @@ def test_detect_reply_lang_ascii_vi():
         ("chat lieu cotton", "vi"),
         ("chat non xu ly", "vi"),
         ("Enzyme protease là hóa chất gì", "vi"),
+        ("nuoc tieu xu ly", "vi"),
+        ("sua bot tre em", "vi"),
     ]
     for q, expect in cases:
         got = detect_reply_lang(q)
@@ -45,6 +47,8 @@ def test_chem_explain_e1_vi():
     assert "enzyme" in low or "đạm" in ans or "dam" in low
     assert "siêu thị" in low or "siêu" in ans or "cửa hàng" in low or "Nước giặt" in ans or "nước giặt" in low
     assert "Enzyme protease" not in ans.split("\n")[0] or "phân giải" in ans
+    assert "Không trả lời bằng tên tiếng Anh" not in ans
+    assert "Cap" not in ans
 
 
 def test_chem_explain_without_prefer_still_matches():
@@ -128,15 +132,30 @@ def test_session_chem_followup_path():
     clear_session("test", "u1")
 
 
+def test_shop_speak_strips_cap_ppe():
+    from vi_text_canon import shop_speak_ko, shop_speak_vi
+
+    vi = shop_speak_vi("Cap1 thấm. Cap2 cạo. Đúng PPE. E1 ngâm. CẤM lụa/len cùng ngâm với Javel.")
+    assert "Cap" not in vi
+    assert "PPE" not in vi
+    assert "enzyme" in vi.lower() or "đạm" in vi
+    assert "Javel" in vi
+    ko = shop_speak_ko("Cap1 흡수. PPE 필수.")
+    assert "Cap" not in ko
+    assert "PPE" not in ko
+
+
 def test_sanitize_strips_giao_duc():
     from vi_text_canon import sanitize_education_vi_fields
 
     g = sanitize_education_vi_fields(
-        {"stain_context": {"why_vi": "GIAO DUC: Chat non = protein. Enzyme protease."}}
+        {"stain_context": {"why_vi": "GIAO DUC: Chat non = protein. Enzyme protease. Cap2 + PPE."}}
     )
     w = g["stain_context"]["why_vi"]
     assert "GIAO DUC" not in w
     assert "Chất nôn" in w or "chất nôn" in w
+    assert "Cap" not in w
+    assert "PPE" not in w
 
 
 if __name__ == "__main__":

@@ -32,6 +32,8 @@ _VI_ASCII_HINTS = (
     "mau tuoi", "máu", "cotton", "lua ", "lụa", "len ",
     "dung cu", "dụng cụ", "gang tay", "găng", "binh xit", "khan trang",
     "tiep tuc", "tiếp tục", "con gi", "còn gì",
+    "nuoc tieu", "nước tiểu", "sua bot", "sữa bột", "sua cong", "chat non",
+    "bao ho", "bảo hộ", "ngam enzyme", "ngâm enzyme", "bot tay", "bột tẩy",
 )
 
 _VI_LEAK = re.compile(
