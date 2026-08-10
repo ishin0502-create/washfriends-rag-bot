@@ -12,6 +12,7 @@ from typing import Any
 OPS_REMAINDER_IDS = frozenset({
     "I_CARE_LABEL",
     "I_INTAKE_SCRIPT",
+    "I_CLAIM_SCRIPT",
     "I_WATER_HARDNESS",
     "I_COLOR_FADE",
     "I_WHITE_FADE",
@@ -27,6 +28,7 @@ def education_for_ops_remainder(item_id: str) -> dict[str, str]:
     return {
         "I_CARE_LABEL": _care_label,
         "I_INTAKE_SCRIPT": _intake,
+        "I_CLAIM_SCRIPT": _claim,
         "I_WATER_HARDNESS": _water,
         "I_COLOR_FADE": _color_fade,
         "I_WHITE_FADE": _white_fade,
@@ -39,7 +41,7 @@ def education_for_ops_remainder(item_id: str) -> dict[str, str]:
 
 
 def _care_label() -> dict[str, str]:
-    return {
+    out = {
         "precheck_ko": "케어라벨: 옷 안쪽 라벨 찾기. 흐리면 사진. X 표시면 추측 금지 — 그대로 준수.",
         "why_ko": (
             "[왜] 라벨=원단과의 계약. "
@@ -59,17 +61,17 @@ def _care_label() -> dict[str, str]:
         "success_rate_ko": "라벨 준수=사고↓. 무시=클레임↑.",
         "refuse_when_ko": "X 기호 무시하고 강제 물세탁 → 거절.",
         "must_include_ko": "5그룹 기호, X 준수, 유색 산소만, 추측 금지",
-        "precheck_vi": "Tim nhan. Anh neu mo. X → TUAN THU, khong doan.",
-        "why_vi": "[Tai sao] Nhan = hop dong. Chau=nhiet/tay/X. Tam giac=tay. Vuong=say. Ui. Vong=dry.",
-        "fresh_path_vi": "(1)Doc 5 nhom. (2)Ghi max. (3)X nuoc → dry. (4)Mau: B1. (5)Nhan mo → bao.",
-        "dried_path_vi": "Nhan mat: test goc, an toan thap.",
-        "motion_vi": "Cap0 — doc, khong doan",
-        "water_temp_vi": "Theo so; bat dau thap hon max",
-        "aftercare_vi": "Giu nhan. CAM cat.",
-        "sense_check_vi": "Mat: ghi du 5 nhom.",
-        "success_rate_vi": "Tuan thu: tot.",
-        "refuse_when_vi": "Bat bo qua X → tu choi.",
-        "must_include_vi": "5 nhom, tuan X, mau B1, khong doan",
+        "precheck_vi": "Tìm nhãn. Ảnh nếu mờ. X → TUÂN THỦ, không đoán.",
+        "why_vi": "[Tại sao] Nhãn = hợp đồng. Chậu=nhiệt/tay/X. Tam giác=tẩy. Vuông=sấy. Ủi. Vòng=dry.",
+        "fresh_path_vi": "(1)Đọc 5 nhóm. (2)Ghi max. (3)X nước → dry. (4)Màu: oxy. (5)Nhãn mờ → báo.",
+        "dried_path_vi": "Nhãn mất: test góc, an toàn thấp.",
+        "motion_vi": "Cap0 — đọc, không đoán",
+        "water_temp_vi": "Theo số; bắt đầu thấp hơn max",
+        "aftercare_vi": "Giữ nhãn. CẤM cắt.",
+        "sense_check_vi": "Mắt: ghi đủ 5 nhóm.",
+        "success_rate_vi": "Tuân thủ: tốt.",
+        "refuse_when_vi": "Bắt bỏ qua X → từ chối.",
+        "must_include_vi": "5 nhóm, tuân X, màu oxy, không đoán",
         "precheck_en": "Find care label. Photo if faded. Any X → obey, do not guess.",
         "why_en": "[Why] Label is the fabric contract. Tub=wash max °C/hand/X. Triangle=bleach. Square=dryer. Iron dots. Circle=dry-clean.",
         "fresh_path_en": "(1)Read 5 symbol groups. (2)Note max temp/bleach/dry/iron/dry-clean. (3)Tub X → dry-clean. (4)Colors usually oxygen only. (5)Disclose faded label.",
@@ -82,9 +84,24 @@ def _care_label() -> dict[str, str]:
         "refuse_when_en": "Forced wet wash past X → refuse.",
         "must_include_en": "5 symbol groups, obey X, oxygen on colors, no guessing",
     }
+    try:
+        from education_ops_depth_v12 import education_for_ops_depth
+
+        out.update(education_for_ops_depth("I_CARE_LABEL"))
+    except Exception:
+        pass
+    return out
 
 
 def _intake() -> dict[str, str]:
+    try:
+        from education_ops_depth_v12 import education_for_ops_depth
+
+        deep = education_for_ops_depth("I_INTAKE_SCRIPT")
+        if deep:
+            return deep
+    except Exception:
+        pass
     return {
         "precheck_ko": "접수: 카메라·전표 2부·위험 태그(실크/울/빈티지) 준비.",
         "why_ko": (
@@ -127,6 +144,28 @@ def _intake() -> dict[str, str]:
         "success_rate_en": "Photo+consent → fewer disputes.",
         "refuse_when_en": "No photo/sign on high-risk item → refuse intake.",
         "must_include_en": "two photos, signed ticket, dried-stain consent, risk tag",
+    }
+
+
+def _claim() -> dict[str, str]:
+    try:
+        from education_ops_depth_v12 import education_for_ops_depth
+
+        deep = education_for_ops_depth("I_CLAIM_SCRIPT")
+        if deep:
+            return deep
+    except Exception:
+        pass
+    return {
+        "why_ko": "[왜] 클레임=사진·전표 증거. 진정→대조→과실 사과 / 기존 손상 사진.",
+        "fresh_path_ko": "(1)전표·사진 확인. (2)대조. (3)과실이면 사과·보상안. (4)즉흥 100% 환불 금지.",
+        "must_include_ko": "접수사진, 전표, 사과·보상안",
+        "why_vi": "[Tại sao] Khiếu nại = ảnh phiếu. Bình tĩnh → đối chiếu.",
+        "fresh_path_vi": "(1)Phiếu+ảnh. (2)So. (3)Lỗi shop: xin lỗi. (4)CẤM hoàn 100% nóng.",
+        "must_include_vi": "ảnh nhận, phiếu, xin lỗi",
+        "why_en": "[Why] Claims need photos+ticket.",
+        "fresh_path_en": "(1)Ticket+photos. (2)Compare. (3)Apology+offer if shop fault. (4)No impulse 100% refund.",
+        "must_include_en": "intake photo, ticket, apology+offer",
     }
 
 
@@ -480,7 +519,7 @@ def apply_ops_remainder_hints(graph: dict[str, Any], item_id: str) -> dict[str, 
         })
         out["tools"] = tools
     if item_id in {
-        "I_CARE_LABEL", "I_INTAKE_SCRIPT", "I_WATER_HARDNESS",
+        "I_CARE_LABEL", "I_INTAKE_SCRIPT", "I_CLAIM_SCRIPT", "I_WATER_HARDNESS",
         "I_COLOR_FADE", "I_WHITE_FADE", "I_KNIT", "I_SCARF", "I_ACTIVEWEAR",
     }:
         out.setdefault("empty_chems_ok", True)

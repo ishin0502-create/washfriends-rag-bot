@@ -223,6 +223,14 @@ try:
 except Exception:
     pass
 
+# Intake dried consent + claim depth (wins over thin V7 / ASCII drills).
+try:
+    from education_ops_depth_v12 import apply_ops_depth
+
+    apply_ops_depth(OPS_DRILLS)
+except Exception:
+    pass
+
 RESCUE_BY_GROUP = {
     "G1": {
         "ko": "2차: 찬물 재확인 → 효소 농도·시간↑(원단 허용 시, 실크·울 금지) → 흰 면만 과산화/산소 검토. 고객에 성공률↓ 고지.",
