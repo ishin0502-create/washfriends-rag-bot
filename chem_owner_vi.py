@@ -262,6 +262,179 @@ CHEM_OWNER_VI: dict[str, dict[str, str]] = {
 }
 
 
+# KO shop-language overlays (buy path + product wording for owner SOP step 4)
+CHEM_OWNER_KO: dict[str, dict[str, str]] = {
+    "E1": {
+        "shop_name_ko": "슈퍼·마트 세탁 코너 「enzyme·효소·protease」표기 액체세제 또는 효소 담금제",
+        "buy_where_ko": "슈퍼/마트 세탁용품 코너",
+        "alt1_ko": "라벨에 enzyme/protease 적힌 일반 세탁세제",
+    },
+    "E2": {
+        "shop_name_ko": "슈퍼·마트 「amylase·전분 효소」표기 세제",
+        "buy_where_ko": "슈퍼/마트",
+        "alt1_ko": "전분·녹말 얼룩용 효소 세제",
+    },
+    "E3": {
+        "shop_name_ko": "슈퍼·마트 「lipase·지방 효소」표기 세제",
+        "buy_where_ko": "슈퍼/마트",
+        "alt1_ko": "기름·지방 얼룩용 효소 세제",
+    },
+    "D2": {
+        "shop_name_ko": "주방세제(예: Sunlight·Mama 등)",
+        "buy_where_ko": "슈퍼/마트",
+        "alt1_ko": "락스·표백제 아님 — 중성 주방세제",
+    },
+    "D1": {
+        "shop_name_ko": "자동차용 탈지제·용제",
+        "buy_where_ko": "자동차용품점·화공점(환기 필수)",
+        "alt1_ko": "오토바이·엔진 오일용 탈지제",
+    },
+    "D3": {
+        "shop_name_ko": "일반 세탁세제(액체·분말)",
+        "buy_where_ko": "슈퍼/마트",
+        "alt1_ko": "얼룩 전처리 후 본세탁용",
+    },
+    "A3": {
+        "shop_name_ko": "흰 식초(식용, 약 5%)",
+        "buy_where_ko": "슈퍼/마트",
+        "alt1_ko": "식초 1 : 물 4로 희석",
+    },
+    "A1": {
+        "shop_name_ko": "소독용 알코올 70–90%",
+        "buy_where_ko": "약국·슈퍼",
+        "alt1_ko": "이소프로필 알코올",
+    },
+    "A2": {
+        "shop_name_ko": "아세톤·매니큐어 리무버(무유)",
+        "buy_where_ko": "약국·슈퍼·화장품 코너",
+        "alt1_ko": "아세테이트·레이온 테스트 필수",
+    },
+    "A4": {
+        "shop_name_ko": "과산화수소 3%(약국)",
+        "buy_where_ko": "약국",
+        "alt1_ko": "흰 면만·구석 테스트",
+    },
+    "A5": {
+        "shop_name_ko": "암모니아 희석액",
+        "buy_where_ko": "화공점",
+        "alt1_ko": "락스(염소)와 절대 혼합 금지",
+    },
+    "B1": {
+        "shop_name_ko": "산소계 표백제(과탄산·oxy)",
+        "buy_where_ko": "슈퍼 세탁용품 코너",
+        "alt1_ko": "흰옷·면 위주 — 유색 금지",
+    },
+    "B2": {
+        "shop_name_ko": "락스·자벨(염소 표백)",
+        "buy_where_ko": "슈퍼/마트",
+        "alt1_ko": "흰 면만 — 식초·암모니아와 혼합 금지",
+    },
+    "N1": {
+        "shop_name_ko": "베이킹소다",
+        "buy_where_ko": "슈퍼/마트",
+        "alt1_ko": "페이스트 또는 희석 담금",
+    },
+    "N2": {
+        "shop_name_ko": "식용 소금(정제염)",
+        "buy_where_ko": "슈퍼/마트",
+        "alt1_ko": "신선 혈·탄닌 보조",
+    },
+    "N3": {
+        "shop_name_ko": "옥수수전분·베이비파우더(무향)",
+        "buy_where_ko": "슈퍼/마트",
+        "alt1_ko": "기름 흡착 1차",
+    },
+    "S1": {
+        "shop_name_ko": "워시프렌즈 중성세제",
+        "buy_where_ko": "워시프렌즈 본사·창고 공급",
+        "alt1_ko": "실크·울·민감 원단 우선",
+    },
+    "X2": {
+        "shop_name_ko": "옥살산(녹·철·적토용)",
+        "buy_where_ko": "화공점(장갑 필수)",
+        "alt1_ko": "실크·울 금지",
+    },
+}
+
+
+def owner_chem_line(code: str, lang: str, chem_row: dict | None = None) -> str:
+    """One owner-facing line: product name + where to buy + dilution."""
+    code = (code or "").upper()
+    if not code:
+        return ""
+    row = dict(chem_row or {})
+    try:
+        from protocol import CHEM_META
+
+        meta = CHEM_META.get(code) or {}
+    except Exception:
+        meta = {}
+    if lang == "ko":
+        own = CHEM_OWNER_KO.get(code) or {}
+        name = str(row.get("name_ko") or meta.get("name_ko") or own.get("name_ko") or code).strip()
+        shop = str(
+            row.get("shop_name_ko") or own.get("shop_name_ko") or row.get("alt1_ko") or own.get("alt1_ko") or ""
+        ).strip()
+        buy = str(row.get("buy_where_ko") or own.get("buy_where_ko") or "").strip()
+        dil = str(row.get("dilution_ko") or meta.get("dilution_ko") or "").strip()
+        parts = [f"「{name}」"]
+        if shop and shop not in name:
+            parts.append(f"매장: {shop}")
+        if buy:
+            parts.append(f"구매: {buy}")
+        if dil:
+            parts.append(f"희석·사용: {dil}")
+        return " — ".join(parts)
+    if lang == "en":
+        name = str(row.get("name") or meta.get("name_en") or meta.get("name") or code).strip()
+        own = CHEM_OWNER_VI.get(code) or {}
+        shop = str(own.get("shop_name_vi") or row.get("shop_name_vi") or name).strip()
+        buy = str(own.get("buy_where_vi") or row.get("buy_where_vi") or "").strip()
+        dil = str(row.get("dilution_en") or meta.get("dilution_en") or row.get("dilution_ko") or "").strip()
+        parts = [name]
+        if shop and shop != name:
+            parts.append(f"Shop: {shop}")
+        if buy:
+            parts.append(f"Buy: {buy}")
+        if dil:
+            parts.append(f"Mix/use: {dil}")
+        return " — ".join(parts)
+    own = CHEM_OWNER_VI.get(code) or {}
+    name = str(own.get("name_vi") or row.get("name_vi") or row.get("shop_name_vi") or code).strip()
+    shop = str(own.get("shop_name_vi") or row.get("shop_name_vi") or name).strip()
+    buy = str(own.get("buy_where_vi") or row.get("buy_where_vi") or "").strip()
+    dil = str(own.get("dilution_vi") or row.get("dilution_vi") or meta.get("dilution_vi") or "").strip()
+    parts = [f"「{name}」"]
+    if shop and shop not in name:
+        parts.append(f"Tên cửa hàng: {shop}")
+    if buy:
+        parts.append(f"Mua: {buy}")
+    if dil:
+        parts.append(f"Pha/dùng: {dil}")
+    return " — ".join(parts)
+
+
+def collect_owner_chem_lines(chemicals: list, lang: str, extra_codes: list[str] | None = None) -> list[str]:
+    """Deduped owner chem lines for LLM step (4) and post-enforcement."""
+    by_code: dict[str, dict] = {}
+    for c in chemicals or []:
+        if not c:
+            continue
+        code = str((c or {}).get("code") or "").upper()
+        if code:
+            by_code[code] = dict(c)
+    for code in extra_codes or []:
+        code = str(code or "").upper()
+        if code and code not in by_code:
+            by_code[code] = {"code": code}
+    lines: list[str] = []
+    for code in sorted(by_code.keys()):
+        line = owner_chem_line(code, lang, by_code[code])
+        if line:
+            lines.append(line)
+    return lines
+
+
 def apply_owner_vi_to_chem_meta(chem_meta: dict[str, dict[str, str]]) -> None:
     """Mutate CHEM_META in place with owner VI fields."""
     for code, own in CHEM_OWNER_VI.items():

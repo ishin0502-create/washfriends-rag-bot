@@ -129,12 +129,12 @@ CHEM_META: dict[str, dict[str, str]] = {
         "dilution_en": "Thick cover 10–30 min then brush off",
     },
     "N2": {
-        "name_ko": "소금(흡착·찬물 보조)",
+        "name_ko": "소금(식용·찬물 보조)",
         "name_vi": "Muối ăn",
         "name_en": "Table salt",
-        "dilution_ko": "신선 얼룩: 키친타월·소금으로 흡수(선택)",
-        "dilution_vi": "Vết tươi: muối/giấy thấm (tuỳ chọn)",
-        "dilution_en": "Fresh: salt/paper absorb (optional)",
+        "dilution_ko": "찬물 1L에 소금 큰술 2 → 15–30분 (슈퍼 식용소금). 신선 혈·탄닌 보조.",
+        "dilution_vi": "2 muỗng muối / 1L nước lạnh (máu tươi) — 15–30 phút. Siêu thị.",
+        "dilution_en": "2 tbsp salt / 1L cold; 15–30 min (fresh blood). Supermarket.",
     },
     "D1": {
         "name_ko": "유성 얼룩용 용제(탈지)",
@@ -510,6 +510,17 @@ def _tpl_blood_fresh() -> Protocol:
         steps=[
             Step("id", "신선 핏자국·PPE·원단 확인", "Nhận máu tươi + PPE", tool_ids=["T_GLOVE_NITRILE", "T_MASK"], force="Cap1"),
             Step("rinse", "안쪽 찬물 헹굼 2–3분", "Xả lạnh mặt trái 2-3 phút", tool_ids=["T_CLOTH"], force="Cap1"),
+            Step(
+                "salt",
+                "찬물+소금 15–30분(슈퍼 식용소금)",
+                "Ngâm muối ăn nước lạnh 15-30 phút",
+                chem="N2",
+                tool_ids=["T_SOAK_BIN", "T_TIMER"],
+                minutes_lo=15,
+                minutes_hi=30,
+                soak=True,
+                force="Cap1",
+            ),
             Step(
                 "enzyme",
                 "효소 찬물 침지",

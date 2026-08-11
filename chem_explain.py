@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from chem_owner_vi import CHEM_OWNER_VI, match_chem_code, owner_card
+from chem_owner_vi import CHEM_OWNER_KO, CHEM_OWNER_VI, match_chem_code, owner_card
 
 
 _CHEM_Q = re.compile(
@@ -30,25 +30,28 @@ def format_chem_explain(code: str, *, lang: str = "vi") -> str:
     if not card.get("name_vi") and not card.get("name_ko"):
         return ""
     if lang == "ko":
-        # Prefer KO from CHEM_META if available
+        # Prefer KO from CHEM_META + CHEM_OWNER_KO (shop/buy)
         try:
             from protocol import CHEM_META
 
             meta = CHEM_META.get(code.upper()) or {}
         except Exception:
             meta = {}
-        name = meta.get("name_ko") or card.get("name_vi") or code
+        own_ko = CHEM_OWNER_KO.get(code.upper()) or {}
+        name = meta.get("name_ko") or own_ko.get("shop_name_ko") or card.get("name_vi") or code
+        shop = own_ko.get("shop_name_ko") or ""
         dil = meta.get("dilution_ko") or card.get("dilution_vi") or ""
-        when = card.get("when_use_vi") or ""
+        when = own_ko.get("alt1_ko") or card.get("when_use_vi") or ""
         forbid = card.get("forbid_vi") or ""
-        buy = card.get("buy_where_vi") or ""
+        buy = own_ko.get("buy_where_ko") or card.get("buy_where_vi") or ""
         lines = [
             f"약품 설명 — {name}",
+            f"· 매장명: {shop}" if shop and shop not in str(name) else "",
             f"· 용도: {when}" if when else "",
             f"· 희석·사용: {dil}" if dil else "",
             f"· 구매: {buy}" if buy else "",
             f"· 주의: {forbid}" if forbid else "",
-            "코드명만 외우지 말고, 매장에서는 위 제품으로 설명하세요.",
+            "코드명만 외우지 말고, 매장에서는 위 제품·구매처로 설명하세요.",
         ]
         return "\n".join(x for x in lines if x)
 

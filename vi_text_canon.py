@@ -273,14 +273,44 @@ def shop_speak_ko(text: str) -> str:
     if not text:
         return text
     t = text
-    t = re.sub(r"(?i)\bCap\s*1\s*[–\-~]\s*2\b", "약~중간(흡수·찍기, 세게 문지르지 말 것)", t)
-    t = re.sub(r"(?i)\bCap\s*0\s*[–\-~]\s*1\b", "아주 약~약하게", t)
-    t = re.sub(r"(?i)\bCap\s*2\s*[–\-~]\s*3\b", "중간~강하게(통제)", t)
-    t = re.sub(r"(?i)\bCap\s*0\b", "아주 약하게(기계/문지르기 없음)", t)
-    t = re.sub(r"(?i)\bCap\s*1\b", "약하게(흡수·찍기만, 문지르기 금지)", t)
-    t = re.sub(r"(?i)\bCap\s*2\b", "중간(긁기·가볍게 문지르기)", t)
-    t = re.sub(r"(?i)\bCap\s*3\b", "강하게(통제하며)", t)
+    # Cap before Korean particles (Cap1과, Cap1·…) — \b fails between ASCII digit + Hangul.
+    # Consume optional particle so we don't leave 「약하게…과」.
+    _cap_tail = r"(?:[과와은는을를의로]|[·\s:：,.\-–~)\]」』]|[^\w]|$)"
+    t = re.sub(
+        rf"(?i)\bCap\s*1\s*[–\-~]\s*2{_cap_tail}",
+        "약~중간(흡수·찍기, 세게 문지르지 말 것)",
+        t,
+    )
+    t = re.sub(rf"(?i)\bCap\s*0\s*[–\-~]\s*1{_cap_tail}", "아주 약~약하게", t)
+    t = re.sub(rf"(?i)\bCap\s*2\s*[–\-~]\s*3{_cap_tail}", "중간~강하게(통제)", t)
+    t = re.sub(rf"(?i)\bCap\s*0{_cap_tail}", "아주 약하게(기계/문지르기 없음)", t)
+    t = re.sub(rf"(?i)\bCap\s*1{_cap_tail}", "약하게(흡수·찍기만, 문지르기 금지)", t)
+    t = re.sub(rf"(?i)\bCap\s*2{_cap_tail}", "중간(긁기·가볍게 문지르기)", t)
+    t = re.sub(rf"(?i)\bCap\s*3{_cap_tail}", "강하게(통제하며)", t)
     t = re.sub(r"(?i)\bPPE\b", "보호구(니트릴 장갑·필요시 마스크)", t)
+    # Chem codes → shop product names (match VI shop_speak pattern)
+    _chem = (
+        ("E1", "슈퍼·마트 「enzyme·효소·protease」표기 세제 또는 효소 담금제"),
+        ("E2", "슈퍼·마트 전분 분해 효소 세제"),
+        ("E3", "슈퍼·마트 유지 분해 효소 세제"),
+        ("A3", "슈퍼·마트 흰 식초(약 5%)"),
+        ("A1", "약국·슈퍼 소독용 알코올 70–90%"),
+        ("A2", "약국·슈퍼 아세톤/매니큐어 리무버(무유)"),
+        ("A4", "약국 과산화수소 3%"),
+        ("A5", "화공점 암모니아 희석액"),
+        ("B1", "슈퍼·마트 산소계 표백제(과탄산)"),
+        ("B2", "슈퍼·마트 락스/자벨(흰 면만)"),
+        ("D2", "슈퍼·마트 주방세제"),
+        ("D1", "자동차용품·화공점 탈지제(환기 필수)"),
+        ("D3", "슈퍼·마트 일반 세탁세제"),
+        ("N1", "슈퍼·마트 베이킹소다"),
+        ("N2", "슈퍼·마트 식용 소금"),
+        ("N3", "슈퍼·마트 옥수수전분·베이비파우더"),
+        ("S1", "워시프렌즈 중성세제(본사·창고)"),
+        ("X2", "화공점 옥살산(녹·철, 장갑 필수)"),
+    )
+    for code, name in _chem:
+        t = re.sub(rf"(?<![A-Za-z0-9]){code}(?![A-Za-z0-9])", name, t)
     return t
 
 

@@ -2488,18 +2488,22 @@ def _sanitize_graph_for_owner(graph, lang: str):
             sc2.pop("name_vi", None)
 
         # Never expose internal ids to owner LLM
+        if sc2.get("id"):
+            g["_owner_stain_id"] = sc2.get("id")
         sc2.pop("id", None)
         g["stain_context"] = sc2
 
     # Protocol: keep ordered steps for LLM, expand chem codes to names, drop raw codes
     proto = g.get("protocol")
+    proto_chem_codes: list[str] = []
     if isinstance(proto, dict):
-        from protocol import CHEM_META
         steps_out = []
         for s in proto.get("steps") or []:
             if not isinstance(s, dict) or s.get("blocked"):
                 continue
             code = (s.get("chem") or "").upper()
+            if code:
+                proto_chem_codes.append(code)
             meta = CHEM_META.get(code, {})
             step = {
                 "action": s.get(f"action_{lang}") or None,
@@ -2519,6 +2523,16 @@ def _sanitize_graph_for_owner(graph, lang: str):
                 else:
                     step["chemical"] = meta.get("name_en") or meta.get("name") or None
                     step["dilution"] = meta.get("dilution_en")
+                try:
+                    from chem_owner_vi import owner_chem_line
+
+                    chem_row = next(
+                        (c for c in (g.get("chemicals") or []) if str((c or {}).get("code") or "").upper() == code),
+                        {"code": code},
+                    )
+                    step["owner_line"] = owner_chem_line(code, lang, chem_row)
+                except Exception:
+                    pass
             steps_out.append({k: v for k, v in step.items() if v})
         def _chem_order_name(c: str) -> str | None:
             meta = CHEM_META.get(c, {})
@@ -2653,6 +2667,47 @@ def _sanitize_graph_for_owner(graph, lang: str):
         g["chemicals"] = [_chem(c) for c in g["chemicals"] if c]
     if g.get("washfriends_supply"):
         g["washfriends_supply"] = [_chem(c) for c in g["washfriends_supply"] if c]
+
+    # Owner education: pre-formatted chem + force guides so step (3)(4) are shop-ready
+    sc = g.get("stain_context") or {}
+    try:
+        from chem_owner_vi import collect_owner_chem_lines
+
+        g["chem_owner_lines"] = collect_owner_chem_lines(
+            (g.get("chemicals") or []) + (g.get("washfriends_supply") or []),
+            lang,
+            extra_codes=proto_chem_codes,
+        )
+    except Exception:
+        g["chem_owner_lines"] = []
+    if lang == "ko":
+        force_raw = str(sc.get("force_metaphor_ko") or g.get("force_metaphor_ko") or "")
+        try:
+            from vi_text_canon import shop_speak_ko
+
+            g["force_guide"] = shop_speak_ko(force_raw)
+        except Exception:
+            g["force_guide"] = force_raw
+        path = sc.get("fresh_path_ko") or g.get("fresh_path_ko") or ""
+        if path:
+            g["execution_path"] = path
+    elif lang == "vi":
+        force_raw = str(sc.get("force_metaphor_vi") or g.get("force_metaphor_vi") or "")
+        try:
+            from vi_text_canon import shop_speak_vi
+
+            g["force_guide"] = shop_speak_vi(force_raw)
+        except Exception:
+            g["force_guide"] = force_raw
+        path = sc.get("fresh_path_vi") or g.get("fresh_path_vi") or ""
+        if path:
+            g["execution_path"] = path
+    else:
+        g["force_guide"] = sc.get("force_metaphor_en") or ""
+        path = sc.get("fresh_path_en") or g.get("fresh_path_en") or sc.get("fresh_path_vi") or ""
+        if path:
+            g["execution_path"] = path
+
     return g
 
 
@@ -2996,7 +3051,8 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "단계: (1)오염·원단·두께·색상 — match_diagnosis의 chemistry·fabric_type·fabric_weight·"
             "fabric_rule을 반드시 반영(소수성 오일 vs 단백질 vs 탄닌 등). "
             "원단·두께 미확인이면 weight_bands를 (1)에 넣고 "
-            "「Cap1·표백 보류 → 확인 후 조정」으로 말할 것. 「보수적으로 안내」는 쓰지 말 것. "
+            "「약하게(흡수·찍기만)·표백 보류 → 확인 후 조정」으로 말할 것. 「보수적으로 안내」·단독 Cap1/Cap2는 쓰지 말 것. "
+            "force_guide가 있으면 (3)힘·방향에 평어로 넣고 Cap은 괄호 보조만. "
             "SOP는 보통 두께 기준으로 (2)–(6)까지 완결할 것. "
             "색 미확인·유색이면 chemicals[]에 없는 산소/염소 표백을 (4)에 넣지 말 것 — "
             "‘흰옷 확인 후·구석 테스트’만 안내. "
@@ -3009,8 +3065,10 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "타이머·담금통은 use_for_ko에 적힌 정확한 분(예: 15–45분)을 그대로 말할 것. "
             "분무기는 use_for_ko 그대로 — 「분무기 겉면 라벨에 약 이름과 희석비를 적어 둔다」. "
             "「식초 1 물 4라고 적는다」처럼 어색하게 줄이지 말 것. "
-            "(3)힘·방향 Cap — 얇은 원단은 Cap1–2만. "
-            "(4)약품(name_ko·dilution_ko) (5)수온 (6)후관리. "
+            "(3)힘·방향 — force_guide 또는 「약하게(흡수·찍기만, 문지르기 금지)」 등 평어. Cap1 단독 금지. "
+            "(4)약품 — chem_owner_lines[] 각 줄을 빠짐없이: 제품명·매장/구매처·희석·시간. "
+            "name_ko·dilution_ko만 던지지 말 것. execution_path·protocol.steps 순서를 생략하지 말 것. "
+            "(5)수온 (6)후관리. "
             "protocol.steps가 있으면 그것이 유일한 실행 순서 — "
             "fresh_path_ko·chemicals[]·분무기 use_for는 그 렌더이므로 서로 모순되게 쓰지 말 것. "
             "protocol이 없으면 fresh_path_ko의 「어디에·몇 분·어떻게」를 그대로. "
@@ -3064,6 +3122,20 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
                 wrapper = (
                     f"【필수 포함 — 생략 금지】 {must}\n\n" + wrapper
                 )
+            chem_lines = safe_graph.get("chem_owner_lines") or []
+            if chem_lines and not safe_graph.get("specialty_item_care") and not safe_graph.get("leather_care"):
+                wrapper = (
+                    "【(4)약품 — 아래 줄 생략 금지】\n"
+                    + "\n".join(f"· {ln}" for ln in chem_lines)
+                    + "\n\n"
+                    + wrapper
+                )
+            force_g = str(safe_graph.get("force_guide") or "").strip()
+            if force_g and not safe_graph.get("specialty_item_care") and not safe_graph.get("leather_care"):
+                wrapper = f"【(3)힘·방향 — 평어】 {force_g}\n\n" + wrapper
+            exec_path = str(safe_graph.get("execution_path") or "").strip()
+            if exec_path and not safe_graph.get("specialty_item_care") and not safe_graph.get("leather_care"):
+                wrapper = f"【실행 순서 — 번호 단계 생략 금지】 {exec_path[:480]}\n\n" + wrapper
     elif lang == "en":
         item_wash_en = isinstance(safe_graph, dict) and (
             safe_graph.get("item_wash_mode")
@@ -3151,8 +3223,9 @@ Answer from this data only. Do not mix languages."""
                 "CHỈ tiếng Việt. CẤM Hàn/Anh. "
                 "Bước: (1) Nhận diện (vet/vai/độ dày/màu) — bắt buộc dùng match_diagnosis "
                 "(chemistry, fabric_type, fabric_weight, fabric_rule). "
-                "Nếu chưa rõ vải/độ dày: nêu 「Cap1 + tạm dừng tẩy → xác nhận rồi chỉnh」 "
+                "Nếu chưa rõ vải/độ dày: nêu 「lực nhẹ (chỉ thấm/chấm) + tạm dừng tẩy → xác nhận rồi chỉnh」 "
                 "và weight_bands_vi; hoàn tất SOP mức vừa — không nói mơ hồ kiểu bảo thủ. "
+                "force_guide có sẵn → (3) dùng tiếng Việt thường, không chỉ Cap. "
                 "không chỉ hỏi rồi dừng. ask_if_needed chỉ là gợi ý tùy chọn. "
                 "Chưa rõ màu / màu: CẤM bịa tẩy oxy trong (4) nếu không có trong chemicals[]. "
                 "Nếu _compact_followup=true: xác nhận vải/độ dày ngắn, chỉ nêu điểm đổi — không lặp SOP dài. "
@@ -3160,8 +3233,10 @@ Answer from this data only. Do not mix languages."""
                 "(bắt buộc cách dùng; CẤM bịa; rỗng→không cần). "
                 "Đồng hồ/chau ngâm: nói đúng số phút trong use_for_vi. "
                 "Bình xịt: nói đúng thuốc + tỷ lệ + vì sao ghi nhãn theo use_for_vi. "
-                "(3) Lực+hướng Cap — vải mỏng chỉ Cap1–2. "
-                "(4) Hóa chất (5) Nhiệt độ (6) Sau xử lý — theo fresh_path_vi (đâu/phút/cách). "
+                "(3) Lực+hướng — force_guide hoặc 「lực nhẹ, chỉ thấm/chấm, không chà mạnh」. "
+                "(4) Hóa chất — từng dòng chem_owner_lines[]: tên cửa hàng · mua ở đâu · pha/dùng · phút. "
+                "execution_path·protocol.steps: không bỏ bước (vd máu tươi: muối trước enzyme). "
+                "(5) Nhiệt độ (6) Sau xử lý — theo fresh_path_vi (đâu/phút/cách). "
                 "Theo age_frame_vi/age_bucket: "
                 "unknown → (1) tách tươi/khô → body fresh(+protocol) → neu kho: dried_path_vi → limit+rescue; "
                 "dried → body dried_path; hard → limit trước + dried 1 lần; fresh → body fresh. "
@@ -3188,6 +3263,20 @@ Chỉ trả lời từ dữ liệu trên. Không trộn ngôn ngữ."""
                 or (safe_graph.get("stain_context") or {}).get("group") == "item_care"
             ):
                 wrapper = f"【BẮT BUỘC GỒM】 {must_vi}\n\n" + wrapper
+            chem_lines_vi = safe_graph.get("chem_owner_lines") or []
+            if chem_lines_vi and not safe_graph.get("specialty_item_care") and not safe_graph.get("leather_care"):
+                wrapper = (
+                    "【(4) Hóa chất — không bỏ dòng】\n"
+                    + "\n".join(f"· {ln}" for ln in chem_lines_vi)
+                    + "\n\n"
+                    + wrapper
+                )
+            force_vi = str(safe_graph.get("force_guide") or "").strip()
+            if force_vi and not safe_graph.get("specialty_item_care") and not safe_graph.get("leather_care"):
+                wrapper = f"【(3) Lực — tiếng thường】 {force_vi}\n\n" + wrapper
+            exec_vi = str(safe_graph.get("execution_path") or "").strip()
+            if exec_vi and not safe_graph.get("specialty_item_care") and not safe_graph.get("leather_care"):
+                wrapper = f"【Thứ tự thực hiện — không bỏ bước】 {exec_vi[:480]}\n\n" + wrapper
     return wrapper
 
 
@@ -3375,12 +3464,14 @@ def _polish_owner_ko_phrasing(answer: str) -> str:
         out,
     )
     replacements = (
-        ("보수적으로 안내", "Cap1·표백 보류로 진행"),
-        ("보수적으로(약하게) 안내하고", "Cap1·표백 보류로 진행하고"),
-        ("보수적으로(약하게) 안내", "Cap1·표백 보류로 진행"),
-        ("원단 두께 미상일시 보수적으로 안내", "원단·두께 미확인 시 Cap1·표백 보류로 진행"),
-        ("원단·두께 미상일 시 보수적으로 안내", "원단·두께 미확인 시 Cap1·표백 보류로 진행"),
-        ("원단·두께 미상일시 보수적으로 안내", "원단·두께 미확인 시 Cap1·표백 보류로 진행"),
+        ("보수적으로 안내", "약하게(흡수·찍기만)·표백 보류로 진행"),
+        ("보수적으로(약하게) 안내하고", "약하게(흡수·찍기만)·표백 보류로 진행하고"),
+        ("보수적으로(약하게) 안내", "약하게(흡수·찍기만)·표백 보류로 진행"),
+        ("원단 두께 미상일시 보수적으로 안내", "원단·두께 미확인 시 약하게·표백 보류로 진행"),
+        ("원단·두께 미상일 시 보수적으로 안내", "원단·두께 미확인 시 약하게·표백 보류로 진행"),
+        ("원단·두께 미상일시 보수적으로 안내", "원단·두께 미확인 시 약하게·표백 보류로 진행"),
+        ("Cap1·표백 보류", "약하게(흡수·찍기만)·표백 보류"),
+        ("Cap1·표백 보류로 진행", "약하게(흡수·찍기만)·표백 보류로 진행"),
     )
     for a, b in replacements:
         if a in out:
@@ -3390,7 +3481,102 @@ def _polish_owner_ko_phrasing(answer: str) -> str:
     out = out.replace("겉면 라벨에 라벨", "겉면 라벨에 약 이름·희석비")
     out = out.replace("라벨에 라벨 붙임", "라벨에 약 이름·희석비를 적어 둔다")
     out = out.replace("라벨에 라벨", "라벨에 약 이름·희석비")
+    try:
+        from vi_text_canon import shop_speak_ko
+
+        out = shop_speak_ko(out)
+    except Exception:
+        pass
     return out
+
+
+def _chem_line_present(answer: str, line: str, lang: str) -> bool:
+    """True if key product/buy hint from owner chem line appears in answer."""
+    if not line or not answer:
+        return False
+    a = answer.lower()
+    if lang == "ko":
+        m = re.search(r"「([^」]+)」", line)
+        if m and m.group(1).lower() in a:
+            if "구매:" in line or "매장:" in line:
+                buy = line.split("구매:", 1)[-1].split("—", 1)[0].strip().lower()
+                if buy and buy[:4] in a:
+                    return True
+                return "슈퍼" in a or "마트" in a or "약국" in a or "워시프렌즈" in a
+            return True
+        if "희석·사용:" in line:
+            frag = line.split("희석·사용:", 1)[-1].strip()[:24].lower()
+            return bool(frag and frag in a)
+        return False
+    if lang == "vi":
+        m = re.search(r"「([^」]+)」", line)
+        if m and m.group(1).lower() in a:
+            return "mua:" in line.lower() and (
+                "siêu thị" in a or "sieu thi" in a or "nhà thuốc" in a or "nha thuoc" in a
+            )
+        return False
+    return line[:40].lower() in a
+
+
+def _enforce_stain_education(answer: str, graph_context: dict, lang: str) -> str:
+    """Append missing chem shop lines, force guide, and key path steps for stain SOPs."""
+    if not answer or lang not in ("ko", "vi", "en"):
+        return answer
+    g = graph_context.get("graph") if isinstance(graph_context, dict) else None
+    if not isinstance(g, dict):
+        return answer
+    if g.get("specialty_item_care") or g.get("leather_care"):
+        return answer
+    sc = g.get("stain_context") or {}
+    if sc.get("group") == "item_care":
+        return answer
+
+    out = answer
+    append: list[str] = []
+
+    force = str(g.get("force_guide") or "").strip()
+    if force and lang == "ko":
+        bare_cap = bool(re.search(r"(?i)\bCap\s*\d", out))
+        plain = ("안경" in out) or ("찍기" in out) or ("흡수" in out) or ("약하게" in out)
+        if bare_cap or not plain:
+            if force not in out and (bare_cap or "힘" not in out):
+                append.append(f"힘·방향: {force}")
+    elif force and lang == "vi":
+        bare_cap = bool(re.search(r"(?i)\bCap\s*\d", out))
+        plain = ("thấm" in out.lower()) or ("chấm" in out.lower()) or ("nhẹ" in out.lower())
+        if bare_cap or (not plain and "lực" not in out.lower()):
+            if force not in out:
+                append.append(f"Lực: {force}")
+
+    for line in g.get("chem_owner_lines") or []:
+        if not _chem_line_present(out, str(line), lang):
+            append.append(str(line))
+
+    stain_id = str(g.get("_owner_stain_id") or sc.get("id") or "")
+    path = str(g.get("execution_path") or "")
+    if lang == "ko" and stain_id == "S_BLOOD_FRESH":
+        if "소금" not in out and "소금" in path:
+            append.append("신선 핏: 찬물 헹굼 후 찬물 1L+소금 큰술2, 15–30분(슈퍼) → 남으면 효소")
+    if lang == "vi" and stain_id == "S_BLOOD_FRESH":
+        low = out.lower()
+        if "muối" not in low and "muoi" not in low and ("muối" in path.lower() or "muoi" in path.lower()):
+            append.append("Máu tươi: ngâm muối ăn nước lạnh 15–30 phút (siêu thị) trước enzyme")
+
+    # Generic: if protocol owner_lines mention salt/enzyme buy but answer only names enzyme jargon
+    if lang == "ko" and g.get("chem_owner_lines"):
+        if re.search(r"효소|프로테아제|protease|enzyme", out, re.I) and not re.search(
+            r"슈퍼|마트|구매|워시프렌즈", out
+        ):
+            for line in g.get("chem_owner_lines") or []:
+                if "효소" in str(line) or "enzyme" in str(line).lower():
+                    if str(line) not in append and not _chem_line_present(out, str(line), lang):
+                        append.append(str(line))
+                    break
+
+    if not append:
+        return out
+    header = "※ 약품·구매·힘:" if lang == "ko" else ("※ Hóa chất · mua · lực:" if lang == "vi" else "※ Chemicals · force:")
+    return out.rstrip() + "\n\n" + header + " " + " ".join(append)
 
 
 def _enforce_must_include(answer: str, graph_context: dict, lang: str) -> str:
@@ -3592,12 +3778,14 @@ def _answer_with_optional_cache(
             print(f"[LANG] retry still leaks={reply_language_leaks(answer2, lang)}; not caching")
             answer = answer2
             answer = _rewrite_item_care_step1_header(answer, graph_context, lang)
+            answer = _enforce_stain_education(answer, graph_context, lang)
             answer = _enforce_must_include(answer, graph_context, lang)
             answer = _enforce_rescue_pass(answer, graph_context, lang)
             if lang == "ko":
                 answer = _polish_owner_ko_phrasing(answer)
             return answer
     answer = _rewrite_item_care_step1_header(answer, graph_context, lang)
+    answer = _enforce_stain_education(answer, graph_context, lang)
     answer = _enforce_must_include(answer, graph_context, lang)
     answer = _enforce_rescue_pass(answer, graph_context, lang)
     if lang == "ko":

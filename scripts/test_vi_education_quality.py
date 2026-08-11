@@ -143,6 +143,57 @@ def test_shop_speak_strips_cap_ppe():
     ko = shop_speak_ko("Cap1 흡수. PPE 필수.")
     assert "Cap" not in ko
     assert "PPE" not in ko
+    # Korean particles after Cap code (common LLM output)
+    ko2 = shop_speak_ko("Cap1과 블롯. Cap1–2: 안경 닦듯. E1 침지.")
+    assert "Cap" not in ko2
+    assert "약하게" in ko2 or "흡수" in ko2
+    assert "슈퍼" in ko2 or "효소" in ko2
+
+
+def test_owner_chem_line_ko_has_buy():
+    from chem_owner_vi import owner_chem_line, collect_owner_chem_lines
+
+    line = owner_chem_line("E1", "ko", {"code": "E1", "name_ko": "효소(프로테아제)"})
+    assert "구매" in line or "슈퍼" in line
+    assert "희석" in line or "사용" in line
+    lines = collect_owner_chem_lines([{"code": "E1"}, {"code": "N2"}], "ko")
+    assert any("소금" in x or "N2" not in x for x in lines)
+    assert any("슈퍼" in x or "마트" in x for x in lines)
+
+
+def test_blood_protocol_has_salt_before_enzyme():
+    from protocol import PROTOCOL_BUILDERS
+
+    p = PROTOCOL_BUILDERS["S_BLOOD_FRESH"]()
+    chems = [s.chem for s in p.steps if getattr(s, "chem", None)]
+    assert "N2" in chems
+    assert "E1" in chems
+    assert chems.index("N2") < chems.index("E1")
+
+
+def test_enforce_stain_education_blood_ko():
+    from graphrag_engine import _enforce_stain_education
+
+    bad = (
+        "(1) 피 얼룩 (2) 흰천 (3) Cap1 (4) 효소(프로테아제) 세제 라벨 희석 "
+        "(5) 찬물 (6) 건조"
+    )
+    g = {
+        "graph": {
+            "_owner_stain_id": "S_BLOOD_FRESH",
+            "force_guide": "약~중간(흡수·찍기) — 안경 닦듯 가볍게",
+            "execution_path": "(2) 찬물 헹굼 (3) 소금 15–30분 (4) 효소",
+            "chem_owner_lines": [
+                "「효소(프로테아제)」 — 매장: 슈퍼 enzyme — 구매: 슈퍼/마트 — 희석·사용: 찬물 침지 15–30분",
+                "「소금」 — 구매: 슈퍼/마트 — 희석·사용: 찬물 1L에 소금 큰술 2",
+            ],
+            "stain_context": {},
+        }
+    }
+    out = _enforce_stain_education(bad, g, "ko")
+    assert "소금" in out
+    assert "슈퍼" in out or "마트" in out
+    assert "힘" in out or "약" in out or "흡수" in out
 
 
 def test_sanitize_strips_giao_duc():
