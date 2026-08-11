@@ -303,10 +303,61 @@ def _offline_item_rows(item_id: str) -> list:
     ]
 
 
+def _offline_stain_graph(stain_id: str) -> dict:
+    """Protocol + KO/VI education when Neo4j stain lookup misses a known S_* id."""
+    sid = str(stain_id or "").strip()
+    if not sid.startswith("S_"):
+        return {}
+    try:
+        from protocol import has_protocol
+        if not has_protocol(sid):
+            return {}
+    except Exception:
+        return {}
+    sc: dict = {"id": sid, "name": sid}
+    try:
+        from ko_stain_education import KO_STAIN_EDU
+
+        sc.update(KO_STAIN_EDU.get(sid) or {})
+    except Exception:
+        pass
+    return {
+        "stain_context": sc,
+        "chemicals": [],
+        "tools": [],
+        "fabric_context": None,
+        "washfriends_supply": [],
+        "never_use_on_fabric": [],
+        "force_levels": [],
+        "fabric_cautions": [],
+        "never_mix_alerts": [],
+        "climate_context": [],
+        "_offline_stain": True,
+    }
+
+
+def _template_stain_reply(stain_id: str, lang: str) -> str:
+    """Deterministic SOP if LLM/Neo4j fail — never return empty for known stains."""
+    g = _offline_stain_graph(stain_id)
+    sc = (g or {}).get("stain_context") or {}
+    if not sc:
+        return ""
+    if lang == "ko":
+        parts = [sc.get("why_ko"), sc.get("fresh_path_ko"), sc.get("dried_path_ko")]
+        body = "\n\n".join(p for p in parts if p)
+        return body or ""
+    if lang == "vi":
+        parts = [sc.get("why_vi"), sc.get("fresh_path_vi"), sc.get("dried_path_vi")]
+        return "\n\n".join(p for p in parts if p)
+    return sc.get("fresh_path_ko") or sc.get("why_ko") or ""
+
+
 def _try_recover_item_graph(entities: dict) -> dict:
     """Last chance before empty_graph: infer specialty item + offline/Neo4j fetch."""
     entities = dict(entities or {})
     raw = str(entities.get("_raw") or entities.get("_user_caption") or "")
+    if entities.get("stain_id") or _named_laundry_stain(raw):
+        return {}
     item_id = str(entities.get("item_id") or "") or _infer_item_from_text(raw)
     if not item_id:
         return {}
@@ -512,10 +563,15 @@ def _fetch_graph_context(entities: dict) -> dict:
             "I_QUIZ_STAINS", "I_QUIZ_FABRIC", "I_CARE_LABEL", "I_DRY_VS_WET",
             "I_WATER_HARDNESS", "I_MACHINE_PROFILE", "I_SORT", "I_RINSE", "I_QC_HANDOVER",
         }:
-            entities["stain_id"] = ""
-            entities["stain_type"] = ""
-            stain_id = ""
-            stain_input = ""
+            # Never wipe a named stain SOP (wine/kimchi/blood) for an ops card
+            if stain_id or stain_input or _named_laundry_stain(raw_original, raw_msg):
+                entities.pop("item_id", None)
+                item_id = ""
+            else:
+                entities["stain_id"] = ""
+                entities["stain_type"] = ""
+                stain_id = ""
+                stain_input = ""
         # Item-care questions must not early-exit as price/safety/mystery with empty graph
         if intent in ("price", "safety", "mystery", "browse", "rescue", "hardest", "daily"):
             intent = "treatment"
@@ -661,23 +717,28 @@ def _fetch_graph_context(entities: dict) -> dict:
     })
 
     if not rows or rows[0].get("stain_context") is None:
-        fallback = _fallback_search(stain_input or stain_id or raw_msg)
-        if fallback:
-            best = fallback[0]
-            rows = _run_query(Q_FULL_CONTEXT, {
-                "stain_id": best.get("id") or "",
-                "stain_input": best.get("name_vi") or best.get("id") or stain_input,
-                "fabric_input": fabric_input,
-            })
-            if rows and rows[0].get("stain_context") is not None:
-                context["graph"] = rows[0]
-                context["query_type"] = "full_context_via_fallback"
-            else:
-                context["graph"] = fallback
-                context["query_type"] = "name_fallback"
+        offline = _offline_stain_graph(stain_id)
+        if offline:
+            context["graph"] = offline
+            context["query_type"] = "offline_stain"
         else:
-            context["graph"] = []
-            context["query_type"] = "empty"
+            fallback = _fallback_search(stain_input or stain_id or raw_msg)
+            if fallback:
+                best = fallback[0]
+                rows = _run_query(Q_FULL_CONTEXT, {
+                    "stain_id": best.get("id") or "",
+                    "stain_input": best.get("name_vi") or best.get("id") or stain_input,
+                    "fabric_input": fabric_input,
+                })
+                if rows and rows[0].get("stain_context") is not None:
+                    context["graph"] = rows[0]
+                    context["query_type"] = "full_context_via_fallback"
+                else:
+                    context["graph"] = fallback
+                    context["query_type"] = "name_fallback"
+            else:
+                context["graph"] = []
+                context["query_type"] = "empty"
     else:
         context["graph"] = rows[0]
         context["query_type"] = "full_context"
@@ -1230,21 +1291,44 @@ def _bind_tool_howto_to_protocol(graph: dict) -> dict:
     return out
 
 
-def _process_stage_blocked(raw: str, t: str) -> bool:
-    """True when a named stain or specific garment should win over sort/rinse/QC."""
-    stain_named = any(
-        k in raw
+def _blood_stain_mentioned(raw: str) -> bool:
+    """KO/VI/EN blood mentions — include 피묻은 (no space), not 커피 묻은."""
+    msg = raw or ""
+    t = _normalize_text(msg)
+    if any(k in msg for k in ("핏자국", "혈액", "피얼룩", "혈흔", "핏물", "피 얼룩")):
+        return True
+    # 피묻 / 피 묻 — but 커피 ends with 피
+    if re.search(r"(?<!커)피\s*묻", msg):
+        return True
+    return ("mau tuoi" in t or "mau kho" in t) or (
+        "blood" in t and "bleed" not in t
+    )
+
+
+def _named_laundry_stain(raw: str, t: str = "") -> bool:
+    """User named a concrete stain — ops/item cards must not steal the turn."""
+    msg = raw or ""
+    norm = t or _normalize_text(msg)
+    if _blood_stain_mentioned(msg):
+        return True
+    return any(
+        k in msg
         for k in (
-            "얼룩", "커피", "와인", "피 ", "혈액", "김치", "잉크", "곰팡이", "기름",
+            "얼룩", "커피", "와인", "포도주", "김치", "잉크", "곰팡이", "기름",
             "녹", "립스틱", "케첩", "마요", "구토", "소변", "대변",
         )
     ) or any(
-        k in t
+        k in norm
         for k in (
-            "vet ", " ca phe", "ruou", "mau ", "kimchi", "muc ", "moc", "dau an",
-            "blood", "wine", "coffee", "ink", "mold", "ketchup",
+            "vet ", "ca phe", "ruou", "kimchi", "muc ", "dau an",
+            "wine", "coffee", "ink", "mold", "ketchup",
         )
     )
+
+
+def _process_stage_blocked(raw: str, t: str) -> bool:
+    """True when a named stain or specific garment should win over sort/rinse/QC."""
+    stain_named = _named_laundry_stain(raw, t)
     garment = any(
         k in raw
         for k in (
@@ -2970,7 +3054,14 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
                 raw_graph = apply_vi_canon_to_graph(raw_graph)
             except Exception:
                 pass
-    safe_graph = _sanitize_graph_for_owner(raw_graph, lang) if isinstance(raw_graph, dict) else raw_graph
+    if isinstance(raw_graph, dict):
+        try:
+            safe_graph = _sanitize_graph_for_owner(raw_graph, lang)
+        except Exception as e:
+            print(f"[SANITIZE] fail-open: {type(e).__name__}: {e}")
+            safe_graph = raw_graph
+    else:
+        safe_graph = raw_graph
     graph_json = json.dumps(safe_graph, ensure_ascii=False, indent=2, default=str)
     query_type = graph_context.get("query_type", "unknown")
     if lang == "ko":
@@ -3763,10 +3854,22 @@ def _answer_with_optional_cache(
     if cached and reply_language_leaks(cached, lang):
         print(f"[LANG] ignore contaminated cache lang={lang} leaks={reply_language_leaks(cached, lang)}")
 
-    base_prompt = _build_llm_prompt(cache_question, graph_context, lang=lang)
-    llm_prompt = (prefix + "\n\n" + base_prompt) if prefix else base_prompt
-    item_wash = _graph_is_item_wash(graph_context)
-    answer = _call_llm(llm_prompt, lang=lang, item_wash=item_wash and lang == "ko")
+    try:
+        base_prompt = _build_llm_prompt(cache_question, graph_context, lang=lang)
+        llm_prompt = (prefix + "\n\n" + base_prompt) if prefix else base_prompt
+        item_wash = _graph_is_item_wash(graph_context)
+        answer = _call_llm(llm_prompt, lang=lang, item_wash=item_wash and lang == "ko")
+    except Exception as e:
+        print(f"[LLM] fail-open template: {type(e).__name__}: {e}")
+        g = graph_context.get("graph") if isinstance(graph_context, dict) else {}
+        sid = ""
+        if isinstance(g, dict):
+            sid = str(g.get("_owner_stain_id") or (g.get("stain_context") or {}).get("id") or "")
+        sid = sid or str(entities.get("stain_id") or "")
+        templ = _template_stain_reply(sid, lang)
+        if templ:
+            return templ
+        raise
     leaks = reply_language_leaks(answer, lang)
     if leaks:
         print(f"[LANG] leak detected lang={lang} reasons={leaks}; retrying")
@@ -3906,12 +4009,26 @@ def generate_response(user_message: str, channel: str = "", user_id: str = "") -
     elif channel and user_id and pending.get("awaiting") == "treatment_clarify" and _message_has_new_stain_topic(user_message):
         clear_session(channel, user_id)
 
-    answer = _generate_response_core(
-        effective,
-        cache_question=user_message if not merge_pending else effective,
-        compact_followup=bool(merge_pending),
-        forced_lang=lang,
-    )
+    try:
+        answer = _generate_response_core(
+            effective,
+            cache_question=user_message if not merge_pending else effective,
+            compact_followup=bool(merge_pending),
+            forced_lang=lang,
+        )
+    except Exception as e:
+        print(f"[CORE] fail-open: {type(e).__name__}: {e}")
+        sid = ""
+        if "김치" in effective:
+            sid = "S_KIMCHI"
+        elif any(k in effective for k in ("와인", "포도주")):
+            sid = "S_RED_WINE"
+        elif _blood_stain_mentioned(effective):
+            sid = "S_BLOOD_FRESH"
+        templ = _template_stain_reply(sid, lang)
+        if templ:
+            return templ
+        raise
 
     # Remember stain + chems for next clarify / chem-explain turn
     if channel and user_id and answer and "찾을 수 없" not in answer and "could not find matching" not in answer.lower():
@@ -4016,6 +4133,9 @@ def _generate_response_core(
     entities["_raw"] = user_message
     # Hard override language from script (more reliable than LLM lang field)
     entities["lang"] = lang
+    # LLM sometimes invents item_id (intake/care) and later wipe the stain SOP
+    if entities.get("item_id") and _named_laundry_stain(user_message):
+        entities.pop("item_id", None)
     if compact_followup:
         entities["_compact_followup"] = True
     # Hard override for high-value franchise phrases (before graph routing)
@@ -4117,6 +4237,7 @@ def _generate_response_core(
         for k in (
             "이염", "혈액", "커피", "김치", "잉크", "곰팡이", "기름", "케첩",
             "누렇", "황변", "노랗", "누래", "변색", "노란", "핏자국", "피 묻",
+            "피묻", "와인", "포도주",
         )
     ):
         entities["intent"] = "treatment"
@@ -4403,9 +4524,7 @@ def _generate_response_core(
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_FECES"
         entities["stain_type"] = "phan"
-    elif any(k in user_message for k in ("핏자국", "혈액", "피 묻", "피얼룩")) or "mau tuoi" in raw_n or "mau kho" in raw_n or (
-        "blood" in raw_n and "bleed" not in raw_n
-    ):
+    elif _blood_stain_mentioned(user_message):
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_BLOOD_DRY" if any(
             k in user_message for k in ("마른", "굳은", "오래된", "고착", "말랐")
@@ -4674,6 +4793,10 @@ def _generate_response_core(
                     entities["item_id"] = ic["id"]
                     _generate_response_core.last_entities = dict(entities)  # type: ignore[attr-defined]
     if not graph_data or graph_data == {} or graph_data == []:
+        sid = str(entities.get("stain_id") or "")
+        templ = _template_stain_reply(sid, lang)
+        if templ:
+            return templ
         return _empty_graph_reply(entities)
 
     if isinstance(graph_data, dict):

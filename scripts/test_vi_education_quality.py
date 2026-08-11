@@ -161,6 +161,24 @@ def test_owner_chem_line_ko_has_buy():
     assert any("슈퍼" in x or "마트" in x for x in lines)
 
 
+def test_ko_blood_compact_and_wine_named():
+    from graphrag_engine import _blood_stain_mentioned, _named_laundry_stain, _offline_stain_graph
+
+    assert _blood_stain_mentioned("피묻은 옷은 어떻게 세탁하나요?")
+    assert _blood_stain_mentioned("피 묻은 옷")
+    assert not _blood_stain_mentioned("커피 묻은 옷")
+    assert not _blood_stain_mentioned("옷에 와인이 묻었는데 어떻게 지우나요?")
+    assert _named_laundry_stain("옷에 와인이 묻었는데 어떻게 지우나요?")
+    assert _named_laundry_stain("옷에 김치국물이 묻었어. 어떻게 세탁하는지?")
+    wine = _offline_stain_graph("S_RED_WINE")
+    assert wine.get("stain_context", {}).get("id") == "S_RED_WINE"
+    assert "식초" in str(wine["stain_context"].get("fresh_path_ko") or "")
+    kimchi = _offline_stain_graph("S_KIMCHI")
+    assert "주방세제" in str(kimchi["stain_context"].get("fresh_path_ko") or "")
+    blood = _offline_stain_graph("S_BLOOD_FRESH")
+    assert "소금" in str(blood["stain_context"].get("fresh_path_ko") or "")
+
+
 def test_blood_protocol_has_salt_before_enzyme():
     from protocol import PROTOCOL_BUILDERS
 

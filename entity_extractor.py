@@ -162,8 +162,9 @@ def extract_entities(user_message: str) -> dict:
         _coerce_types(entities)
         return entities
 
-    except (json.JSONDecodeError, KeyError, IndexError) as e:
-        # Graceful fallback -- return minimal safe defaults
+    except Exception as e:
+        # Graceful fallback -- return minimal safe defaults (API/timeout included)
+        print(f"[EXTRACT] fallback: {type(e).__name__}: {e}")
         return _fallback_entities(user_message)
 
 

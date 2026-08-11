@@ -69,7 +69,7 @@ def max_entries() -> int:
 
 def cache_version() -> str:
     # v3: shop names + WF supply products in answers
-    return os.getenv("ANSWER_CACHE_VERSION", "v105")
+    return os.getenv("ANSWER_CACHE_VERSION", "v106")
 
 
 def _normalize_key(text: str) -> str:
@@ -98,7 +98,7 @@ _STAIN_MARKERS = (
     "mau", "blood", "ca phe", "coffee", "tra", "tea", "dau", "oil", "nuoc mam", "fish sauce",
     "laterite", "dat do", "xe may", "motorbike", "muc", "ink", "ca ri", "curry", "nghe",
     # KO — prevent fuzzy cross-topic hits when Hangul questions have empty Latin signatures
-    "커피", "피", "혈액", "김치", "주스", "이염", "곰팡이", "케첩", "황변", "누렇", "와이셔츠",
+    "커피", "피", "혈액", "김치", "와인", "주스", "이염", "곰팡이", "케첩", "황변", "누렇", "와이셔츠",
     "립스틱", "가죽", "정장", "색바램", "풀",
 )
 
