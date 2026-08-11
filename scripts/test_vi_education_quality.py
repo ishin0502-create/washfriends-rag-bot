@@ -161,6 +161,36 @@ def test_owner_chem_line_ko_has_buy():
     assert any("슈퍼" in x or "마트" in x for x in lines)
 
 
+def test_polish_coffee_thin_and_vinegar_dup():
+    from graphrag_engine import _polish_owner_ko_phrasing, _strip_misplaced_fresh_rescue
+
+    raw = (
+        "(1) 원단·두께 미확인시 얇음으로 약하게(흡수·찍기만), 표백 보류.\n"
+        "(2) 흰 식초(식용 식초 약 5%)를 흰 식초(~5%): 식초 1 : 물 4로 타서.\n"
+        "(4) 식초."
+    )
+    out = _polish_owner_ko_phrasing(raw)
+    assert "얇음으로" not in out
+    assert "(흡수·찍기만)(흡수·찍기만)" not in out
+    assert "흰 식초(~5%): 식초" not in out
+    with_rescue = (
+        out
+        + "\n\n1차 실패·마른 얼룩: 성공률 하락·잔여 가능을 고지한 뒤에만 2차 진행. 100% 약속 금지."
+    )
+    out2 = _strip_misplaced_fresh_rescue(
+        with_rescue,
+        {"graph": {"age_bucket": "unknown", "stain_context": {"age_bucket": "unknown"}}},
+        "ko",
+    )
+    assert "1차 실패" not in out2
+    kept = _strip_misplaced_fresh_rescue(
+        with_rescue,
+        {"graph": {"age_bucket": "dried", "stain_context": {"age_bucket": "dried"}}},
+        "ko",
+    )
+    assert "1차 실패" in kept
+
+
 def test_ko_blood_compact_and_wine_named():
     from graphrag_engine import _blood_stain_mentioned, _named_laundry_stain, _offline_stain_graph
 

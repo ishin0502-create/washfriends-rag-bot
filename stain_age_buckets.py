@@ -474,24 +474,26 @@ def _frame_for(bucket: AgeBucket) -> dict[str, str]:
                 "No fresh 5–15. No 100%."
             ),
         }
-    # unknown — dual teach
+    # unknown — dual teach (keep short; do not dump 1st-fail rescue on first ask)
     return {
         "age_frame_ko": (
-            "age_bucket=unknown. (1)에서 신선/마름을 한 줄로 갈라 확인. "
-            "본문 SOP는 fresh_path_ko(+protocol). "
-            "반드시 「마른·고착이면」dried_path_ko 단계를 이어서 쓰고, "
-            "limit_path_ko·rescue_disclose로 한계를 고지. "
-            "신선만 길게·마름 생략 금지."
+            "age_bucket=unknown. (1)에서 신선/마름을 한 줄로만 갈라 확인. "
+            "본문 SOP는 fresh_path_ko(+protocol)만 — 완결할 것. "
+            "(6) 또는 [성공률]에 「마른·고착이면」dried_path_ko 핵심을 한두 줄. "
+            "첫 질문에 「1차 실패·마른 얼룩」 rescue 전문을 붙이지 말 것 "
+            "(마름·재시도가 명시될 때만)."
         ),
         "age_frame_vi": (
-            "age_bucket=unknown. In (1) split tuoi/kho one line. "
-            "Body = fresh_path_vi(+protocol). Then 「neu kho」 dried_path_vi steps. "
-            "End with limit_path_vi + rescue_disclose. Do not omit dried."
+            "age_bucket=unknown. In (1) split tuoi/kho one short line. "
+            "Body = fresh_path_vi(+protocol) only. "
+            "In (6)/success: one–two lines 「nếu khô」 from dried_path_vi. "
+            "Do NOT paste full lần-1-thất-bại rescue on a first ask."
         ),
         "age_frame_en": (
-            "age_bucket=unknown. In (1) ask fresh vs dried briefly. "
-            "Body = fresh_path(+protocol). Then dried_path steps for set stains. "
-            "Disclose limit_path + rescue. Do not omit dried branch."
+            "age_bucket=unknown. In (1) split fresh vs dried briefly. "
+            "Body = fresh_path(+protocol). "
+            "In aftercare/success: one–two dried_path lines. "
+            "Do not paste full 1st-fail rescue on a first ask."
         ),
     }
 

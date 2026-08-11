@@ -10,6 +10,7 @@ Design:
 """
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
@@ -2476,9 +2477,20 @@ def bind_tools_from_protocol(proto: Protocol, tools: list, *, item_id: str = "")
                     f"Silk/wool: no vinegar/enzyme spray. Use 「{spray_name_ko}」 lightly per bottle — dab/blot only."
                 )
             else:
+                # Short dil only — avoid 「흰 식초」을 「흰 식초(~5%): 식초 1:4」 double name
+                dil_short_ko = spray_dil_ko
+                if ":" in dil_short_ko or "：" in dil_short_ko:
+                    # Prefer the ratio clause if Neo4j stuffed product name into dilution
+                    for sep in (": ", "：", "—", "–"):
+                        if "식초" in dil_short_ko and "물" in dil_short_ko and sep in dil_short_ko:
+                            break
+                    m_ratio = re.search(r"식초\s*1\s*[:：]\s*물\s*4", dil_short_ko)
+                    if m_ratio:
+                        dil_short_ko = m_ratio.group(0)
                 t["use_for_ko"] = (
-                    f"이 얼룩용: 「{spray_name_ko}」을 「{spray_dil_ko}」로 타서, "
-                    f"다른 약이 안 들어 있는 분무기에만 넣는다. 병 겉에 「{spray_name_ko} / {spray_dil_ko}」라고 적는다. "
+                    f"이 얼룩용: 「{spray_name_ko}」을 {dil_short_ko}로 타서 "
+                    f"다른 약이 안 들어 있는 분무기에만 넣는다. "
+                    f"분무기 겉면 라벨에 「{spray_name_ko} · {dil_short_ko}」처럼 적어 둔다. "
                     f"얼룩에 1–2번만 뿌리고 흠뻑 적시지 말 것."
                 )
                 t["use_for_vi"] = (
@@ -2514,10 +2526,14 @@ def bind_tools_from_protocol(proto: Protocol, tools: list, *, item_id: str = "")
                     f"CAM giấm/enzyme."
                 )
             elif soak_chem and soak_chem == spray_chem and spray_chem:
+                dil_s = soak_dil_ko
+                m_ratio = re.search(r"식초\s*1\s*[:：]\s*물\s*4", dil_s or "")
+                if m_ratio:
+                    dil_s = m_ratio.group(0)
                 t["use_for_ko"] = (
-                    f"분무기와 같은 약: 「{soak_name_ko}」을 「{soak_dil_ko}」로 통에 만들어 "
+                    f"분무기와 같은 약: 「{soak_name_ko}」을 {dil_s}로 통에 만들어 "
                     f"{min_ko}만 담근다(분무·담금 중 하나 또는 병행). "
-                    f"통 겉에 「{soak_name_ko} / {soak_dil_ko}」라고 적는다. "
+                    f"통 겉면 라벨에 「{soak_name_ko} · {dil_s}」처럼 적어 둔다. "
                     f"정장·넥타이·얇은 실크는 SOP에서 금하면 통담금 하지 말 것."
                 )
                 t["use_for_vi"] = (

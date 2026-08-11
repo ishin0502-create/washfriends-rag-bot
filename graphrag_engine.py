@@ -3563,10 +3563,36 @@ def _polish_owner_ko_phrasing(answer: str) -> str:
         ("원단·두께 미상일시 보수적으로 안내", "원단·두께 미확인 시 약하게·표백 보류로 진행"),
         ("Cap1·표백 보류", "약하게(흡수·찍기만)·표백 보류"),
         ("Cap1·표백 보류로 진행", "약하게(흡수·찍기만)·표백 보류로 진행"),
+        ("미확인시 얇음으로 약하게(흡수·찍기만)", "미확인 시 약하게(흡수·찍기만)"),
+        ("미확인 시 얇음으로 약하게(흡수·찍기만)", "미확인 시 약하게(흡수·찍기만)"),
+        ("미확인시 얇음으로 약하게", "미확인 시 약하게(흡수·찍기만)"),
+        ("미확인 시 얇음으로 약하게", "미확인 시 약하게(흡수·찍기만)"),
+        ("미확인시 얇음으로", "미확인 시"),
+        ("미확인 시 얇음으로", "미확인 시"),
+        ("얇음으로 약하게(흡수·찍기만)", "약하게(흡수·찍기만)"),
+        ("얇음으로 약하게", "약하게(흡수·찍기만)"),
+        ("얇음으로,", "보통 두께 기준,"),
+        ("약하게(흡수·찍기만)(흡수·찍기만)", "약하게(흡수·찍기만)"),
     )
     for a, b in replacements:
         if a in out:
             out = out.replace(a, b)
+    # Dedup vinegar product name jammed into dilution
+    out = re.sub(
+        r"흰\s*식초\([^)]*\)\s*를\s*흰\s*식초[^:：]*[:：]\s*(식초\s*1\s*[:：]\s*물\s*4)",
+        r"흰 식초(약 5%)를 \1",
+        out,
+    )
+    out = re.sub(
+        r"「흰\s*식초[^」]*」\s*을\s*「흰\s*식초[^」]*」",
+        "「흰 식초(약 5%)」을 「식초 1 : 물 4」",
+        out,
+    )
+    out = re.sub(
+        r"흰\s*식초\([^)]*약\s*5%\s*\)\s*를\s*흰\s*식초\([^)]*\)\s*[:：]\s*",
+        "흰 식초(약 5%)를 ",
+        out,
+    )
     # LLM sometimes collapses spray howto into 「라벨에 라벨」
     out = out.replace("분무기 겉면 라벨에 라벨 붙임", "분무기 겉면 라벨에 약 이름·희석비를 적어 둔다")
     out = out.replace("겉면 라벨에 라벨", "겉면 라벨에 약 이름·희석비")
@@ -3579,6 +3605,24 @@ def _polish_owner_ko_phrasing(answer: str) -> str:
     except Exception:
         pass
     return out
+
+
+def _strip_misplaced_fresh_rescue(answer: str, graph_context: dict, lang: str) -> str:
+    """Drop 1st-fail rescue footer on fresh/unknown first asks (LLM over-teach)."""
+    if lang != "ko" or not answer:
+        return answer
+    g = graph_context.get("graph") if isinstance(graph_context, dict) else None
+    if not isinstance(g, dict):
+        return answer
+    sc = g.get("stain_context") if isinstance(g.get("stain_context"), dict) else {}
+    bucket = str(sc.get("age_bucket") or g.get("age_bucket") or "")
+    if bucket in ("dried", "hard"):
+        return answer
+    return re.sub(
+        r"\n*\s*1차\s*실패[·\s]*마른\s*얼룩[^\n]*100%\s*약속\s*금지\.?\s*$",
+        "",
+        answer,
+    ).rstrip()
 
 
 def _chem_line_present(answer: str, line: str, lang: str) -> bool:
@@ -3886,6 +3930,7 @@ def _answer_with_optional_cache(
             answer = _enforce_rescue_pass(answer, graph_context, lang)
             if lang == "ko":
                 answer = _polish_owner_ko_phrasing(answer)
+                answer = _strip_misplaced_fresh_rescue(answer, graph_context, lang)
             return answer
     answer = _rewrite_item_care_step1_header(answer, graph_context, lang)
     answer = _enforce_stain_education(answer, graph_context, lang)
@@ -3893,6 +3938,7 @@ def _answer_with_optional_cache(
     answer = _enforce_rescue_pass(answer, graph_context, lang)
     if lang == "ko":
         answer = _polish_owner_ko_phrasing(answer)
+        answer = _strip_misplaced_fresh_rescue(answer, graph_context, lang)
     if not reply_language_leaks(answer, lang):
         cache_store(cache_question, answer, ctx_key)
     else:
