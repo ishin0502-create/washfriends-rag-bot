@@ -392,12 +392,12 @@ RETURN s {
     .dilution_vi, .dilution_ko, .when_use_vi
   }) AS chemicals,
   CASE $attempt_number
-    WHEN 1 THEN '2차 준비: dried_path / rescue_2nd 따르고, 성공률 하락을 먼저 고지.'
+    WHEN 1 THEN '2차 준비: 마른 얼룩 경로 / 2차 재처리를 따르고, 성공률 하락을 먼저 고지.'
     WHEN 2 THEN '3차: 원단 허용 시에만 산소계 검토, 아니면 전문·배상 논의. 100% 금지.'
     ELSE '잔여 가능 — 고객 고지. 무리한 강처리·혼합 금지.'
   END AS recommended_rescue_ko,
   CASE $attempt_number
-    WHEN 1 THEN 'Lan 2: theo dried_path/rescue_2nd; bao ty le thap truoc.'
+    WHEN 1 THEN 'Lan 2: theo quy trinh vet kho / lan 2; bao ty le thap truoc.'
     WHEN 2 THEN 'Lan 3: B1 chi neu vai cho; khong thi chuyen. CAM 100%.'
     ELSE 'Co the vin vien — bao khach. CAM xu ly manh/pha cocktail.'
   END AS recommended_rescue
@@ -937,12 +937,30 @@ def _merge_item_into_context(context: dict, item_graph: dict) -> dict:
     return context
 
 
+# Stain names that contain color words — must not set garment_color.
+_GARMENT_COLOR_NOISE = (
+    "블랙커피",
+    "블랙 커피",
+    "black coffee",
+    "화이트와인",
+    "화이트 와인",
+    "white wine",
+    "레드와인",
+    "레드 와인",
+    "red wine",
+    "블랙티",
+    "black tea",
+)
+
+
 def _infer_garment_color(text: str) -> str:
     """white | black | colored | '' — garment/stain-host color from owner message."""
     if not text:
         return ""
     raw = text
-    t = _normalize_text(text)
+    for noise in _GARMENT_COLOR_NOISE:
+        raw = re.sub(re.escape(noise), " ", raw, flags=re.I)
+    t = _normalize_text(raw)
     if any(k in raw for k in ("흰", "하얀", "화이트", "백색")) or "trang" in t or "white" in t:
         return "white"
     if any(k in raw for k in ("검정", "검은", "블랙")) or "den " in f" {t} " or t.endswith(" den") or "black" in t:
@@ -1080,7 +1098,7 @@ def _refine_tools_for_context(graph: dict, entities: Optional[dict] = None) -> d
     if garment_color:
         out["garment_color"] = garment_color
         if garment_color == "white":
-            out["color_note_ko"] = "흰 옷: 산소표백(B1)은 원단 허용 시에만. 염소(락스)는 단백질·실크·울 금지."
+            out["color_note_ko"] = "흰 옷: 산소표백은 원단 허용 시에만. 염소(락스)는 단백질·실크·울 금지."
             out["color_note_vi"] = "Do TRANG: B1 chi khi vai cho phep. Javel CAM tren protein/lua/len."
             out["color_note_en"] = "White: oxygen bleach only if fabric allows. No chlorine on protein/silk/wool."
         elif garment_color == "colored":
@@ -3166,9 +3184,10 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
             "aftercare_ko의 강광·열고착 경고와 rescue_2nd_ko/rescue_disclose_ko가 있으면 "
             "후관리·실패 시 2차에 포함 — dried/hard면 「1차 실패 후」+「2차:」를 빠뜨리지 말 것. "
             "age_frame_ko·age_bucket을 따를 것: "
-            "unknown이면 (1) 신선/마름 한 줄 → 본문 fresh_path(+protocol) → "
-            "「마른·고착이면」dried_path_ko 단계 → limit_path_ko·rescue로 한계. "
-            "dried면 본문=dried_path_ko(장침지 soak_minutes_ko), protocol 신선 분(5–15) 금지. "
+            "unknown이면 (1) 신선/마름 한 줄 → 본문 신선 경로(+protocol) → "
+            "「마른·고착이면」마른 얼룩 단계(장침지) → 한계·2차 고지. "
+            "dried면 본문=마른 얼룩 장침지, protocol 신선 분(5–15) 금지. "
+            "필드명(dried_path, rescue_2nd, Cap, 내부 코드)을 점주 답에 쓰지 말 것. "
             "path_lock_ko가 있으면 최우선. "
             "탄닌·와인: 문지르기·솔 문지르기 금지. 두께 미상이면 얇다고 Cap 단정 금지. "
             "hard면 limit_path_ko·path_lock을 (1)에 먼저 → dried 1회·100% 금지·「1시간 내 양호」금지. "
@@ -3573,10 +3592,25 @@ def _polish_owner_ko_phrasing(answer: str) -> str:
         ("얇음으로 약하게", "약하게(흡수·찍기만)"),
         ("얇음으로,", "보통 두께 기준,"),
         ("약하게(흡수·찍기만)(흡수·찍기만)", "약하게(흡수·찍기만)"),
+        ("흰 식초을", "흰 식초를"),
+        ("바깥→안 문지름", "바깥→안 찍어 바름"),
+        ("바깥→안으로 문지름", "바깥→안 찍어 바름"),
     )
     for a, b in replacements:
         if a in out:
             out = out.replace(a, b)
+    out = re.sub(r"식초(\([^)]*\))을", r"식초\1를", out)
+    out = out.replace("식초)을", "식초)를")
+    out = re.sub(
+        r"(니트릴\s*장갑|마스크)\(보호구\([^)]*\)\)",
+        r"\1",
+        out,
+    )
+    out = re.sub(r"(?i)dried_path(?:_ko|_vi)?", "마른 얼룩 경로", out)
+    out = re.sub(r"(?i)rescue_2nd(?:_ko|_vi)?", "2차 재처리", out)
+    if "문지르기 금지" in out:
+        out = re.sub(r"바깥→안\s*문지른다", "바깥→안 찍어 바른다", out)
+        out = out.replace("후 바깥→안 문지름", "후 바깥→안 찍어 바름")
     # Dedup vinegar product name jammed into dilution
     out = re.sub(
         r"흰\s*식초\([^)]*\)\s*를\s*흰\s*식초[^:：]*[:：]\s*(식초\s*1\s*[:：]\s*물\s*4)",
@@ -3618,11 +3652,17 @@ def _strip_misplaced_fresh_rescue(answer: str, graph_context: dict, lang: str) -
     bucket = str(sc.get("age_bucket") or g.get("age_bucket") or "")
     if bucket in ("dried", "hard"):
         return answer
-    return re.sub(
+    out = re.sub(
         r"\n*\s*1차\s*실패[·\s]*마른\s*얼룩[^\n]*100%\s*약속\s*금지\.?\s*$",
         "",
         answer,
-    ).rstrip()
+    )
+    out = re.sub(
+        r"\n*\s*1차\s*실패[^\n]{0,100}(마른\s*얼룩|마른 얼룩 경로|dried_path|2차\s*진행)[^\n]*$",
+        "",
+        out,
+    )
+    return out.rstrip()
 
 
 def _chem_line_present(answer: str, line: str, lang: str) -> bool:
@@ -3651,6 +3691,76 @@ def _chem_line_present(answer: str, line: str, lang: str) -> bool:
             )
         return False
     return line[:40].lower() in a
+
+
+_TANNIN_OXYGEN_IDS = {
+    "S_RED_WINE",
+    "S_WHITE_WINE_BEER",
+    "S_BLACK_COFFEE",
+    "S_TEA",
+    "S_FRUIT_JUICE",
+    "S_SOFT_DRINK",
+    "S_KIMCHI",
+    "S_KETCHUP",
+    "S_TOMATO_SAUCE",
+    "S_SOY_SAUCE",
+    "S_CHILI",
+    "S_BETEL",
+    "S_SUGARCANE",
+}
+
+
+def _fabric_blocks_oxygen(graph: dict) -> bool:
+    fabric = graph.get("fabric_context") if isinstance(graph, dict) else None
+    if not isinstance(fabric, dict):
+        return False
+    if fabric.get("can_oxygen") is False:
+        return True
+    fid = str(fabric.get("id") or "").upper()
+    # F3 wool, F4 silk, F7 rayon, F8 leather, F9 suede — not F5 linen
+    if fid in {"F3", "F4", "F7", "F8", "F9"}:
+        return True
+    blob = " ".join(
+        str(fabric.get(k) or "")
+        for k in ("name", "name_ko", "name_vi")
+    ).lower()
+    return any(
+        x in blob
+        for x in ("silk", "wool", "실크", "비단", "울", "lụa", "rayon", "레이온", "leather", "suede", "가죽", "스웨이드")
+    )
+
+
+def _oxygen_line_present(answer: str, lang: str) -> bool:
+    if not answer:
+        return False
+    if lang == "ko":
+        return bool(re.search(r"산소표백|산소계", answer))
+    if lang == "vi":
+        low = answer.lower()
+        return "oxy" in low or "tẩy oxy" in low or "bot tay oxy" in low
+    return "oxygen" in answer.lower()
+
+
+def _tannin_oxygen_owner_line(graph: dict, sc: dict, lang: str) -> str:
+    """Shop-speak oxygen-if-white cue for tannin stains. Empty if not applicable."""
+    sid = str((graph or {}).get("_owner_stain_id") or (sc or {}).get("id") or "")
+    tannin = bool((sc or {}).get("contains_tannin")) or sid in _TANNIN_OXYGEN_IDS
+    if not tannin:
+        return ""
+    if _fabric_blocks_oxygen(graph or {}):
+        return ""
+    color = str((graph or {}).get("garment_color") or "")
+    if color in {"colored", "black"}:
+        return ""
+    if lang == "ko":
+        if color == "white":
+            return "흰옷 잔색: 산소표백(원단 허용·구석 테스트). 락스 금지."
+        return "흰/면 잔색: 산소표백(색 미확인 시 생략·구석 테스트)."
+    if lang == "vi":
+        if color == "white":
+            return "Vải trắng còn màu: tẩy oxy (vải cho phép, thử góc). CẤM Javel."
+        return "Trắng/cotton còn màu: tẩy oxy (bỏ nếu chưa rõ màu, thử góc)."
+    return ""
 
 
 def _enforce_stain_education(answer: str, graph_context: dict, lang: str) -> str:
@@ -3696,6 +3806,10 @@ def _enforce_stain_education(answer: str, graph_context: dict, lang: str) -> str
         low = out.lower()
         if "muối" not in low and "muoi" not in low and ("muối" in path.lower() or "muoi" in path.lower()):
             append.append("Máu tươi: ngâm muối ăn nước lạnh 15–30 phút (siêu thị) trước enzyme")
+
+    oxy_note = _tannin_oxygen_owner_line(g, sc, lang)
+    if oxy_note and oxy_note not in out and not _oxygen_line_present(out, lang):
+        append.append(oxy_note)
 
     # Generic: if protocol owner_lines mention salt/enzyme buy but answer only names enzyme jargon
     if lang == "ko" and g.get("chem_owner_lines"):

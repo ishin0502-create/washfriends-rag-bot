@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-08-11-coffee-edu-v16",
+            "build": "2026-08-11-tannin-oxy-v17",
             "checks": checks,
         },
         status_code=200,
@@ -2567,6 +2567,19 @@ RETURN size(nodes) AS cleared""")
             "ORDER BY id"
         )
         log["vn_specialty_stains"] = [dict(row) for row in r4]
+        r5 = s.run(
+            "MATCH (s:Stain) WHERE s.id IN "
+            "['S_BLACK_COFFEE','S_RED_WINE','S_KIMCHI','S_BLOOD_FRESH'] "
+            "RETURN s.id AS id, s.name_ko AS name_ko, "
+            "CASE WHEN s.why_ko IS NOT NULL AND s.why_ko <> '' THEN true ELSE false END AS has_why_ko, "
+            "CASE WHEN s.fresh_path_ko IS NOT NULL AND s.fresh_path_ko <> '' THEN true ELSE false END AS has_fresh_ko, "
+            "CASE WHEN s.dried_path_ko IS NOT NULL AND s.dried_path_ko <> '' THEN true ELSE false END AS has_dried_ko, "
+            "(s.fresh_path_ko CONTAINS '산소' OR s.why_ko CONTAINS '산소') AS oxygen_in_ko, "
+            "(s.fresh_path_ko CONTAINS '식초' OR s.why_ko CONTAINS '식초' "
+            " OR s.fresh_path_ko CONTAINS '소금' OR s.why_ko CONTAINS '소금') AS core_chem_ko "
+            "ORDER BY id"
+        )
+        log["tannin_protein_ko"] = [dict(row) for row in r5]
         log["kb_docs"] = {
             "note": "Graph education is seeded via /admin/seed (Neo4j). Markdown under kb/ is the human protocol mirror — run python ingest.py to refresh Chroma if used.",
             "home": "kb/laundry_kb_v3_items_home.md",

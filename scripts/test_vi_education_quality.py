@@ -244,6 +244,96 @@ def test_enforce_stain_education_blood_ko():
     assert "힘" in out or "약" in out or "흡수" in out
 
 
+def test_infer_garment_color_ignores_stain_names():
+    from graphrag_engine import _infer_garment_color
+
+    assert _infer_garment_color("면 티셔츠에 방금 쏟은 블랙커피 얼룩") == ""
+    assert _infer_garment_color("옷에 화이트와인 묻었어") == ""
+    assert _infer_garment_color("흰 면 셔츠에 레드와인") == "white"
+    assert _infer_garment_color("검정 면 티에 커피") == "black"
+
+
+def test_polish_tannin_wine_kimchi_and_dried_path():
+    from graphrag_engine import _polish_owner_ko_phrasing, _strip_misplaced_fresh_rescue
+
+    wine = "분무기: 흰 식초(식용 식초 약 5%)을 식초 1 : 물 4로 희석."
+    out = _polish_owner_ko_phrasing(wine)
+    assert "을 식초" not in out
+    assert "%)를" in out or "식초를" in out
+
+    kimchi = "문지르기 금지. 주방세제 후 바깥→안 문지름."
+    out_k = _polish_owner_ko_phrasing(kimchi)
+    assert "문지름" not in out_k
+    assert "찍어 바름" in out_k
+
+    blood = (
+        "건조 전 강광.\n"
+        "1차 실패 시 2차 진행 가능 — 마른 얼룩은 dried_path로 진행."
+    )
+    polished = _polish_owner_ko_phrasing(blood)
+    assert "dried_path" not in polished
+    stripped = _strip_misplaced_fresh_rescue(
+        polished,
+        {"graph": {"age_bucket": "fresh", "stain_context": {"age_bucket": "fresh"}}},
+        "ko",
+    )
+    assert "1차 실패" not in stripped
+    assert "dried_path" not in stripped
+
+
+def test_tannin_oxygen_if_white_and_unknown():
+    from graphrag_engine import _enforce_stain_education
+
+    wine_unknown = "(1) 레드와인 (2) 흰 천 (3) 약하게 (4) 흰 식초 1:4 (5) 찬물 (6) 강광"
+    g_unknown = {
+        "graph": {
+            "_owner_stain_id": "S_RED_WINE",
+            "garment_color": "",
+            "stain_context": {"id": "S_RED_WINE", "contains_tannin": True},
+            "chem_owner_lines": [],
+        }
+    }
+    out_u = _enforce_stain_education(wine_unknown, g_unknown, "ko")
+    assert "산소표백" in out_u
+    assert "색 미확인 시 생략" in out_u
+
+    wine_white = wine_unknown
+    g_white = {
+        "graph": {
+            "_owner_stain_id": "S_RED_WINE",
+            "garment_color": "white",
+            "stain_context": {"id": "S_RED_WINE", "contains_tannin": True},
+            "chem_owner_lines": [],
+        }
+    }
+    out_w = _enforce_stain_education(wine_white, g_white, "ko")
+    assert "흰옷 잔색" in out_w
+    assert "산소표백" in out_w
+
+    wine_color = wine_unknown
+    g_color = {
+        "graph": {
+            "_owner_stain_id": "S_RED_WINE",
+            "garment_color": "colored",
+            "stain_context": {"id": "S_RED_WINE", "contains_tannin": True},
+            "chem_owner_lines": [],
+        }
+    }
+    out_c = _enforce_stain_education(wine_color, g_color, "ko")
+    assert "산소표백" not in out_c
+
+    coffee_already = wine_unknown + "\n흰/면 잔색: 산소표백(색 미확인 시 생략)."
+    g_coffee = {
+        "graph": {
+            "_owner_stain_id": "S_BLACK_COFFEE",
+            "stain_context": {"id": "S_BLACK_COFFEE", "contains_tannin": True},
+            "chem_owner_lines": [],
+        }
+    }
+    out_cf = _enforce_stain_education(coffee_already, g_coffee, "ko")
+    assert out_cf.count("산소표백") == 1
+
+
 def test_sanitize_strips_giao_duc():
     from vi_text_canon import sanitize_education_vi_fields
 
