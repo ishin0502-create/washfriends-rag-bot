@@ -3596,6 +3596,12 @@ def _polish_owner_ko_phrasing(answer: str) -> str:
         ("흰 식초을", "흰 식초를"),
         ("바깥→안 문지름", "바깥→안 찍어 바름"),
         ("바깥→안으로 문지름", "바깥→안 찍어 바름"),
+        ("바깥→안으로 가볍게 문지름", "바깥→안 가볍게 찍어 바름"),
+        ("가볍게 문지름", "가볍게 찍어 바름(세게 문지르기 금지)"),
+        ("가볍게 문지른다", "가볍게 찍어 바른다(세게 문지르기 금지)"),
+        ("가볍게 마사지", "가볍게 찍어 바름"),
+        ("바깥→안으로 닦는다", "바깥→안 찍어 흡수한다"),
+        ("바깥→안으로 닦아", "바깥→안 찍어 흡수해"),
     )
     for a, b in replacements:
         if a in out:
@@ -3609,9 +3615,14 @@ def _polish_owner_ko_phrasing(answer: str) -> str:
     )
     out = re.sub(r"(?i)dried_path(?:_ko|_vi)?", "마른 얼룩 경로", out)
     out = re.sub(r"(?i)rescue_2nd(?:_ko|_vi)?", "2차 재처리", out)
+    # Soft-rub leftovers (LLM) even when “문지르기 금지” was omitted
+    out = re.sub(r"바깥→안(?:으로)?\s*가볍게\s*문지름", "바깥→안 가볍게 찍어 바름", out)
+    out = re.sub(r"얼룩에\s*바깥→안(?:으로)?\s*가볍게\s*문지름", "얼룩에 바깥→안 가볍게 찍어 바름", out)
+    out = re.sub(r"가벼운\s*힘으로\s*바깥→안(?:으로)?\s*닦는다", "약하게 바깥→안 찍어 흡수한다", out)
     if "문지르기 금지" in out:
         out = re.sub(r"바깥→안\s*문지른다", "바깥→안 찍어 바른다", out)
         out = out.replace("후 바깥→안 문지름", "후 바깥→안 찍어 바름")
+        out = re.sub(r"(?<!세게\s)문지름(?!\s*금지)", "찍어 바름", out)
     # Dedup vinegar product name jammed into dilution
     out = re.sub(
         r"흰\s*식초\([^)]*\)\s*를\s*흰\s*식초[^:：]*[:：]\s*(식초\s*1\s*[:：]\s*물\s*4)",

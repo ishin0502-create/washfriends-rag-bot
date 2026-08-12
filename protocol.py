@@ -435,11 +435,11 @@ def _tpl_kimchi() -> Protocol:
             Step("rinse", "안쪽 찬물 헹굼", "Xả lạnh mặt trái", force="Cap1"),
             Step(
                 "dish",
-                "주방세제 1–2방울 바깥→안",
-                "Nước rửa chén 1-2 giọt NGOÀI→TRONG",
+                "주방세제 1–2방울 바깥→안 찍어 바름(세게 문지르기 금지)",
+                "Nước rửa chén 1-2 giọt NGOÀI→TRONG (chấm nhẹ, không chà mạnh)",
                 chem="D2",
                 tool_ids=["T_CLOTH", "T_BRUSH_SOFT"],
-                force="Cap2",
+                force="Cap1–2",
             ),
             Step(
                 "vinegar",

@@ -264,10 +264,19 @@ def test_polish_tannin_wine_kimchi_and_dried_path():
     assert "을 식초" not in out
     assert "%)를" in out or "식초를" in out
 
-    kimchi = "문지르기 금지. 주방세제 후 바깥→안 문지름."
+    kimchi = (
+        "힘·방향: 가벼운 힘으로 바깥→안으로 닦는다.\n"
+        "주방세제: 얼룩에 바깥→안으로 가볍게 문지름. 연질솔로 가볍게 마사지."
+    )
     out_k = _polish_owner_ko_phrasing(kimchi)
     assert "문지름" not in out_k
-    assert "찍어 바름" in out_k
+    assert "마사지" not in out_k
+    assert "찍어 바름" in out_k or "찍어 흡수" in out_k
+
+    kimchi2 = "문지르기 금지. 주방세제 후 바깥→안 문지름."
+    out_k2 = _polish_owner_ko_phrasing(kimchi2)
+    assert "문지름" not in out_k2
+    assert "찍어 바름" in out_k2
 
     blood = (
         "건조 전 강광.\n"
