@@ -1310,13 +1310,14 @@ def _bind_tool_howto_to_protocol(graph: dict) -> dict:
 
 
 def _blood_stain_mentioned(raw: str) -> bool:
-    """KO/VI/EN blood mentions — include 피묻은 (no space), not 커피 묻은."""
+    """KO/VI/EN blood mentions — include 피묻은 (no space), not 커피 얼룩/묻은."""
     msg = raw or ""
     t = _normalize_text(msg)
-    if any(k in msg for k in ("핏자국", "혈액", "피얼룩", "혈흔", "핏물", "피 얼룩")):
+    # Unambiguous blood words (no 커피 collision)
+    if any(k in msg for k in ("핏자국", "혈액", "혈흔", "핏물")):
         return True
-    # 피묻 / 피 묻 — but 커피 ends with 피
-    if re.search(r"(?<!커)피\s*묻", msg):
+    # 피묻 / 피 묻 / 피얼룩 / 피 얼룩 — 커피 ends with 피 so lookbehind is required
+    if re.search(r"(?<!커)피\s*(?:묻|얼룩)", msg):
         return True
     return ("mau tuoi" in t or "mau kho" in t) or (
         "blood" in t and "bleed" not in t

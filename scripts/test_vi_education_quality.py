@@ -196,7 +196,10 @@ def test_ko_blood_compact_and_wine_named():
 
     assert _blood_stain_mentioned("피묻은 옷은 어떻게 세탁하나요?")
     assert _blood_stain_mentioned("피 묻은 옷")
+    assert _blood_stain_mentioned("면 티셔츠에 피 얼룩 어떻게 빼?")
     assert not _blood_stain_mentioned("커피 묻은 옷")
+    assert not _blood_stain_mentioned("면 티셔츠에 방금 쏟은 블랙커피 얼룩 어떻게 빼?")
+    assert not _blood_stain_mentioned("블랙커피 얼룩")
     assert not _blood_stain_mentioned("옷에 와인이 묻었는데 어떻게 지우나요?")
     assert _named_laundry_stain("옷에 와인이 묻었는데 어떻게 지우나요?")
     assert _named_laundry_stain("옷에 김치국물이 묻었어. 어떻게 세탁하는지?")
