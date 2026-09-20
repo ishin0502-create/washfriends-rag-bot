@@ -314,6 +314,42 @@ def shop_speak_ko(text: str) -> str:
     return t
 
 
+def shop_speak_en(text: str) -> str:
+    """Franchise-facing EN: Cap/PPE → plain force language (not volume)."""
+    if not text:
+        return text
+    t = text
+    t = re.sub(
+        r"(?i)\bCap\s*1\s*[–\-~]\s*2\b",
+        "light–medium force (blot/dab only; do not scrub sideways)",
+        t,
+    )
+    t = re.sub(r"(?i)\bCap\s*0\s*[–\-~]\s*1\b", "very light–light force", t)
+    t = re.sub(
+        r"(?i)\bCap\s*2\s*[–\-~]\s*3\b",
+        "medium–firm force (controlled; no sideways scrub)",
+        t,
+    )
+    t = re.sub(r"(?i)\bCap\s*0\b", "very light force (machine only / no rubbing)", t)
+    t = re.sub(
+        r"(?i)\bCap\s*1\b",
+        "light force (blot/dab only; no sideways scrubbing)",
+        t,
+    )
+    t = re.sub(
+        r"(?i)\bCap\s*2\b",
+        "medium force (scrape/dab repeatedly; no sideways scrubbing)",
+        t,
+    )
+    t = re.sub(
+        r"(?i)\bCap\s*3\b",
+        "firm force (multiple controlled dabs; no sideways scrubbing)",
+        t,
+    )
+    t = re.sub(r"(?i)\bPPE\b", "protective gear (nitrile gloves; mask if needed)", t)
+    return t
+
+
 def canon_vi_dict(d: dict[str, Any]) -> dict[str, Any]:
     out = dict(d)
     for k, v in list(out.items()):

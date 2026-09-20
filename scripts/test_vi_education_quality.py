@@ -158,6 +158,12 @@ def test_shop_speak_strips_cap_ppe():
     assert "Cap" not in ko3
     assert "중간" in ko3 and "강하게" in ko3
     assert "문지르기 금지" in ko3
+    from vi_text_canon import shop_speak_en
+
+    en = shop_speak_en("Use Cap1 blot. Cap2 scrape. PPE required.")
+    assert "Cap" not in en
+    assert "PPE" not in en
+    assert "blot" in en.lower() or "light" in en.lower()
 
 def test_owner_chem_line_ko_has_buy():
     from chem_owner_vi import owner_chem_line, collect_owner_chem_lines

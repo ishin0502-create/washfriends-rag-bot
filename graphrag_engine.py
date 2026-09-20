@@ -2372,14 +2372,16 @@ def _scrub_internal_codes(text: str, lang: str = "vi") -> str:
     text = text.replace("**", "")
     # Expand codes BEFORE deleting (owner must see salt / enzyme names)
     text = _expand_chem_codes_in_text(text, lang=lang)
-    # Cap / PPE jargon → shop language (VI + KO)
+    # Cap / PPE jargon → shop language (VI + KO + EN)
     try:
-        from vi_text_canon import shop_speak_ko, shop_speak_vi
+        from vi_text_canon import shop_speak_en, shop_speak_ko, shop_speak_vi
 
         if lang == "vi":
             text = shop_speak_vi(text)
         elif lang == "ko":
             text = shop_speak_ko(text)
+        elif lang == "en":
+            text = shop_speak_en(text)
     except Exception:
         pass
     # Parenthetical leftovers after expansion rare; strip empty ()
