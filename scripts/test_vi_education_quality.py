@@ -21,6 +21,11 @@ def test_detect_reply_lang_ascii_vi():
         ("Enzyme protease là hóa chất gì", "vi"),
         ("nuoc tieu xu ly", "vi"),
         ("sua bot tre em", "vi"),
+        # English questions must stay EN even with fabric loanwords
+        ("How do I remove coffee stain from cotton shirt?", "en"),
+        ("How do I remove coffee stain?", "en"),
+        ("Blood stain on white shirt", "en"),
+        ("면 티셔츠에 커피 얼룩", "ko"),
     ]
     for q, expect in cases:
         got = detect_reply_lang(q)
@@ -30,11 +35,11 @@ def test_detect_reply_lang_ascii_vi():
 def test_session_lang_sticky():
     from reply_lang import detect_reply_lang
 
-    # Without sticky, short English-looking chem Q still VI via hints;
-    # with sticky after VI turn, pure latin stays VI
+    # Short follow-ups after a VI turn stay VI (including EN chem loanwords)
     assert detect_reply_lang("ok", session_lang="vi") == "vi"
     assert detect_reply_lang("E1", session_lang="vi") == "vi"
-
+    assert detect_reply_lang("Enzyme?", session_lang="vi") == "vi"
+    assert detect_reply_lang("cotton", session_lang="vi") == "vi"
 
 def test_chem_explain_e1_vi():
     from chem_explain import try_explain_chem
@@ -143,12 +148,16 @@ def test_shop_speak_strips_cap_ppe():
     ko = shop_speak_ko("Cap1 흡수. PPE 필수.")
     assert "Cap" not in ko
     assert "PPE" not in ko
+    assert "찍어 바름" in ko or "흡수" in ko
     # Korean particles after Cap code (common LLM output)
     ko2 = shop_speak_ko("Cap1과 블롯. Cap1–2: 안경 닦듯. E1 침지.")
     assert "Cap" not in ko2
     assert "약하게" in ko2 or "흡수" in ko2
     assert "슈퍼" in ko2 or "효소" in ko2
-
+    ko3 = shop_speak_ko("Cap2 바름. Cap3 반복.")
+    assert "Cap" not in ko3
+    assert "중간" in ko3 and "강하게" in ko3
+    assert "문지르기 금지" in ko3
 
 def test_owner_chem_line_ko_has_buy():
     from chem_owner_vi import owner_chem_line, collect_owner_chem_lines

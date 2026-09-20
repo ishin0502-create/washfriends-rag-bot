@@ -17,7 +17,9 @@ _VI_DIACRITICS = re.compile(
     re.I,
 )
 
-# ASCII Vietnamese franchise phrases (no diacritics)
+# ASCII Vietnamese franchise phrases (no diacritics).
+# Do NOT put bare English loanwords here (cotton/enzyme/acetone/suede) —
+# they appear in EN questions and would false-route to VI.
 _VI_ASCII_HINTS = (
     "lam sao", "xu ly", "xu li", "vet ban", "vet ", "giat ", "giặt",
     "rua chen", "rua ", "khong ", "duoc ", "duoc khong", "xin loi",
@@ -27,15 +29,20 @@ _VI_ASCII_HINTS = (
     # Chem / follow-up questions (unsigned VI — critical)
     "hoa chat", "hóa chất", "la gi", "là gì", "la hoa chat", "cai gi",
     "nghia la", "nghĩa là", "dung de gi", "dùng để", "chat lieu", "chất liệu",
-    "enzyme", "protease", "amylase", "lipase", "javel", "acetone",
+    "javel",
     "giam trang", "giấm", "oxy gia", "tay oxy", "chat non", "chất nôn",
-    "mau tuoi", "máu", "cotton", "lua ", "lụa", "len ",
+    "mau tuoi", "máu", "lua ", "lụa", "len ",
     "dung cu", "dụng cụ", "gang tay", "găng", "binh xit", "khan trang",
     "tiep tuc", "tiếp tục", "con gi", "còn gì",
     "nuoc tieu", "nước tiểu", "sua bot", "sữa bột", "sua cong", "chat non",
     "bao ho", "bảo hộ", "ngam enzyme", "ngâm enzyme", "bot tay", "bột tẩy",
-    "da bong", "da bóng", "ao da", "giay da", "tui da", "suede", "nam moc", "nấm mốc",
-    "son mong", "sơn móng", "acetone", "ve sinh da", "kem da", "xit bao ve",
+    "da bong", "da bóng", "ao da", "giay da", "tui da", "nam moc", "nấm mốc",
+    "son mong", "sơn móng", "ve sinh da", "kem da", "xit bao ve",
+)
+
+# English chem/fabric tokens: keep VI only for short follow-ups after a VI turn
+_VI_EN_LOAN_FOLLOWUPS = (
+    "enzyme", "protease", "amylase", "lipase", "acetone", "cotton", "suede",
 )
 
 _VI_LEAK = re.compile(
@@ -83,6 +90,13 @@ def detect_reply_lang(text: str, *, session_lang: str = "") -> str:
         if session_lang == "ko" and _LATIN_WORD.search(t) and not _VI_DIACRITICS.search(t):
             # KO session + English chem word → still KO education
             return "ko"
+    # Short VI-session follow-up that is only an EN loanword (e.g. "Enzyme?")
+    if (
+        session_lang == "vi"
+        and len(t.strip()) <= 40
+        and any(w in low for w in _VI_EN_LOAN_FOLLOWUPS)
+    ):
+        return "vi"
     if _LATIN_WORD.search(t):
         return "en"
     return session_lang if session_lang in {"vi", "ko", "en"} else "vi"

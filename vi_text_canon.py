@@ -284,9 +284,9 @@ def shop_speak_ko(text: str) -> str:
     t = re.sub(rf"(?i)\bCap\s*0\s*[–\-~]\s*1{_cap_tail}", "아주 약~약하게", t)
     t = re.sub(rf"(?i)\bCap\s*2\s*[–\-~]\s*3{_cap_tail}", "중간~강하게(통제)", t)
     t = re.sub(rf"(?i)\bCap\s*0{_cap_tail}", "아주 약하게(기계/문지르기 없음)", t)
-    t = re.sub(rf"(?i)\bCap\s*1{_cap_tail}", "약하게(흡수·찍기만, 문지르기 금지)", t)
-    t = re.sub(rf"(?i)\bCap\s*2{_cap_tail}", "중간(긁기·가볍게 문지르기)", t)
-    t = re.sub(rf"(?i)\bCap\s*3{_cap_tail}", "강하게(통제하며)", t)
+    t = re.sub(rf"(?i)\bCap\s*1{_cap_tail}", "약하게(흡수·찍어 바름만, 옆으로 문지르기 금지)", t)
+    t = re.sub(rf"(?i)\bCap\s*2{_cap_tail}", "중간(긁기·찍어 바름 반복, 옆으로 문지르기 금지)", t)
+    t = re.sub(rf"(?i)\bCap\s*3{_cap_tail}", "강하게(찍어 바름 여러 회, 옆으로 문지르기 금지)", t)
     t = re.sub(r"(?i)\bPPE\b", "보호구(니트릴 장갑·필요시 마스크)", t)
     # Chem codes → shop product names (match VI shop_speak pattern)
     _chem = (
