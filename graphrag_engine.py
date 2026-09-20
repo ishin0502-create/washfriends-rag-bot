@@ -4130,7 +4130,7 @@ def _answer_with_optional_cache(
             if lang == "ko":
                 answer = _polish_owner_ko_phrasing(answer)
                 answer = _strip_misplaced_fresh_rescue(answer, graph_context, lang)
-            return answer
+            return _prepend_stain_level_banner(answer, graph_context, entities, cache_question, lang)
     answer = _rewrite_item_care_step1_header(answer, graph_context, lang)
     answer = _enforce_stain_education(answer, graph_context, lang)
     answer = _enforce_must_include(answer, graph_context, lang)
@@ -4138,11 +4138,46 @@ def _answer_with_optional_cache(
     if lang == "ko":
         answer = _polish_owner_ko_phrasing(answer)
         answer = _strip_misplaced_fresh_rescue(answer, graph_context, lang)
+    answer = _prepend_stain_level_banner(answer, graph_context, entities, cache_question, lang)
     if not reply_language_leaks(answer, lang):
         cache_store(cache_question, answer, ctx_key)
     else:
         print(f"[LANG] skip cache_store lang={lang} leaks={reply_language_leaks(answer, lang)}")
     return answer
+
+
+def _prepend_stain_level_banner(
+    answer: str,
+    graph_context: dict,
+    entities: dict,
+    user_text: str,
+    lang: str,
+) -> str:
+    try:
+        from stain_level_tags import prepend_level_to_answer
+
+        g = graph_context.get("graph") if isinstance(graph_context, dict) else {}
+        if not isinstance(g, dict):
+            return answer
+        sid = str(
+            g.get("_owner_stain_id")
+            or (g.get("stain_context") or {}).get("id")
+            or entities.get("stain_id")
+            or ""
+        )
+        if not sid and g.get("specialty_item_care"):
+            return answer
+        return prepend_level_to_answer(
+            answer,
+            stain_id=sid,
+            graph=g,
+            entities=entities if isinstance(entities, dict) else {},
+            user_text=user_text or "",
+            lang=lang,
+        )
+    except Exception as e:
+        print(f"[LEVEL] banner skip: {type(e).__name__}: {e}")
+        return answer
 
 
 def generate_response_from_entities(
