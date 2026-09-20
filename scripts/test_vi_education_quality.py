@@ -176,7 +176,23 @@ def test_owner_chem_line_ko_has_buy():
     assert any("슈퍼" in x or "마트" in x for x in lines)
 
 
-def test_polish_coffee_thin_and_vinegar_dup():
+def test_polish_instructional_ko_and_headers():
+    from graphrag_engine import _polish_owner_ko_phrasing
+
+    raw = (
+        "(1) 블랙커피·면 확인.\n"
+        "(2) 흰 천.\n"
+        "세게 문지르기 금지. 건조 금지.\n"
+        "[왜 이 순서] 탄닌이라서.\n"
+        "적어 둔다."
+    )
+    out = _polish_owner_ko_phrasing(raw)
+    assert "문지르지 마세요" in out
+    assert "말리지 마세요" in out or "건조" in out
+    assert "적어 두세요" in out
+    assert "◆ (1)" in out
+    assert "확인하세요" in out
+    assert "◆ [왜" in out
     from graphrag_engine import _polish_owner_ko_phrasing, _strip_misplaced_fresh_rescue
 
     raw = (
