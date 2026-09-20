@@ -3551,7 +3551,7 @@ def _rewrite_item_care_step1_header(answer: str, graph_context: dict, lang: str)
     return _STAIN_STEP1_RE.sub(_ITEM_STEP1, answer, count=1)
 
 
-def _polish_owner_ko_phrasing(answer: str) -> str:
+def _polish_owner_ko_phrasing(answer: str, *, item_wash: bool = False) -> str:
     """Fix known awkward owner-facing phrases without changing chemistry."""
     if not answer:
         return answer
@@ -3674,7 +3674,7 @@ def _polish_owner_ko_phrasing(answer: str) -> str:
     out = out.replace("라벨에 라벨", "라벨에 약 이름·희석비")
     out = out.replace("적어 둔다", "적어 두세요")
     # Promote step / education headers for Zalo readability (no true font size in Zalo)
-    out = _promote_ko_section_headers(out)
+    out = _promote_ko_section_headers(out, item_wash=item_wash)
     try:
         from vi_text_canon import shop_speak_ko
 
@@ -3684,27 +3684,46 @@ def _polish_owner_ko_phrasing(answer: str) -> str:
     return out
 
 
-def _promote_ko_section_headers(text: str) -> str:
-    """Make (1)~(6) and [교육 블록] stand out with ◆ and blank lines (Zalo plain text)."""
+def _promote_ko_section_headers(text: str, *, item_wash: bool = False) -> str:
+    """Make (1)~(6) and [교육 블록] stand out with ◆ (+ emoji on TOC only).
+
+    Emoji is applied ONLY to the fixed (1)~(6) section titles — never to body,
+    chemistry, dilutions, or education blocks ([왜 이 순서] etc.).
+    """
     if not text:
         return text
     out = text
-    # Normalize already-promoted headers
+    # Normalize already-promoted headers; strip prior TOC emoji so re-run is idempotent
     out = re.sub(r"(?m)^[◆●■]\s*", "◆ ", out)
+    out = re.sub(
+        r"(?m)^(◆\s*\([1-6]\))\s*(?:👕|🧰|✋|🧴|🌡(?:️)?|🌬(?:️)?|🏷️|💨)\s+",
+        r"\1 ",
+        out,
+    )
 
-    step_map = {
-        "1": "오염·원단·두께·색상 확인하세요",
-        "2": "도구를 준비하세요",
-        "3": "힘·방향을 지키세요",
-        "4": "약품을 쓰세요",
-        "5": "수온을 지키세요",
-        "6": "후관리·건조 전 확인하세요",
-    }
-    for n, title in step_map.items():
-        # Keep rest of line as body under the promoted header
+    if item_wash:
+        step_map = {
+            "1": ("🏷️", "품목·라벨·용량·오염 유무를 확인하세요"),
+            "2": ("🧰", "도구를 준비하세요"),
+            "3": ("✋", "힘·방향을 지키세요"),
+            "4": ("🧴", "약품을 쓰세요"),
+            "5": ("🌡️", "수온을 지키세요"),
+            "6": ("🌬️", "건조·후관리를 확인하세요"),
+        }
+    else:
+        step_map = {
+            "1": ("👕", "오염·원단·두께·색상 확인하세요"),
+            "2": ("🧰", "도구를 준비하세요"),
+            "3": ("✋", "힘·방향을 지키세요"),
+            "4": ("🧴", "약품을 쓰세요"),
+            "5": ("🌡️", "수온을 지키세요"),
+            "6": ("🌬️", "후관리·건조 전 확인하세요"),
+        }
+    for n, (emoji, title) in step_map.items():
+        # Keep rest of line as body under the promoted header (chemistry untouched)
         out = re.sub(
             rf"(?m)^[ \t]*◆?\s*\({n}\)[ \t]*",
-            f"\n◆ ({n}) {title}\n",
+            f"\n◆ ({n}) {emoji} {title}\n",
             out,
             count=1,
         )
@@ -4128,7 +4147,7 @@ def _answer_with_optional_cache(
             answer = _enforce_must_include(answer, graph_context, lang)
             answer = _enforce_rescue_pass(answer, graph_context, lang)
             if lang == "ko":
-                answer = _polish_owner_ko_phrasing(answer)
+                answer = _polish_owner_ko_phrasing(answer, item_wash=item_wash)
                 answer = _strip_misplaced_fresh_rescue(answer, graph_context, lang)
             return _prepend_stain_level_banner(answer, graph_context, entities, cache_question, lang)
     answer = _rewrite_item_care_step1_header(answer, graph_context, lang)
@@ -4136,7 +4155,7 @@ def _answer_with_optional_cache(
     answer = _enforce_must_include(answer, graph_context, lang)
     answer = _enforce_rescue_pass(answer, graph_context, lang)
     if lang == "ko":
-        answer = _polish_owner_ko_phrasing(answer)
+        answer = _polish_owner_ko_phrasing(answer, item_wash=item_wash)
         answer = _strip_misplaced_fresh_rescue(answer, graph_context, lang)
     answer = _prepend_stain_level_banner(answer, graph_context, entities, cache_question, lang)
     if not reply_language_leaks(answer, lang):
@@ -4166,6 +4185,8 @@ def _prepend_stain_level_banner(
             or ""
         )
         if not sid and g.get("specialty_item_care"):
+            return answer
+        if not sid:
             return answer
         return prepend_level_to_answer(
             answer,

@@ -139,6 +139,40 @@ REFUSE_GATE_VI = (
     "Da/Da lộn cần dung môi."
 )
 
+# Compact legend — prepended once per stain answer (keep short for Zalo 2000).
+# Does not change chemistry; glossary only.
+GLOSSARY = {
+    "ko": (
+        "◆ [용어 안내]\n"
+        "· L1 초보 단독 — 신입도 상급 확인 없이 시도 가능\n"
+        "· L2 감독 필요 — 매니저·경력자 확인 후 진행\n"
+        "· L3 전문 의뢰·거절 우선 — 접수 시 전문 의뢰 또는 반려 우선\n"
+        "· 등급 1 시도 / 등급 2 부분 제거 / 등급 3 복원 불가 — 고객에게 먼저 고지\n"
+        "· 실크·울·가죽·아세테이트·모피, 또는 건조기·다림질 지났으면 한 단계 상향\n"
+        "· 아래 【접수 고지】 문장으로 고객에게 말한 뒤, 이번 건 SOP를 따르세요"
+    ),
+    "vi": (
+        "◆ [Thuật ngữ]\n"
+        "· L1 Tự xử lý — nhân viên mới có thể thử\n"
+        "· L2 Cần giám sát — hỏi quản lý trước\n"
+        "· L3 Ưu tiên từ chối / chuyên nghiệp\n"
+        "· Cấp 1 thử / Cấp 2 một phần / Cấp 3 không khôi phục — báo khách trước\n"
+        "· Lụa/Len/Da/Acetate/Lông hoặc đã sấy/ủi → nâng 1 cấp\n"
+        "· Đọc 【Tiếp nhận】 rồi làm SOP bên dưới"
+    ),
+    "en": (
+        "◆ [Terms]\n"
+        "· L1 beginner OK — juniors may attempt\n"
+        "· L2 supervisor needed — check with a senior first\n"
+        "· L3 refuse / refer first\n"
+        "· Grade 1 attempt / Grade 2 partial / Grade 3 cannot restore — tell the guest first\n"
+        "· Silk/wool/leather/acetate/fur, or after dryer/iron → bump one level\n"
+        "· Read the intake notice, then follow this job's SOP"
+    ),
+}
+
+_GLOSSARY_MARKERS = ("◆ [용어 안내]", "◆ [Thuật ngữ]", "◆ [Terms]")
+
 
 def base_level(stain_id: str) -> str:
     sid = (stain_id or "").strip().upper()
@@ -261,6 +295,19 @@ def format_intake_block(level: str, grade: int, lang: str = "ko") -> str:
     return "\n".join(parts)
 
 
+def format_glossary(lang: str = "ko") -> str:
+    return GLOSSARY[lang if lang in GLOSSARY else "ko"]
+
+
+def _has_glossary_or_level_header(answer: str) -> bool:
+    head = (answer or "").lstrip()[:120]
+    if any(head.startswith(m) for m in _GLOSSARY_MARKERS):
+        return True
+    if head.startswith("◆ [") and ("L1" in head or "L2" in head or "L3" in head):
+        return True
+    return False
+
+
 def prepend_level_to_answer(
     answer: str,
     *,
@@ -270,14 +317,25 @@ def prepend_level_to_answer(
     user_text: str = "",
     lang: str = "ko",
 ) -> str:
+    """Prepend compact glossary + this-job L/grade intake, then the SOP body.
+
+    Order (one Zalo bubble): 용어 안내 → 이번 건 L·등급·접수 고지 → 세탁 SOP.
+    Skips when there is no stain id (item-care / non-stain) so education paths stay intact.
+    """
     if not answer:
         return answer
     g = graph if isinstance(graph, dict) else {}
-    if g.get("specialty_item_care") and not (stain_id or (g.get("stain_context") or {}).get("id")):
+    sid = (stain_id or "").strip() or str(
+        g.get("_owner_stain_id") or (g.get("stain_context") or {}).get("id") or ""
+    )
+    if g.get("specialty_item_care") and not sid:
         return answer
-    level, grade = resolve_level(stain_id, graph=g, entities=entities or {}, user_text=user_text)
-    block = format_intake_block(level, grade, lang)
-    # Avoid double-prepend on cache retries
-    if answer.lstrip().startswith("◆ [") and ("L1" in answer[:80] or "L2" in answer[:80] or "L3" in answer[:80]):
+    # No stain context → do not invent L2 banner on unrelated answers
+    if not sid:
         return answer
-    return block + "\n\n" + answer.lstrip()
+    if _has_glossary_or_level_header(answer):
+        return answer
+    level, grade = resolve_level(sid, graph=g, entities=entities or {}, user_text=user_text)
+    glossary = format_glossary(lang)
+    case_block = format_intake_block(level, grade, lang)
+    return glossary + "\n\n" + case_block + "\n\n" + answer.lstrip()
