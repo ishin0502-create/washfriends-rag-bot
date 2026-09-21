@@ -5,6 +5,9 @@ L1 17 stains + hair dye: individual scripts. Chemistry order from education/prot
 """
 from __future__ import annotations
 
+import re
+from typing import Optional
+
 _START = "▼ 이제 시작합니다 — 순서대로 따라 해 주세요\n\n"
 
 
@@ -1131,9 +1134,185 @@ def protocol_motion_gaps() -> list[str]:
     return sorted(sid for sid in PROTOCOL_BUILDERS if sid not in HAND_MOTIONS_KO)
 
 
-def build_hand_motions(stain_id: str, lang: str = "ko") -> str:
-    """KO scripts (L1/L2/L3); VI covered set; EN empty (SOP body fallback)."""
+def _entities_for_fabric(graph: Optional[dict]) -> dict:
+    """Best-effort fabric entities from graph for motion gating."""
+    g = graph if isinstance(graph, dict) else {}
+    ents = dict(g.get("entities") or {}) if isinstance(g.get("entities"), dict) else {}
+    if not ents.get("fabric_type"):
+        md = g.get("match_diagnosis") if isinstance(g.get("match_diagnosis"), dict) else {}
+        ft = md.get("fabric_type") or (g.get("fabric_context") or {}).get("name") or ""
+        if ft:
+            ents["fabric_type"] = str(ft).lower()
+    raw = str(
+        g.get("_raw")
+        or ents.get("_raw")
+        or g.get("raw_question")
+        or ""
+    )
+    raw_l = raw.lower()
+    if any(k in raw for k in ("실크", "비단")) or "silk" in raw_l or "lua" in raw_l or "lụa" in raw:
+        ents["fabric_type"] = "silk"
+    elif any(k in raw for k in ("울 원단", "울원단", "울 소재", "양모", "모직")) or "wool" in raw_l or re.search(
+        r"(?:^|[^가-힣])울(?:$|[^가-힣])", raw
+    ):
+        ents["fabric_type"] = ents.get("fabric_type") or "wool"
+    return ents
+
+
+# Protein-delicate fabrics: refuse-first motion cards (override generic Steps)
+_DELICATE_REFUSE_STAINS = frozenset({
+    "S_RED_WINE",
+    "S_HAIR_DYE",
+    "S_INK_PEN",
+    "S_INK_PERMANENT",
+})
+
+_DELICATE_REFUSE_KO: dict[str, str] = {
+    "S_RED_WINE": (
+        _START
+        + _step(
+            1,
+            "거절·전문을 먼저 검토해 주세요",
+            "실크·울에 레드와인은 매장 강처리 시 원단·색 손상 위험이 큽니다.\n"
+            "고객께: 완전 제거 어렵고 손상 위험이 있다고 먼저 말씀하세요.\n"
+            "① 전문 의뢰 안내 또는 ② 접수 반려 — 둘 중 하나를 권하세요.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "(매니저 승인 시에만) 아주 약하게",
+            "승인 후에만: 흰 천으로 흡수 → 찬물만 약하게.\n"
+            "식초·산소·효소·문지름·통담금·건조기 금지.\n"
+            "이상하면 즉시 중단 → 전문 의뢰.",
+        )
+        + "\n"
+        + _step(3, "말리지 마세요", "잔색·습기가 있으면 자연 건조만. 열 금지.")
+    ),
+    "S_HAIR_DYE": (
+        _START
+        + _step(
+            1,
+            "실크·울·염색약 — 거절·전문 우선",
+            "단백질 원단에 염모제+알코올/산소는 사고 위험이 큽니다.\n"
+            "전문 의뢰 또는 접수 반려를 먼저 안내하세요.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "(승인 시에만) 흡수·찬물만",
+            "매니저 승인 후에만 찬물 흡수. 알코올·산소 금지(또는 구석 테스트+즉시 중단 기준).\n"
+            "이상하면 중단.",
+        )
+    ),
+    "S_INK_PEN": (
+        _START
+        + _step(
+            1,
+            "실크·울·잉크 — 전문·거절 우선",
+            "용제(알코올)가 실크·울·프린트를 상하게 할 수 있어요.\n"
+            "전문 의뢰 또는 반려를 먼저 검토하세요.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "(승인 시에만) 구석 테스트 후 최소 찍기",
+            "승인 후: 구석 테스트 → 안쪽만 아주 약하게 찍어 빼기.\n"
+            "색 빠짐·원단 변화 시 즉시 중단.",
+        )
+    ),
+    "S_INK_PERMANENT": (
+        _START
+        + _step(
+            1,
+            "실크·울·유성매직 — 거절 우선",
+            "아세톤·강한 용제는 실크·울에 위험합니다. 전문 의뢰·반려를 안내하세요.",
+        )
+    ),
+}
+
+_DELICATE_REFUSE_VI: dict[str, str] = {
+    "S_RED_WINE": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Ưu tiên từ chối / gửi chuyên",
+            "Lụa/len + rượu vang đỏ: xử lý mạnh trong tiệm rủi ro hỏng vải/màu.\n"
+            "Báo khách trước. ① Gửi chuyên hoặc ② từ chối nhận.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "(Chỉ khi quản lý duyệt) Rất nhẹ",
+            "Chỉ sau duyệt: thấm khăn + nước lạnh nhẹ.\n"
+            "Cấm giấm mạnh / oxy / enzyme / chà / ngâm / sấy.\n"
+            "Bất thường → dừng ngay.",
+        )
+        + "\n"
+        + _step_vi(3, "Không sấy", "Còn vết/ẩm → chỉ phơi tự nhiên. Cấm nhiệt.")
+    ),
+    "S_HAIR_DYE": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Lụa/len + thuốc nhuộm — từ chối / chuyên trước",
+            "Cồn/oxy trên protein rất rủi ro. Ưu tiên gửi chuyên hoặc từ chối.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "(Khi được duyệt) Chỉ thấm lạnh",
+            "Sau duyệt: xả/thấm lạnh. Hạn chế cồn/oxy. Dừng nếu bất thường.",
+        )
+    ),
+    "S_INK_PEN": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Lụa/len + mực — chuyên / từ chối",
+            "Dung môi có thể hỏng lụa/len/in. Ưu tiên chuyên hoặc từ chối.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "(Khi duyệt) Test góc rồi chấm tối thiểu",
+            "Test góc → chấm mặt trái rất nhẹ. Phai màu / vải lạ → dừng.",
+        )
+    ),
+    "S_INK_PERMANENT": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Lụa/len + bút vĩnh cửu — từ chối trước",
+            "Acetone/dung môi mạnh nguy hiểm với lụa/len. Gửi chuyên hoặc từ chối.",
+        )
+    ),
+}
+
+
+def build_hand_motions(
+    stain_id: str,
+    lang: str = "ko",
+    *,
+    graph: Optional[dict] = None,
+) -> str:
+    """KO scripts (L1/L2/L3); VI covered set; EN empty (SOP body fallback).
+
+    When graph shows silk/wool (protein delicate), high-risk stains use refuse-first cards
+    so message-2 matches L3 intake instead of generic L2 Steps.
+    """
     sid = str(stain_id or "").strip()
+    if graph is not None and sid in _DELICATE_REFUSE_STAINS:
+        try:
+            from protocol import _fabric_flags
+
+            flags = _fabric_flags(graph, _entities_for_fabric(graph))
+            if flags.get("delicate_protein") or flags.get("is_silk") or flags.get("is_wool"):
+                if lang == "vi":
+                    return _DELICATE_REFUSE_VI.get(sid, "")
+                if lang == "ko":
+                    return _DELICATE_REFUSE_KO.get(sid, "")
+        except Exception:
+            pass
     if lang == "ko":
         return HAND_MOTIONS_KO.get(sid, "")
     if lang == "vi":

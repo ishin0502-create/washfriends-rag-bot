@@ -4525,6 +4525,9 @@ def _generate_response_core(
     # Hard override for high-value franchise phrases (before graph routing)
     # More specific phrases first.
     raw_n = _normalize_text(user_message)
+    from stain_hard_bind import bind_sweat_or_yellow_stain
+
+    _sy_bind = bind_sweat_or_yellow_stain(user_message, raw_n)
     if "laterite" in raw_n or "dat do" in raw_n or any(
         k in user_message for k in ("라테라이트", "적토", "붉은 흙", "빨간 흙")
     ):
@@ -4555,10 +4558,16 @@ def _generate_response_core(
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_RUST"
         entities["stain_type"] = "ri set"
-    elif any(k in user_message for k in ("겨드랑이", "암내", "누런 겨드랑이")) or "ve o nach" in raw_n or "armpit" in raw_n:
+    elif _sy_bind:
         entities["intent"] = "treatment"
-        entities["stain_id"] = "S_SWEAT_YELLOW"
-        entities["stain_type"] = "ve o nach"
+        entities["stain_id"] = _sy_bind
+        if _sy_bind == "S_SWEAT_YELLOW":
+            entities["stain_type"] = "ve o nach / mo hoi cu"
+        elif _sy_bind == "S_SHIRT_YELLOW":
+            entities["stain_type"] = "ao so mi vang"
+            entities.pop("item_id", None)
+        else:
+            entities["stain_type"] = "mo hoi tuoi"
     elif any(k in user_message for k in ("풀로", "풀 이염", "전분 이염", "전분 얼룩", "전분 묻", "아밀라아제", "전분 효소")) or (
         "tinh bot" in raw_n and ("mau lan" in raw_n or "lo mau" in raw_n)
     ) or ("starch" in raw_n and ("dye" in raw_n or "bleed" in raw_n)) or "amylase" in raw_n or (
@@ -4584,31 +4593,6 @@ def _generate_response_core(
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_DEODORANT"
         entities["stain_type"] = "vet khu mui"
-    elif any(
-        k in user_message
-        for k in ("와이셔츠", "흰셔츠", "드레스셔츠", "드레스 셔츠")
-    ) and any(
-        k in user_message
-        for k in ("누렇", "황변", "노랗", "누래", "변색", "노란", "누래짐", "누래졌")
-    ) and not any(k in user_message for k in ("향수", "데오", "데오드란트")):
-        entities["intent"] = "treatment"
-        entities["stain_id"] = "S_SHIRT_YELLOW"
-        entities["stain_type"] = "ao so mi vang"
-        entities.pop("item_id", None)
-    elif any(k in user_message for k in ("누렇게", "황변", "변색", "누래짐")) and any(
-        k in user_message for k in ("셔츠", "와이", "흰옷", "흰 옷", "흰티", "흰 티")
-    ) and not any(k in user_message for k in ("향수", "데오", "데오드란트")):
-        entities["intent"] = "treatment"
-        entities["stain_id"] = "S_SHIRT_YELLOW"
-        entities["stain_type"] = "ao so mi vang"
-        entities.pop("item_id", None)
-    elif any(k in user_message for k in ("황변 제거", "황변빼", "황변 빼", "누래짐 제거")) and not any(
-        k in user_message for k in ("향수", "데오", "데오드란트")
-    ):
-        entities["intent"] = "treatment"
-        entities["stain_id"] = "S_SHIRT_YELLOW"
-        entities["stain_type"] = "ao so mi vang"
-        entities.pop("item_id", None)
     # Generic dress-shirt wash (no yellowing) → item care, NOT yellowing SOP
     elif (
         any(k in user_message for k in ("와이셔츠", "흰셔츠", "드레스셔츠", "드레스 셔츠"))
@@ -5113,13 +5097,6 @@ def _generate_response_core(
         if any(k in user_message for k in ("적토", "라테라이트", "붉은 흙")) or "laterite" in raw_n or "dat do" in raw_n:
             entities["stain_id"] = "S_LATERITE"
             entities["stain_type"] = "dat do"
-    elif any(k in user_message for k in ("땀냄새", "땀 묻", "땀얼룩", "땀 얼룩")) or (
-        "땀" in user_message
-        and not any(k in user_message for k in ("겨드랑", "누렇", "황변", "데오"))
-    ) or "mo hoi tuoi" in raw_n or ("sweat" in raw_n and "yellow" not in raw_n and "armpit" not in raw_n):
-        entities["intent"] = "treatment"
-        entities["stain_id"] = "S_SWEAT_FRESH"
-        entities["stain_type"] = "mo hoi tuoi"
     elif any(k in user_message for k in ("계란", "달걀")) or "trung ga" in raw_n or "long trang" in raw_n or (
         "egg" in raw_n and "eggplant" not in raw_n
     ):

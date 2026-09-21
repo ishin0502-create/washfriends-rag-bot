@@ -213,6 +213,60 @@ STAIN_STATUS_KO: dict[str, str] = {
         "· 이미 건조기를 거쳤다면 복원이 매우 어렵습니다 — 손님께 먼저 말씀하세요\n"
         "· 락스는 흰 100% 면·폴리만, 매니저 확인 후"
     ),
+    "S_BLACK_COFFEE": (
+        "◆ 【먼저 확인】 블랙커피\n"
+        "· 아직 젖어 있다 → 한 줄 순서 1번(흡수·찬물)부터\n"
+        "· 이미 말랐다 → 잔색 가능 — 고객 동의 후 식초 중심으로\n"
+        "· 건조기·다리미 지남 → 열고착. 부분 제거만 기대·사전 고지"
+    ),
+    "S_COOKING_OIL": (
+        "◆ 【먼저 확인】 식용유·기름때\n"
+        "· 물부터 붓지 마세요 → 전분·흡착 후 세제\n"
+        "· 이미 건조기를 돌렸다 → 열고착. 완전 제거 어려움 — 먼저 고지\n"
+        "· 미끄러움이 남으면 말리지 마세요"
+    ),
+    "S_INK_PEN": (
+        "◆ 【먼저 확인】 볼펜·잉크\n"
+        "· 안쪽에서만 찍어 빼기 · 문지르면 번짐\n"
+        "· 실크·울·프린트 → 구석 테스트·매니저 확인\n"
+        "· 열고착이면 성공 낮음 — 사전 고지"
+    ),
+    "S_MUD": (
+        "◆ 【먼저 확인】 진흙\n"
+        "· 젖은 채 문지르지 마세요 → 먼저 말려 털기\n"
+        "· 적토·붉은 흙이면 일반 진흙과 다름(라테라이트 요령)\n"
+        "· 락스로 철 성분을 건드리지 마세요"
+    ),
+    "S_KIMCHI": (
+        "◆ 【먼저 확인】 김치국\n"
+        "· 고춧가루·건더기 먼저 제거\n"
+        "· 유색옷 산소 신중 · 치약 금지\n"
+        "· 고추 색소·냄새 남은 채 말리지 마세요"
+    ),
+    "S_SOY_SAUCE": (
+        "◆ 【먼저 확인】 간장\n"
+        "· 즉시 찬물·흡수 · 이른 열 금지\n"
+        "· 이미 말랐거나 건조기 지남 → 잔색·검정 잔영 고지"
+    ),
+    "S_SWEAT_YELLOW": (
+        "◆ 【먼저 확인】 겨드랑이·땀 황변\n"
+        "· 신선 땀과 다릅니다 — 단백질+데오 잔여가 누런 경우가 많아요\n"
+        "· 락스(염소) 금지 → 더 누래질 수 있어요\n"
+        "· 완전 복원 어려움 — 부분 개선·사전 동의를 받으세요"
+    ),
+    "S_SHIRT_YELLOW": (
+        "◆ 【먼저 확인】 와이셔츠·흰옷 황변\n"
+        "· 목·겨드랑·전체 중 어디인지 확인\n"
+        "· 락스 금지(단백질 황변에 쓰면 더 누래요)\n"
+        "· 효소 → 산소 순서 · 완전 하얗게는 보장하지 마세요"
+    ),
+    "S_RED_WINE": (
+        "◆ 【먼저 확인】 레드와인\n"
+        "· 아직 젖어 있다 → 즉시 흡수(소금 금지)·찬물\n"
+        "· 이미 말랐다 → 잔색(자줏빛) 가능성 높음 — 사전 고지\n"
+        "· 실크·울 → 매장 강처리는 위험. 전문 의뢰·거절을 먼저 검토하세요\n"
+        "· 건조기·다리미 지남 → 열고착. 거의 어려움"
+    ),
 }
 
 STAIN_STATUS_VI: dict[str, str] = {
@@ -224,6 +278,31 @@ STAIN_STATUS_VI: dict[str, str] = {
         "\n"
         "◆ 【Nói khách trước】 Thuốc nhuộm rất mạnh, khó sạch hết. "
         "Chúng tôi sẽ cố gắng nhưng có thể còn vết. Anh/Chị muốn tiếp tục chứ ạ?"
+    ),
+    "S_BLACK_COFFEE": (
+        "◆ 【Kiểm tra trước】 Cà phê đen\n"
+        "· Còn ướt → thấm + xả lạnh trước\n"
+        "· Đã khô → có thể còn vết — cần đồng ý\n"
+        "· Đã sấy/ủi → cố định nhiệt, chỉ kỳ vọng một phần"
+    ),
+    "S_COOKING_OIL": (
+        "◆ 【Kiểm tra trước】 Dầu ăn\n"
+        "· Đừng đổ nước trước → bột/thấm rồi xà phòng\n"
+        "· Đã sấy → cố định nhiệt, báo khách trước\n"
+        "· Còn nhờn → không sấy"
+    ),
+    "S_SWEAT_YELLOW": (
+        "◆ 【Kiểm tra trước】 Ố vàng mồ hôi / nách\n"
+        "· Khác mồ hôi mới — thường protein + khử mùi\n"
+        "· Cấm Javel (làm vàng hơn)\n"
+        "· Khó trắng lại hoàn toàn — cần đồng ý"
+    ),
+    "S_RED_WINE": (
+        "◆ 【Kiểm tra trước】 Rượu vang đỏ\n"
+        "· Còn ướt → thấm ngay (không muối) + lạnh\n"
+        "· Đã khô → dễ còn tím — báo trước\n"
+        "· Lụa/len → ưu tiên từ chối / gửi chuyên\n"
+        "· Đã sấy/ủi → rất khó"
     ),
 }
 
@@ -248,6 +327,41 @@ STAIN_TOOL_EXTRAS: dict[str, dict[str, list[str]]] = {
             "Oxygen bleach powder",
             "Basin for soaking",
         ],
+    },
+    "S_BLACK_COFFEE": {
+        "ko": ["흰 식초", "분무기(식초 1:4 전용)", "산소표백제(흰옷만)"],
+        "vi": ["Giấm trắng", "Bình xịt (giấm 1:4)", "Bột oxy (áo trắng)"],
+        "en": ["White vinegar", "Spray bottle (1:4 vinegar)", "Oxygen bleach (white only)"],
+    },
+    "S_COOKING_OIL": {
+        "ko": ["전분(감자·옥수수) 또는 베이비파우더", "주방세제", "흰 천"],
+        "vi": ["Bột (khoai/ngô) hoặc phấn baby", "Nước rửa chén", "Khăn trắng"],
+        "en": ["Starch or baby powder", "Dish soap", "White cloth"],
+    },
+    "S_INK_PEN": {
+        "ko": ["이소프로필 알코올 70%", "흰 천 여러 장", "흡수지·키친타월"],
+        "vi": ["Cồn isopropyl 70%", "Nhiều khăn trắng", "Giấy thấm"],
+        "en": ["IPA 70%", "White cloths", "Blotting paper"],
+    },
+    "S_KIMCHI": {
+        "ko": ["주방세제", "흰 식초", "산소표백제(흰옷만)"],
+        "vi": ["Nước rửa chén", "Giấm trắng", "Bột oxy (áo trắng)"],
+        "en": ["Dish soap", "White vinegar", "Oxygen bleach (white only)"],
+    },
+    "S_SWEAT_YELLOW": {
+        "ko": ["효소세제", "산소표백제(흰·허용 원단)", "담금통", "중성세제(실크·울)"],
+        "vi": ["Nước giặt enzyme", "Bột oxy (trắng)", "Chậu ngâm", "Giặt trung tính (lụa/len)"],
+        "en": ["Enzyme detergent", "Oxygen bleach (white)", "Soak basin", "Neutral wash (silk/wool)"],
+    },
+    "S_SHIRT_YELLOW": {
+        "ko": ["효소세제", "산소표백제", "연질 솔(목·소매)", "담금통"],
+        "vi": ["Enzyme", "Bột oxy", "Bàn chải mềm", "Chậu ngâm"],
+        "en": ["Enzyme detergent", "Oxygen bleach", "Soft brush", "Basin"],
+    },
+    "S_RED_WINE": {
+        "ko": ["흰 천·키친타월", "흰 식초", "산소표백제(흰 면·린넨만)", "담금통"],
+        "vi": ["Khăn/giấy trắng", "Giấm trắng", "Bột oxy (cotton trắng)", "Chậu ngâm"],
+        "en": ["White cloth/paper", "White vinegar", "Oxygen bleach (white cotton)", "Basin"],
     },
 }
 
@@ -276,6 +390,89 @@ STAIN_SOFT_OUTLOOK: dict[str, dict[str, str]] = {
             "· After dryer/iron: rarely workable — refer or decline first"
         ),
     },
+    "S_SWEAT_YELLOW": {
+        "ko": (
+            "◆ 【예상 결과】\n"
+            "· 얕은 황변: 부분 개선 기대\n"
+            "· 오래·진한 겨드랑 황변: 잔영 남기 쉬움 — 동의 필수\n"
+            "· 락스 쓴 뒤: 더 나쁠 수 있음 — 전문·거절 검토"
+        ),
+        "vi": (
+            "◆ 【Kết quả kỳ vọng】\n"
+            "· Ố nhẹ: có thể cải thiện một phần\n"
+            "· Ố nách lâu/đậm: dễ còn — cần đồng ý\n"
+            "· Đã dùng Javel: có thể xấu hơn — chuyên / từ chối"
+        ),
+        "en": (
+            "◆ 【Expected result】\n"
+            "· Light yellowing: partial improvement likely\n"
+            "· Old/dark armpit: residual common — consent required\n"
+            "· After chlorine: may worsen — refer or decline"
+        ),
+    },
+    "S_SHIRT_YELLOW": {
+        "ko": (
+            "◆ 【예상 결과】\n"
+            "· 목·소매만 옅음: 개선 기대\n"
+            "· 전체 황변: 부분만 — 완전 하양 보장 금지\n"
+            "· 열고착·락스 이력: 어려움"
+        ),
+        "vi": (
+            "◆ 【Kết quả kỳ vọng】\n"
+            "· Chỉ cổ/tay nhẹ: có thể cải thiện\n"
+            "· Vàng cả áo: chỉ một phần — không hứa trắng hết\n"
+            "· Đã nhiệt/Javel: khó"
+        ),
+        "en": (
+            "◆ 【Expected result】\n"
+            "· Collar/cuff light: often improves\n"
+            "· Whole-shirt yellow: partial only — never promise pure white\n"
+            "· Heat/chlorine history: hard"
+        ),
+    },
+    "S_RED_WINE": {
+        "ko": (
+            "◆ 【예상 결과】\n"
+            "· 묻은 직후·면: 꽤 개선 가능 — 완전 제거는 보장하지 않아요\n"
+            "· 마름·자줏빛: 잔색 흔함\n"
+            "· 실크·울: 매장 강처리 위험 — 전문·거절 우선\n"
+            "· 건조기·다리미: 거의 어려움"
+        ),
+        "vi": (
+            "◆ 【Kết quả kỳ vọng】\n"
+            "· Mới + cotton: có thể cải thiện — không đảm bảo sạch hết\n"
+            "· Đã khô/tím: dễ còn\n"
+            "· Lụa/len: ưu tiên chuyên / từ chối\n"
+            "· Đã sấy/ủi: rất khó"
+        ),
+        "en": (
+            "◆ 【Expected result】\n"
+            "· Fresh cotton: often improves — full removal not guaranteed\n"
+            "· Dried purple: residual common\n"
+            "· Silk/wool: refer or decline first\n"
+            "· After dryer/iron: rarely workable"
+        ),
+    },
+    "S_COOKING_OIL": {
+        "ko": (
+            "◆ 【예상 결과】\n"
+            "· 신선·흡수 전: 잘 빠지는 편\n"
+            "· 이미 건조기: 열고착 — 부분만 기대·사전 고지\n"
+            "· 미끄러움 남음: 말리면 더 굳어요"
+        ),
+        "vi": (
+            "◆ 【Kết quả kỳ vọng】\n"
+            "· Mới, chưa sấy: thường ra tốt\n"
+            "· Đã sấy: cố định nhiệt — chỉ một phần\n"
+            "· Còn nhờn: đừng sấy"
+        ),
+        "en": (
+            "◆ 【Expected result】\n"
+            "· Fresh before dryer: often good\n"
+            "· After dryer: heat-set — partial only\n"
+            "· Still greasy: do not dry"
+        ),
+    },
 }
 
 # VI stain-specific don'ts (common VI block is shared; extras only when present)
@@ -285,6 +482,24 @@ STAIN_DONTS_VI: dict[str, list[str]] = {
         "Không dùng cồn cho lụa/len/da khi chưa test góc",
         "Không tái sử dụng khăn đã dính màu → màu ngấm ngược",
         "Không làm trong phòng kín với cồn — phải thông gió (cháy/mùi)",
+    ],
+    "S_SWEAT_YELLOW": [
+        "Không dùng Javel lên ố vàng — sẽ vàng hơn",
+    ],
+    "S_SHIRT_YELLOW": [
+        "Không dùng Javel cho áo sơ mi vàng protein",
+    ],
+    "S_RED_WINE": [
+        "Không rắc muối",
+        "Không dùng oxy trên lụa/len/áo màu",
+    ],
+    "S_COOKING_OIL": [
+        "Không sấy khi còn nhờn",
+        "Không đổ nước rồi chà mạnh trước",
+    ],
+    "S_KIMCHI": [
+        "Không dùng kem đánh răng",
+        "Không sấy khi còn ớt/mùi",
     ],
 }
 
@@ -835,7 +1050,7 @@ def inject_clarity_into_answer(
     try:
         from owner_hand_motions import build_hand_motions
 
-        motions = build_hand_motions(sid, lang)
+        motions = build_hand_motions(sid, lang, graph=g)
     except Exception:
         motions = ""
 
