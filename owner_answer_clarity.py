@@ -107,7 +107,10 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
 
 
 def _soften_step_label(text: str) -> str:
-    t = text
+    t = text.strip()
+    # Already instructional — leave alone
+    if "하세요" in t or "마세요" in t:
+        return t
     reps = (
         ("즉시 찬물", "바로 찬물로 헹구세요"),
         ("찬물 헹굼", "찬물로 헹구세요"),
@@ -120,8 +123,10 @@ def _soften_step_label(text: str) -> str:
         ("세탁", "세탁하세요"),
     )
     for a, b in reps:
-        if t == a or t.startswith(a):
-            return b + t[len(a) :] if t.startswith(a) and t != a else b
+        if t == a:
+            return b
+        if t.startswith(a):
+            return b + t[len(a) :]
     return t
 
 
