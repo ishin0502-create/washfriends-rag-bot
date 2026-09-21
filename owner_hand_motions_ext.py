@@ -949,3 +949,347 @@ HAND_MOTIONS_VI_EXTRA: dict[str, str] = {
         + _step_vi(3, "Dừng ngay nếu đổi màu vải", "Dừng → chuyên.")
     ),
 }
+
+# ── Tail: last protocol stains + remaining VI gaps ──
+HAND_MOTIONS_KO_TAIL: dict[str, str] = {
+    "S_SUGARCANE": (
+        _START
+        + _step(
+            1,
+            "찬물 흡수 · 문지름 금지",
+            "사탕수수즙(느억미아)=당+색소. 안쪽에서 찬물로 흡수하세요.\n"
+            "세게 문지르지 마세요. 열고착·건조기 금지.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "식초 → (흰옷) 산소",
+            "식초 Cap1+물 Cap4, 10~20분.\n"
+            "흰·면만 산소(테스트). 유색·실크·울은 산소 금지.",
+        )
+        + "\n"
+        + _step(3, "세탁 · 확인", "세탁 후 확인. 당·색 남은 채 말리지 마세요(나중에 누렇게).")
+    ),
+    "S_DOENJANG": (
+        _START
+        + _step(
+            1,
+            "고형 긁기 · 찬물",
+            "된장을 Cap1로 살살 긁어 주세요.\n"
+            "찬물로 헹구세요.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "주방세제 → 효소",
+            "주방세제 → 효소 15~40분.\n"
+            "실크·울은 효소 금지. 흰옷만 산소(테스트).",
+        )
+        + "\n"
+        + _step(3, "세탁 · 확인", "세탁 후 확인. 갈색·냄새 남은 채 말리지 마세요.")
+    ),
+    "S_GOCHUJANG": (
+        _START
+        + _step(
+            1,
+            "페이스트 긁기 · 번짐 주의",
+            "고추장을 살살 긁어 주세요. 문지르면 색소가 번집니다.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "주방세제 → 식초",
+            "주방세제 → 식초 Cap1+물 Cap4, 5~15분.\n"
+            "유색은 산소 금지. 흰옷만 산소(테스트).",
+        )
+        + "\n"
+        + _step(3, "세탁 · 확인", "세탁 후 확인. 빨간·냄새 남은 채 말리지 마세요.")
+    ),
+    "S_PERSIMMON": (
+        _START
+        + _step(
+            1,
+            "즉시 찬물 · 문지름 금지",
+            "감물(감 얼룩)은 빨리 처리할수록 좋아요.\n"
+            "찬물로만 흡수. 세게 문지르지 마세요.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "식초 반복 → (흰옷) 산소",
+            "식초 Cap1+물 Cap4, 10~20분 반복.\n"
+            "흰·면만 산소(테스트). 늦으면 한계를 손님께 말씀하세요.",
+        )
+        + "\n"
+        + _step(3, "세탁 · 확인", "세탁 후 확인. 갈색 남은 채 말리지 마세요.")
+    ),
+    "S_CRAYON": (
+        _START
+        + _step(
+            1,
+            "차게 해 깨기",
+            "얼리거나 차게 한 뒤 Cap2로 깨서 제거하세요.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "흡수지 · 저온(매니저)",
+            "매니저 확인. 흡수지+저온으로 왁스 옮기기.\n"
+            "실크·합성 열 주의. 잔여는 주방세제. 흰옷만 산소(테스트).",
+        )
+        + "\n"
+        + _step(3, "세탁 · 확인", "세탁 후 확인. 색·왁스 남은 채 말리지 마세요.")
+    ),
+    "S_SOFTENER_SPOT": (
+        _START
+        + _step(
+            1,
+            "유연제 오일 링 확인",
+            "유연제 직접 묻은 오일 링입니다. 미끄럼 남은 채 건조 금지.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "주방세제로 탈지",
+            "주방세제 Cap2, 5~15분. 필요 시 식초 Cap1+물 Cap4.\n"
+            "미온으로 다시 세탁.",
+        )
+        + "\n"
+        + _step(3, "확인 후 건조", "미끄럼이 없어진 뒤에만 건조하세요.")
+    ),
+}
+
+HAND_MOTIONS_VI_TAIL: dict[str, str] = {
+    "S_SUGARCANE": (
+        _START_VI
+        + _step_vi(1, "Thấm lạnh · không chà", "Nước mía = đường+màu. Thấm lạnh từ trong. Cấm chà / sấy sớm.")
+        + "\n"
+        + _step_vi(2, "Giấm → oxy trắng", "Giấm 1:4 10–20 phút. Oxy chỉ trắng/cotton.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn đường/màu → không sấy (vàng sau).")
+    ),
+    "S_DOENJANG": (
+        _START_VI
+        + _step_vi(1, "Cạo · lạnh", "Cạo doenjang nhẹ. Xả lạnh.")
+        + "\n"
+        + _step_vi(2, "Nước rửa chén → enzyme", "D2 → enzyme 15–40. Lụa/len: cấm enzyme. Oxy chỉ trắng.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn nâu/mùi → không sấy.")
+    ),
+    "S_GOCHUJANG": (
+        _START_VI
+        + _step_vi(1, "Cạo · không chà", "Cạo gochujang. Không chà loang đỏ.")
+        + "\n"
+        + _step_vi(2, "Nước rửa chén → giấm", "D2 → giấm 1:4. Oxy chỉ trắng.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn đỏ/mùi → không sấy.")
+    ),
+    "S_PERSIMMON": (
+        _START_VI
+        + _step_vi(1, "Ngay · lạnh", "Hồng/quả hồng: xử lý sớm. Thấm lạnh, không chà.")
+        + "\n"
+        + _step_vi(2, "Giấm lặp · oxy trắng", "Giấm 1:4 10–20 lặp. Oxy chỉ trắng. Trễ → báo khách.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn nâu → không sấy.")
+    ),
+    "S_CRAYON": (
+        _START_VI
+        + _step_vi(1, "Làm lạnh rồi bẻ", "Làm lạnh/đông rồi bẻ Cap2.")
+        + "\n"
+        + _step_vi(2, "Giấy + nhiệt thấp (quản lý)", "Hỏi quản lý. Giấy thấm + ủi thấp. D2. Oxy chỉ trắng.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn sáp/màu → không sấy.")
+    ),
+    "S_SOFTENER_SPOT": (
+        _START_VI
+        + _step_vi(1, "Vòng dầu softener", "Vòng dầu do softener. Còn nhờn → không sấy.")
+        + "\n"
+        + _step_vi(2, "Nước rửa chén", "D2 5–15 phút. Có thể giấm 1:4. Giặt ấm lại.")
+        + "\n"
+        + _step_vi(3, "Sấy khi hết nhờn", "Chỉ sấy khi hết nhờn.")
+    ),
+    "S_MUSTARD": (
+        _START_VI
+        + _step_vi(1, "Gạt · lạnh", "Gạt. Thấm lạnh. Không chà.")
+        + "\n"
+        + _step_vi(2, "Nước rửa chén · oxy trắng", "D2 → oxy chỉ trắng.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn vàng → không sấy.")
+    ),
+    "S_URINE": (
+        _START_VI
+        + _step_vi(1, "Găng · lạnh · không trộn", "Găng. Chỉ lạnh. Không trộn ammonia + javel.")
+        + "\n"
+        + _step_vi(2, "Enzyme → giấm", "Enzyme → giấm 1:4. Lụa/len: trung tính.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Xả kỹ rồi giặt. Còn mùi → không sấy.")
+    ),
+    "S_VOMIT": (
+        _START_VI
+        + _step_vi(1, "PPE · thông gió", "Găng + thoáng. Gạt đặc. Cấm nóng. Không trộn hóa chất.")
+        + "\n"
+        + _step_vi(2, "Lạnh · enzyme → giấm", "Xả lạnh → enzyme → giấm. Lụa/len: cấm enzyme.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn mùi/vết → không sấy.")
+    ),
+    "S_DEODORANT": (
+        _START_VI
+        + _step_vi(1, "Cặn trắng vs vàng", "Cặn trắng → giấm. Nách vàng → enzyme → oxy trắng. Cấm javel.")
+        + "\n"
+        + _step_vi(2, "Xử lý", "Giấm 1:4 hoặc enzyme 15–30.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn cặn/vàng → không sấy.")
+    ),
+    "S_PERFUME": (
+        _START_VI
+        + _step_vi(1, "Lạnh · báo vàng muộn", "Xả lạnh. Áo trắng có thể vàng sau — báo khách.")
+        + "\n"
+        + _step_vi(2, "Giấm · oxy ngắn", "Giấm 1:4. Oxy ngắn chỉ trắng.")
+        + "\n"
+        + _step_vi(3, "Giặt · thoáng", "Giặt, phơi thoáng. Không sấy khi còn mùi.")
+    ),
+    "S_SUNSCREEN": (
+        _START_VI
+        + _step_vi(1, "Bột hút · cấm javel", "Phủ bột 10–30 phút. Cấm javel. Còn nhờn → không sấy.")
+        + "\n"
+        + _step_vi(2, "Nước rửa chén", "D2 nhẹ. Lụa/len: trung tính.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Hết nhờn mới sấy.")
+    ),
+    "S_MASCARA": (
+        _START_VI
+        + _step_vi(1, "Thấm · không chà", "Thấm khăn. Không chà ngang.")
+        + "\n"
+        + _step_vi(2, "Nước rửa chén → cồn", "D2 → thử góc rồi cồn. Oxy chỉ trắng.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn đen → không sấy.")
+    ),
+    "S_IODINE": (
+        _START_VI
+        + _step_vi(1, "Quản lý · thử góc", "Iodine khó. Hỏi quản lý. Thử góc cồn.")
+        + "\n"
+        + _step_vi(2, "Chấm cồn · oxy trắng", "Lộn trái, chấm cồn, đổi khăn. Oxy chỉ trắng.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn nâu → không sấy.")
+    ),
+    "S_STARCH_TRANSFER": (
+        _START_VI
+        + _step_vi(1, "Iểm hồ/tinh bột", "Ưu tiên enzyme. Hỏi quản lý.")
+        + "\n"
+        + _step_vi(2, "Ngâm enzyme", "Enzyme 20–40 phút. Không chà mạnh.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn bột trắng → không sấy.")
+    ),
+    "S_GUM": (
+        _START_VI
+        + _step_vi(1, "Đông rồi bẻ", "Túi + đông 30–60 phút. Bẻ khi giòn.")
+        + "\n"
+        + _step_vi(2, "Acetone cực ít (quản lý)", "Hỏi quản lý. Cấm acetate/lụa. Thử góc + găng.")
+        + "\n"
+        + _step_vi(3, "Nước rửa chén · giặt", "D2 rồi giặt. Còn dính → không sấy.")
+    ),
+    "S_CANDLE_WAX": (
+        _START_VI
+        + _step_vi(1, "Cạo khi cứng", "Để cứng rồi cạo Cap2 nhẹ.")
+        + "\n"
+        + _step_vi(2, "Giấy + ủi thấp (quản lý)", "Hỏi quản lý. Giấy thấm + nhiệt thấp. Lụa cẩn thận.")
+        + "\n"
+        + _step_vi(3, "Giặt", "D2 / oxy trắng nếu cần. Giặt rồi kiểm.")
+    ),
+    "S_GREASE": (
+        _START_VI
+        + _step_vi(1, "Bột hút", "Phủ bột. Còn nhờn/mùi → không sấy.")
+        + "\n"
+        + _step_vi(2, "Nước rửa chén · enzyme", "D2 → enzyme (trừ lụa/len). Dung môi mạnh chỉ quản lý.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn dầu → không sấy.")
+    ),
+    "S_CHILI": (
+        _START_VI
+        + _step_vi(1, "Phủi ớt", "Phủi. Không chà.")
+        + "\n"
+        + _step_vi(2, "Nước rửa chén → giấm", "D2 → giấm 1:4. Oxy chỉ trắng.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn đỏ/mùi → không sấy.")
+    ),
+    "S_BETEL": (
+        _START_VI
+        + _step_vi(1, "Quản lý · báo vết", "Trầu/cau khó. Hỏi quản lý. Báo còn vết.")
+        + "\n"
+        + _step_vi(2, "Lạnh · enzyme → giấm", "Lạnh → enzyme → giấm. Oxy chỉ trắng.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn nâu/đỏ → không sấy.")
+    ),
+    "S_SHRIMP_PASTE": (
+        _START_VI
+        + _step_vi(1, "Báo mùi", "Mắm tôm: dầu+đạm+màu. Báo còn mùi.")
+        + "\n"
+        + _step_vi(2, "D2 → enzyme → giấm", "Lần lượt. Lụa/len: cấm enzyme.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn mùi/màu → không sấy.")
+    ),
+    "S_GAC": (
+        _START_VI
+        + _step_vi(1, "Dầu trước màu", "Gấc: dầu rồi màu. Hỏi quản lý. Thử góc.")
+        + "\n"
+        + _step_vi(2, "D2 → cồn · oxy trắng", "D2 → cồn (thử). Oxy chỉ trắng.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn cam/đỏ → không sấy.")
+    ),
+    "S_ANNATTO": (
+        _START_VI
+        + _step_vi(1, "Quản lý · thử góc", "Annatto dễ cố định. Hỏi quản lý. Thử góc.")
+        + "\n"
+        + _step_vi(2, "D2 → cồn → oxy trắng", "D2 → cồn. Oxy chỉ trắng.")
+        + "\n"
+        + _step_vi(3, "Giặt", "Giặt. Còn cam → không sấy.")
+    ),
+    "S_MOTORBIKE_OIL": (
+        _START_VI
+        + _step_vi(1, "Quản lý · báo vết", "Dầu xe máy khó, dễ cố định nhiệt. Hỏi quản lý.")
+        + "\n"
+        + _step_vi(2, "Bột → D2", "Bột hút → D2. Lụa/len: cấm dung môi mạnh/nóng.")
+        + "\n"
+        + _step_vi(3, "Dừng", "Không được → chuyên.")
+    ),
+    "S_RUST": (
+        _START_VI
+        + _step_vi(1, "Quản lý · cấm lụa/len", "Gỉ sắt nguy hiểm. Lụa/len/da → chuyên. Hỏi quản lý.")
+        + "\n"
+        + _step_vi(2, "Oxalic chỉ vải an toàn", "Găng + thử góc + trung hòa. Không dùng javel cho gỉ.")
+        + "\n"
+        + _step_vi(3, "Dừng", "Nghi ngờ → dừng, chuyên.")
+    ),
+    "S_PAINT_LATEX": (
+        _START_VI
+        + _step_vi(1, "Sơn nước khô · khó", "Báo một phần / từ chối. Hỏi quản lý.")
+        + "\n"
+        + _step_vi(2, "Cạo nhẹ · D2", "Cạo Cap2. D2. Dung môi mạnh chỉ quản lý.")
+        + "\n"
+        + _step_vi(3, "Dừng", "Không được → chuyên.")
+    ),
+    "S_PAINT_OIL": (
+        _START_VI
+        + _step_vi(1, "Sơn dầu · cấm thinner lụa", "Acetate/lụa/len: cấm thinner → chuyên ngay. Hỏi quản lý.")
+        + "\n"
+        + _step_vi(2, "Chỉ theo quản lý", "Không tự ý dung môi. Thông gió.")
+        + "\n"
+        + _step_vi(3, "Dừng", "Nguy hiểm → dừng.")
+    ),
+    "S_SHOE_POLISH": (
+        _START_VI
+        + _step_vi(1, "Xi giày · khó", "Nhiều lớp. Báo khách. Lụa/da lộn → chuyên.")
+        + "\n"
+        + _step_vi(2, "Chỉ quản lý", "Cạo nhẹ. Dung môi mạnh chỉ quản lý + thông gió.")
+        + "\n"
+        + _step_vi(3, "Dừng", "Không được → chuyên.")
+    ),
+    "S_FECES": (
+        _START_VI
+        + _step_vi(1, "Vệ sinh · PPE", "Găng. Tách dụng cụ. Cấm nóng/sấy. An toàn trước.")
+        + "\n"
+        + _step_vi(2, "Lạnh · enzyme", "Gạt → lạnh → enzyme (trừ lụa/len). Nặng → chuyên/trả.")
+        + "\n"
+        + _step_vi(3, "Giặt theo quy định", "Theo quy vệ sinh cửa hàng. Còn mùi → không sấy.")
+    ),
+}

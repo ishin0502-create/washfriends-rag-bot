@@ -37,6 +37,25 @@ _GRADE_FOOTER = {
     },
 }
 
+# Soft outlook — no percentages (B-6): grade-based expected result for message 1
+_SOFT_OUTLOOK = {
+    "ko": {
+        1: "◆ 【예상 결과】 시도해 볼 수 있어요 — 다만 완전 제거는 보장하지 않아요.",
+        2: "◆ 【예상 결과】 부분 제거만 기대하세요 — 잔색·잔영이 남을 수 있어요. 접수 때 동의를 받으세요.",
+        3: "◆ 【예상 결과】 복원이 어렵습니다 — 거절 또는 전문 의뢰를 먼저 검토하세요.",
+    },
+    "vi": {
+        1: "◆ 【Kết quả kỳ vọng】 Có thể thử — không đảm bảo sạch hết.",
+        2: "◆ 【Kết quả kỳ vọng】 Chỉ kỳ vọng sạch một phần — có thể còn vết. Cần đồng ý khi nhận đồ.",
+        3: "◆ 【Kết quả kỳ vọng】 Khó phục hồi — ưu tiên từ chối hoặc gửi chuyên.",
+    },
+    "en": {
+        1: "◆ 【Expected result】 Worth trying — full removal is not guaranteed.",
+        2: "◆ 【Expected result】 Expect partial removal only — marks may remain. Get consent at intake.",
+        3: "◆ 【Expected result】 Unlikely to restore — refuse intake or refer out first.",
+    },
+}
+
 # Compressed common don'ts (why one line each)
 COMMON_DONTS_KO = [
     "뜨거운 물로 헹구지 마세요 → 얼룩이 섬유에 붙어 잘 안 빠져요",
@@ -667,6 +686,9 @@ def inject_clarity_into_answer(
     flow_bits: list[str] = []
     if level in {"L2", "L3"}:
         flow_bits.append(_SUPERVISOR[lang])
+    outlook = (_SOFT_OUTLOOK.get(lang) or _SOFT_OUTLOOK["ko"]).get(int(grade) or 2, "")
+    if outlook:
+        flow_bits.append(outlook)
     status = build_status_check(g, lang)
     if status:
         flow_bits.append(status)

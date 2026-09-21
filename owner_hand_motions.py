@@ -767,11 +767,14 @@ HAND_MOTIONS_KO: dict[str, str] = {
 from owner_hand_motions_ext import (  # noqa: E402
     HAND_MOTIONS_KO_L2_REST,
     HAND_MOTIONS_KO_L3,
+    HAND_MOTIONS_KO_TAIL,
     HAND_MOTIONS_VI_EXTRA,
+    HAND_MOTIONS_VI_TAIL,
 )
 
 HAND_MOTIONS_KO.update(HAND_MOTIONS_KO_L2_REST)
 HAND_MOTIONS_KO.update(HAND_MOTIONS_KO_L3)
+HAND_MOTIONS_KO.update(HAND_MOTIONS_KO_TAIL)
 
 _L1_REQUIRED = {
     "S_BLOOD_FRESH",
@@ -1079,6 +1082,7 @@ HAND_MOTIONS_VI: dict[str, str] = {
 }
 
 HAND_MOTIONS_VI.update(HAND_MOTIONS_VI_EXTRA)
+HAND_MOTIONS_VI.update(HAND_MOTIONS_VI_TAIL)
 
 _VI_CORE = {
     "S_HAIR_DYE",
@@ -1094,10 +1098,19 @@ _VI_CORE = {
 }
 assert _VI_CORE.issubset(HAND_MOTIONS_VI.keys()), "VI core hand-motion coverage incomplete"
 assert set(HAND_MOTIONS_VI_EXTRA).issubset(HAND_MOTIONS_VI.keys()), "VI extra merge failed"
+assert set(HAND_MOTIONS_KO_TAIL).issubset(HAND_MOTIONS_KO.keys()), "KO tail merge failed"
+assert set(HAND_MOTIONS_VI_TAIL).issubset(HAND_MOTIONS_VI.keys()), "VI tail merge failed"
+
+
+def protocol_motion_gaps() -> list[str]:
+    """PROTOCOL_BUILDERS ids missing KO hand motions (should be empty)."""
+    from protocol import PROTOCOL_BUILDERS
+
+    return sorted(sid for sid in PROTOCOL_BUILDERS if sid not in HAND_MOTIONS_KO)
 
 
 def build_hand_motions(stain_id: str, lang: str = "ko") -> str:
-    """KO scripts (L1/L2/L3); VI core+extra; EN empty (SOP body fallback)."""
+    """KO scripts (L1/L2/L3); VI covered set; EN empty (SOP body fallback)."""
     sid = str(stain_id or "").strip()
     if lang == "ko":
         return HAND_MOTIONS_KO.get(sid, "")

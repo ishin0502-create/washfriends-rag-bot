@@ -133,17 +133,49 @@ def test_vi_no_ko_motions():
 def test_l2_rest_and_l3():
     from owner_hand_motions import (
         HAND_MOTIONS_KO,
+        HAND_MOTIONS_VI,
         l2_rest_coverage,
         l3_motion_coverage,
         build_hand_motions,
+        protocol_motion_gaps,
     )
 
     assert not l2_rest_coverage()
     assert not l3_motion_coverage()
+    assert not protocol_motion_gaps(), protocol_motion_gaps()
     assert "락스" in build_hand_motions("S_SHIRT_YELLOW", "ko")
     assert "거절" in build_hand_motions("S_GLUE", "ko") or "등급 3" in build_hand_motions("S_GLUE", "ko")
     assert "S_CURRY" in HAND_MOTIONS_KO
     assert "S_TAR" in HAND_MOTIONS_KO
+    assert "S_SUGARCANE" in HAND_MOTIONS_KO
+    assert "S_DOENJANG" in HAND_MOTIONS_KO
+    assert "Bước" in build_hand_motions("S_SUGARCANE", "vi")
+    assert "Bước" in build_hand_motions("S_MUSTARD", "vi")
+    assert len(HAND_MOTIONS_VI) >= len(HAND_MOTIONS_KO) - 5  # VI near-parity
+
+
+def test_soft_outlook_no_percent():
+    from owner_answer_clarity import inject_clarity_into_answer, split_zalo_messages
+    from protocol import PROTOCOL_BUILDERS
+
+    proto = PROTOCOL_BUILDERS["S_BLOOD_FRESH"]()
+    g = {
+        "protocol": proto.to_dict(),
+        "stain_context": {"id": "S_BLOOD_FRESH"},
+        "chemicals": [],
+        "tools": [],
+    }
+    body = (
+        "┌─ 기본 ─┐\n└──┘\n"
+        "▼ 이번 건 세탁 교육\n"
+        "━━━━━━━━━━━━━━━━\n"
+        "◆ (1) x\n"
+    )
+    out = inject_clarity_into_answer(body, graph=g, level="L1", grade=1, lang="ko")
+    parts = split_zalo_messages(out)
+    assert "예상 결과" in parts[0]
+    assert "%" not in parts[0]
+    assert "80%" not in out and "60–80" not in out
 
 
 def test_vi_inject_uses_vi_steps():
@@ -183,5 +215,6 @@ if __name__ == "__main__":
     test_inject_drops_toc()
     test_vi_no_ko_motions()
     test_l2_rest_and_l3()
+    test_soft_outlook_no_percent()
     test_vi_inject_uses_vi_steps()
-    print("OK hand motions L1+L2+L3+VI")
+    print("OK hand motions full + soft outlook")
