@@ -70,6 +70,7 @@ STAIN_DONTS_KO: dict[str, list[str]] = {
         "유색 옷에 산소표백제 쓰지 마세요",
         "실크·울·가죽에 알코올 함부로 쓰지 마세요 (구석 테스트 필수)",
         "물든 흰 천을 재사용하지 마세요 → 색소가 다시 옷으로 가요",
+        "알코올은 밀폐 공간에서 쓰지 마세요 → 환기하세요 (냄새·화재)",
     ],
     "S_INK_PEN": [
         "락스(염소)로 잉크를 지우려 하지 마세요 → 회색 자국이 남을 수 있어요",
@@ -176,9 +177,12 @@ STAIN_DONTS_KO: dict[str, list[str]] = {
 STAIN_STATUS_KO: dict[str, str] = {
     "S_HAIR_DYE": (
         "◆ 【먼저 확인】 염색약이 어떤 상태인가요?\n"
-        "· 아직 젖어 있다 → 아래 한 줄 순서 1번(찬물)부터 하세요\n"
-        "· 이미 말랐다 → 찬물보다 알코올 찍기부터 하시고, 잔색 가능성을 고객께 먼저 말씀하세요\n"
-        "· 다림질·건조기를 이미 거쳤다 → 거의 안 빠져요. 전문 의뢰 또는 정중히 거절해 주세요"
+        "· 아직 젖어 있다(만지면 손에 묻음) → Step 1(찬물)부터. 빠를수록 좋아요\n"
+        "· 이미 말랐다 → Step 1 건너뛰고 Step 2(알코올)부터. 잔색 가능성을 고객께 먼저 말씀하세요\n"
+        "· 다림질·건조기를 이미 거쳤다 → 거의 안 빠져요(열고착). 전문 의뢰 또는 정중히 거절해 주세요\n"
+        "\n"
+        "◆ 【고객께 먼저】 염색약은 강한 색소라 완전 제거가 어려울 수 있어요. "
+        "최선을 다하지만 자국이 남을 수 있습니다. 그래도 진행할까요?"
     ),
     "S_BLOOD_FRESH": (
         "◆ 【먼저 확인】 핏자국이 어떤 상태인가요?\n"
@@ -209,6 +213,79 @@ STAIN_STATUS_KO: dict[str, str] = {
         "· 이미 건조기를 거쳤다면 복원이 매우 어렵습니다 — 손님께 먼저 말씀하세요\n"
         "· 락스는 흰 100% 면·폴리만, 매니저 확인 후"
     ),
+}
+
+STAIN_STATUS_VI: dict[str, str] = {
+    "S_HAIR_DYE": (
+        "◆ 【Kiểm tra trước】 Thuốc nhuộm đang ở trạng thái nào?\n"
+        "· Còn ướt (chạm vào dính tay) → bắt đầu Step 1 (xả lạnh). Càng sớm càng tốt\n"
+        "· Đã khô → bỏ Step 1, sang Step 2 (cồn). Báo khách trước: có thể còn vết\n"
+        "· Đã sấy/ủi → gần như không ra (cố định nhiệt). Gửi chuyên hoặc từ chối lịch sự\n"
+        "\n"
+        "◆ 【Nói khách trước】 Thuốc nhuộm rất mạnh, khó sạch hết. "
+        "Chúng tôi sẽ cố gắng nhưng có thể còn vết. Anh/Chị muốn tiếp tục chứ ạ?"
+    ),
+}
+
+# Extra tool names for message 1 (stain-specific; no chemistry invention)
+STAIN_TOOL_EXTRAS: dict[str, dict[str, list[str]]] = {
+    "S_HAIR_DYE": {
+        "ko": [
+            "흰 면 천 5장 이상",
+            "이소프로필 알코올 70%(약국 소독용)",
+            "산소표백제 분말(과탄산나트륨)",
+            "담금통·대야",
+        ],
+        "vi": [
+            "Khăn trắng ≥5 miếng",
+            "Cồn isopropyl 70% (cồn sát trùng)",
+            "Bột tẩy oxy (sodium percarbonate)",
+            "Thau/chậu ngâm",
+        ],
+        "en": [
+            "White cloths (5+)",
+            "Isopropyl alcohol 70% (rubbing alcohol)",
+            "Oxygen bleach powder",
+            "Basin for soaking",
+        ],
+    },
+}
+
+# Soft outlook override (no %): state-based for high-risk stains
+STAIN_SOFT_OUTLOOK: dict[str, dict[str, str]] = {
+    "S_HAIR_DYE": {
+        "ko": (
+            "◆ 【예상 결과】\n"
+            "· 묻은 직후·흰옷: 꽤 잘 빠질 수 있어요. 그래도 완전 제거는 보장하지 않아요\n"
+            "· 시간이 지남: 잔색 가능성 높음 — 접수 때 동의를 받으세요\n"
+            "· 이미 마름: 부분 제거만 기대하세요\n"
+            "· 건조기·다리미 지남: 거의 어려움 — 전문 의뢰·거절을 먼저 검토하세요"
+        ),
+        "vi": (
+            "◆ 【Kết quả kỳ vọng】\n"
+            "· Mới dính + áo trắng: có thể ra nhiều — vẫn không đảm bảo sạch hết\n"
+            "· Để lâu: dễ còn vết — cần đồng ý khi nhận\n"
+            "· Đã khô: chỉ kỳ vọng sạch một phần\n"
+            "· Đã sấy/ủi: rất khó — ưu tiên chuyên / từ chối"
+        ),
+        "en": (
+            "◆ 【Expected result】\n"
+            "· Fresh + white: often improves a lot — full removal still not guaranteed\n"
+            "· Time passed: residual marks likely — get consent at intake\n"
+            "· Already dry: expect partial removal only\n"
+            "· After dryer/iron: rarely workable — refer or decline first"
+        ),
+    },
+}
+
+# VI stain-specific don'ts (common VI block is shared; extras only when present)
+STAIN_DONTS_VI: dict[str, list[str]] = {
+    "S_HAIR_DYE": [
+        "Không dùng tẩy oxy cho áo màu",
+        "Không dùng cồn cho lụa/len/da khi chưa test góc",
+        "Không tái sử dụng khăn đã dính màu → màu ngấm ngược",
+        "Không làm trong phòng kín với cồn — phải thông gió (cháy/mùi)",
+    ],
 }
 
 _NEXT_MSG = {
@@ -444,46 +521,82 @@ def build_tools_names_only(graph: dict, lang: str = "ko") -> str:
         head = "◆ 【Tools】 Names only — how-to in next message"
         extra_head = "· "
     lines = [f"{extra_head}{b}" for b in basics]
+    seen_lower = {ln.lower() for ln in lines}
     for n in names:
         # skip if already covered by basics keywords
-        low = n.lower()
-        if any(x in n for x in ("장갑", "găng", "glove", "흰 천", "khan", "cloth", "타이머", "timer", "hẹn")):
+        if any(x in n.lower() for x in ("장갑", "găng", "glove", "흰 천", "khan", "cloth", "타이머", "timer", "hẹn")):
+            continue
+        key = f"{extra_head}{n}".lower()
+        if key in seen_lower:
             continue
         lines.append(f"{extra_head}{n}")
-    return head + "\n" + "\n".join(lines[:10])
+        seen_lower.add(key)
+    # Stain-specific extras (e.g. IPA 70% for hair dye) — names only, no new chemistry
+    sid = _motion_stain_id(graph)
+    extras = (STAIN_TOOL_EXTRAS.get(sid) or {}).get(lang) or []
+    for ex in extras:
+        ex = str(ex).strip()
+        if not ex:
+            continue
+        key = f"{extra_head}{ex}".lower()
+        if key in seen_lower:
+            continue
+        # soft de-dupe against already-listed tool names
+        if any(ex.lower() in ln.lower() or ln.lower() in key for ln in lines):
+            continue
+        lines.append(f"{extra_head}{ex}")
+        seen_lower.add(key)
+    return head + "\n" + "\n".join(lines[:12])
 
 
 def build_spot_test_block(graph: dict, lang: str = "ko") -> str:
     codes = _chem_codes(graph)
     if not (codes & BLOT_CHEM_CODES):
         return ""
+    # Light hint when alcohol is in play — still generic blot procedure
+    a1_hint = "A1" in codes
     if lang == "vi":
+        chem_line = (
+            "1) Thấm hóa chất (cồn IPA 70%) lên khăn trắng một ít\n"
+            if a1_hint
+            else "1) Thấm hóa chất lên khăn trắng một ít\n"
+        )
         return (
             "◆ 【Thử góc】 Làm trước khi dùng hóa chất\n"
             "Chỗ kín (lai trong / cạnh nhãn).\n"
-            "1) Thấm hóa chất lên khăn trắng một ít\n"
-            "2) Ấn 30 giây lên chỗ thử\n"
+            + chem_line
+            + "2) Ấn 30 giây lên chỗ thử\n"
             "3) Nhấc khăn ra kiểm tra\n"
             "· Khăn dính màu vải → dừng hóa chất này\n"
             "· Không đổi màu → có thể tiếp tục\n"
             "💡 30 giây giúp tránh hỏng vải"
         )
     if lang == "en":
+        chem_line = (
+            "1) Dab a little IPA 70% alcohol on a white cloth\n"
+            if a1_hint
+            else "1) Dab a little chem on a white cloth\n"
+        )
         return (
             "◆ 【Spot-test】 Do this before using chemicals\n"
             "Hidden seam / inside label area.\n"
-            "1) Dab a little chem on a white cloth\n"
-            "2) Press on the test spot for 30 seconds\n"
+            + chem_line
+            + "2) Press on the test spot for 30 seconds\n"
             "3) Lift and check\n"
             "· Cloth picks up garment color → stop this chem\n"
             "· No color change → OK to continue\n"
             "💡 30 seconds can prevent fabric damage"
         )
+    chem_line = (
+        "1) 쓸 약(이소프로필 알코올 70%)을 흰 천에 조금 묻혀 주세요\n"
+        if a1_hint
+        else "1) 쓸 약을 흰 천에 조금 묻혀 주세요\n"
+    )
     return (
         "◆ 【구석 테스트】 약품 쓰기 전에 해 주세요\n"
         "안 보이는 곳(안쪽 밑단·라벨 옆)에서요.\n"
-        "1) 쓸 약을 흰 천에 조금 묻혀 주세요\n"
-        "2) 테스트 부위에 30초 꾹 눌러 주세요\n"
+        + chem_line
+        + "2) 테스트 부위에 30초 꾹 눌러 주세요\n"
         "3) 천을 떼고 확인하세요\n"
         "· 천에 옷 색이 묻었다 → 이 약은 쓰지 마세요\n"
         "· 색 변화 없다 → 진행하셔도 됩니다\n"
@@ -492,15 +605,22 @@ def build_spot_test_block(graph: dict, lang: str = "ko") -> str:
 
 
 def build_donts_block(graph: dict, lang: str = "ko") -> str:
+    sid = _motion_stain_id(graph)
     if lang == "vi":
-        return (
-            "◆ 【Tuyệt đối không】\n"
-            "· Không xả nước nóng → vết gắn chặt vào sợi\n"
-            "· Không chà mạnh → loang và hỏng vải. Ấn thấm từ trên xuống\n"
-            "· Không đổ hóa chất trực tiếp lên áo → thấm khăn trắng rồi chấm\n"
-            "· Không trộn nhiều hóa chất cùng lúc → dùng lần lượt, xả giữa các bước\n"
-            "· Không sấy/ủi khi còn vết → nhiệt cố định vết"
-        )
+        lines = [
+            "◆ 【Tuyệt đối không】",
+            "· Không xả nước nóng → vết gắn chặt vào sợi",
+            "· Không chà mạnh → loang và hỏng vải. Ấn thấm từ trên xuống",
+            "· Không đổ hóa chất trực tiếp lên áo → thấm khăn trắng rồi chấm",
+            "· Không trộn nhiều hóa chất cùng lúc → dùng lần lượt, xả giữa các bước",
+            "· Không sấy/ủi khi còn vết → nhiệt cố định vết",
+        ]
+        extra = STAIN_DONTS_VI.get(sid) or []
+        if extra:
+            lines.append("[Vết này]")
+            for d in extra:
+                lines.append(f"· {d}")
+        return "\n".join(lines)
     if lang == "en":
         return (
             "◆ 【Do not】\n"
@@ -510,7 +630,6 @@ def build_donts_block(graph: dict, lang: str = "ko") -> str:
             "· Do not mix chems at once → one chem → rinse → next\n"
             "· Do not dry/iron over remaining marks → heat sets them"
         )
-    sid = _motion_stain_id(graph)
     lines = ["◆ 【절대 하지 마세요】"]
     lines.append("[공통]")
     for d in COMMON_DONTS_KO:
@@ -529,7 +648,7 @@ def build_dry_check_block(lang: str = "ko") -> str:
             "◆ 【Trước khi sấy】 Kiểm tra dưới ánh sáng mạnh\n"
             "· Sạch → sấy/phơi bình thường\n"
             "· Còn vết → không sấy/ủi — làm lại bước hoặc phơi tự nhiên và báo khách\n"
-            "💡 Nhiệt có thể làm vết vĩnh viễn"
+            "💡 Dù 'gần sạch' mà còn vết → đừng sấy. Nhiệt có thể làm vết vĩnh viễn"
         )
     if lang == "en":
         return (
@@ -544,24 +663,26 @@ def build_dry_check_block(lang: str = "ko") -> str:
         "· 깨끗하다 → 정상 건조하시면 됩니다\n"
         "· 자국이 보인다 → 건조기·다림질 하지 마세요. "
         "약 단계를 한 번 더 하거나, 자연 건조 후 고객께 잔색을 말씀해 주세요\n"
-        "💡 열을 가하면 자국이 영구로 남을 수 있어요"
+        "💡 “거의 다 빠졌는데”라도 자국이 보이면 말리지 마세요. "
+        "열을 가하면 자국이 영구로 남을 수 있어요"
     )
 
 
 def build_status_check(graph: dict, lang: str = "ko") -> str:
-    if lang != "ko":
-        return ""
     sid = _motion_stain_id(graph)
+    if lang == "vi":
+        return STAIN_STATUS_VI.get(sid, "")
+    if lang == "en":
+        return ""
     if sid in STAIN_STATUS_KO:
         return STAIN_STATUS_KO[sid]
     # Generic age hint from graph if present
-    age = ""
     sc = graph.get("stain_context") if isinstance(graph.get("stain_context"), dict) else {}
     age = str(sc.get("age_bucket") or graph.get("age_bucket") or "")
     if age == "dried":
         return (
             "◆ 【먼저 확인】 얼룩이 이미 마른 상태예요.\n"
-            "성공률이 낮아질 수 있어요. 잔색 가능성을 고객께 먼저 말씀해 주세요."
+            "잔색 가능성을 고객께 먼저 말씀해 주세요."
         )
     if age == "hard":
         return (
@@ -686,7 +807,12 @@ def inject_clarity_into_answer(
     flow_bits: list[str] = []
     if level in {"L2", "L3"}:
         flow_bits.append(_SUPERVISOR[lang])
-    outlook = (_SOFT_OUTLOOK.get(lang) or _SOFT_OUTLOOK["ko"]).get(int(grade) or 2, "")
+    sid = _motion_stain_id(g)
+    outlook_override = (STAIN_SOFT_OUTLOOK.get(sid) or {}).get(lang) or ""
+    if outlook_override:
+        outlook = outlook_override
+    else:
+        outlook = (_SOFT_OUTLOOK.get(lang) or _SOFT_OUTLOOK["ko"]).get(int(grade) or 2, "")
     if outlook:
         flow_bits.append(outlook)
     status = build_status_check(g, lang)
@@ -704,17 +830,7 @@ def inject_clarity_into_answer(
     spot = build_spot_test_block(g, lang)
     if spot:
         detail_bits.append(spot)
-    base, mx = _soak_bounds(g)
-    if base is not None and mx is not None and int(mx) >= int(base) + 15:
-        if lang == "vi":
-            soak_head = "◆ 【Thời gian ngâm】"
-        elif lang == "en":
-            soak_head = "◆ 【Soak time】"
-        else:
-            soak_head = "◆ 【담금 시간】"
-        detail_bits.append(soak_head + "\n" + format_soak_time(int(base), int(mx), lang))
 
-    sid = _motion_stain_id(g)
     motions = ""
     try:
         from owner_hand_motions import build_hand_motions
@@ -722,6 +838,29 @@ def inject_clarity_into_answer(
         motions = build_hand_motions(sid, lang)
     except Exception:
         motions = ""
+
+    # If hand-motions already embed a soak *heading* (◆ 【담금 시간】 inside a Step),
+    # skip the shared top soak block. Mere references like "(시간은 【담금 시간】 안내)"
+    # must still get the common block (e.g. blood).
+    soak_embedded = bool(motions) and (
+        "◆ 【담금 시간】" in motions
+        or "◆ 【Thời gian ngâm】" in motions
+        or "◆ 【Soak time】" in motions
+    )
+    base, mx = _soak_bounds(g)
+    if (
+        not soak_embedded
+        and base is not None
+        and mx is not None
+        and int(mx) >= int(base) + 15
+    ):
+        if lang == "vi":
+            soak_head = "◆ 【Thời gian ngâm】"
+        elif lang == "en":
+            soak_head = "◆ 【Soak time】"
+        else:
+            soak_head = "◆ 【담금 시간】"
+        detail_bits.append(soak_head + "\n" + format_soak_time(int(base), int(mx), lang))
 
     if motions:
         # Hand-motion Steps replace LLM ◆(1)~(6) — no duplicate TOC

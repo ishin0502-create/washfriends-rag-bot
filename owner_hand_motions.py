@@ -18,36 +18,47 @@ HAND_MOTIONS_KO: dict[str, str] = {
         + _step(
             1,
             "장갑 끼고 찬물로 헹궈 주세요",
+            "※ 이미 말라서 온 경우 → 이 Step은 건너뛰고 Step 2로 가세요.\n"
             "장갑을 먼저 껴 주세요.\n"
-            "찬물을 틀어 얼룩 뒷면에 2~3분 흘려 주세요.\n"
+            "찬물(약 15~20°C)을 틀어 얼룩 뒷면에 2~3분 흘려 주세요.\n"
             "세게 문지르지 마세요. 물로만 씻어내는 거예요.\n"
             "→ 색이 물에 씻겨 나오면 잘 되고 있는 거예요.",
         )
         + "\n"
         + _step(
             2,
-            "알코올로 색소를 빼 주세요",
+            "알코올(70% IPA)로 색소를 빼 주세요",
+            "⚠️ 환기 필수 — 창문·환풍기. 알코올은 냄새가 강하고 불이 붙을 수 있어요.\n"
+            "약품: 이소프로필 알코올 70%(약국 「소독용 알코올」). 무수·메탄올 금지.\n"
             "① 옷을 뒤집어 주세요 (안감이 위로)\n"
             "② 얼룩 아래에 깨끗한 흰 천을 깔아 받쳐 주세요\n"
             "③ 다른 흰 천에 알코올을 묻혀 주세요 (옷에 직접 붓지 마세요)\n"
             "④ 위에서 수직으로 꾹 3초 → 떼세요 (옆으로 문지르면 퍼져요)\n"
             "⑤ 아래 천에 색소가 옮으면 잘 되고 있는 거예요\n"
             "⑥ 천이 물들면 바로 새 천으로 바꿔 주세요\n"
-            "⑦ 5~10번 반복. 더 안 묻으면 다음으로",
+            "⑦ 5~10번 반복. 더 안 묻으면 다음으로\n"
+            "⑧ 찬물(15~20°C)로 한 번 헹궈 주세요 — 다음 약(산소) 쓰기 전에 알코올을 씻어내는 거예요.\n"
+            "🛑 중단: 옷 색이 빠지거나 원단이 이상해지면 즉시 멈추세요.",
         )
         + "\n"
         + _step(
             3,
             "산소표백제로 담가 주세요 (흰옷만!)",
-            "⚠️ 유색·실크·울이면 이 Step은 하지 마세요.\n"
-            "미지근한 물 1L에 산소표백제 큰술 1을 풀어 주세요.\n"
-            "얼룩 부위만 담가 주세요. (시간은 위 【담금 시간】대로)",
+            "⚠️ 유색·실크·울이면 이 Step은 하지 마세요 → Step 4로.\n"
+            "미지근한 물(약 30~35°C) 1L에 산소표백제 큰술 1을 풀어 주세요.\n"
+            "(가능하면 병 표기 희석을 우선하세요.)\n"
+            "얼룩 부위만 담가 주세요.\n"
+            "◆ 【담금 시간】\n"
+            "타이머 30분 → 꺼내 확인.\n"
+            "· 많이 빠졌다 → 헹구고 Step 4\n"
+            "· 아직 남았다 → 30분 더\n"
+            "· 최대 120분(2시간) 넘기지 마세요.",
         )
         + "\n"
         + _step(
             4,
             "세탁해 주세요",
-            "허용 수온으로 세탁해 주세요.\n"
+            "미지근한 물(약 30~35°C)로 세탁해 주세요.\n"
             "잔색이 남을 수 있다고 고객께 미리 말씀해 주세요.",
         )
     ),
@@ -833,36 +844,47 @@ HAND_MOTIONS_VI: dict[str, str] = {
         + _step_vi(
             1,
             "Đeo găng và xả nước lạnh",
+            "※ Nếu vết đã khô → bỏ Step này, sang Step 2.\n"
             "Đeo găng trước.\n"
-            "Xả nước lạnh từ mặt trái 2–3 phút.\n"
+            "Xả nước lạnh (khoảng 15–20°C) mặt trái 2–3 phút.\n"
             "Không chà mạnh — chỉ để nước cuốn màu.\n"
             "→ Thấy màu ra theo nước là đang đúng.",
         )
         + "\n"
         + _step_vi(
             2,
-            "Chấm cồn lấy màu",
+            "Chấm cồn IPA 70% lấy màu",
+            "⚠️ Thông gió bắt buộc — cửa sổ/quạt. Cồn dễ cháy, mùi mạnh.\n"
+            "Hóa chất: cồn isopropyl 70% (hiệu thuốc: cồn sát trùng). Cấm methanol/cồn khan.\n"
             "① Lộn trái áo\n"
             "② Lót khăn trắng sạch dưới vết\n"
             "③ Thấm cồn lên khăn trắng khác (không đổ trực tiếp lên áo)\n"
             "④ Ấn thẳng đứng 3 giây → nhấc (không chà ngang)\n"
             "⑤ Màu sang khăn dưới = đang lấy được\n"
             "⑥ Khăn dính màu → đổi khăn mới ngay\n"
-            "⑦ Lặp 5–10 lần. Hết dính màu → bước tiếp",
+            "⑦ Lặp 5–10 lần. Hết dính màu → bước tiếp\n"
+            "⑧ Xả lạnh (15–20°C) một lần — rửa cồn trước khi dùng oxy.\n"
+            "🛑 Dừng ngay nếu màu vải phai hoặc vải bất thường.",
         )
         + "\n"
         + _step_vi(
             3,
             "Ngâm oxy (chỉ áo trắng!)",
-            "⚠️ Áo màu / lụa / len → bỏ bước này.\n"
-            "Pha 1L nước ấm nhẹ + 1 thìa oxy.\n"
-            "Chỉ ngâm chỗ vết. (Thời gian theo 【Thời gian ngâm】 phía trên)",
+            "⚠️ Áo màu / lụa / len → bỏ Step này, sang Step 4.\n"
+            "Pha nước ấm nhẹ (khoảng 30–35°C) 1L + 1 thìa bột oxy.\n"
+            "(Ưu tiên hướng dẫn trên bao nếu có.)\n"
+            "Chỉ ngâm chỗ vết.\n"
+            "◆ 【Thời gian ngâm】\n"
+            "Hẹn giờ 30 phút → kiểm tra.\n"
+            "· Đã nhạt → xả rồi Step 4\n"
+            "· Còn → ngâm thêm 30 phút\n"
+            "· Không quá 120 phút (2 giờ).",
         )
         + "\n"
         + _step_vi(
             4,
             "Giặt",
-            "Giặt theo nhiệt độ cho phép.\n"
+            "Giặt nước ấm nhẹ (khoảng 30–35°C).\n"
             "Nhắc khách trước: có thể còn vết.",
         )
     ),

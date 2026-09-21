@@ -19,6 +19,62 @@ def test_hair_motions_present():
     assert "뒤집어" in m
     assert "꾹 3초" in m or "3초" in m
     assert "◆ (1)" not in m
+    assert "70%" in m or "이소프로필" in m
+    assert "환기" in m
+    assert "⑧" in m or "8)" in m or "한 번 헹궈" in m
+    assert "15~20" in m or "15–20" in m
+    assert "【담금 시간】" in m
+    assert "건너뛰" in m
+
+
+def test_hair_dye_clarity_p0():
+    """P0: soak inside Step3 only, IPA tools, state outlook, no %."""
+    proto = PROTOCOL_BUILDERS["S_HAIR_DYE"]()
+    g = {
+        "protocol": proto.to_dict(),
+        "stain_context": {"id": "S_HAIR_DYE"},
+        "chemicals": [{"code": "A1"}, {"code": "B1"}],
+        "tools": [{"id": "T_CLOTH", "name_ko": "흰 면 천"}],
+    }
+    body = (
+        "┌─ 기본 ─┐\n└──┘\n"
+        "▼ 이번 건 세탁 교육 (아래부터 SOP)\n"
+        "━━━━━━━━━━━━━━━━\n"
+        "◆ (1) x\n"
+        "◆ [왜 이 순서인가요]\n염모제는 강한 색소입니다.\n"
+    )
+    out = inject_clarity_into_answer(body, graph=g, level="L2", grade=2, lang="ko")
+    parts = split_zalo_messages(out)
+    flow, detail = parts[0], "\n".join(parts[1:])
+    assert detail.count("【담금 시간】") == 1
+    assert "이소프로필" in flow or "70%" in flow
+    assert "산소" in flow
+    assert "이미 말랐다" in flow or "말랐다" in flow
+    assert "고객께 먼저" in flow or "진행할까요" in flow
+    # IPA "70%" in tools is OK; ban success-rate style percents
+    assert "70~80" not in out and "50–60" not in out and "50~60" not in out
+    assert "30%" not in out and "80%" not in out
+    assert "환기" in detail
+    assert "밀폐" in detail or "환기" in detail
+    assert "이소프로필" in detail
+    # Blood still gets common soak above steps (no soak heading in blood motions)
+    g2 = {
+        "protocol": PROTOCOL_BUILDERS["S_BLOOD_FRESH"]().to_dict(),
+        "stain_context": {"id": "S_BLOOD_FRESH"},
+        "chemicals": [],
+        "tools": [],
+    }
+    body2 = (
+        "┌─ 기본 ─┐\n└──┘\n"
+        "▼ 이번 건 세탁 교육\n"
+        "━━━━━━━━━━━━━━━━\n"
+        "◆ (1) x\n"
+    )
+    out2 = inject_clarity_into_answer(body2, graph=g2, level="L1", grade=1, lang="ko")
+    d2 = "\n".join(split_zalo_messages(out2)[1:])
+    assert "【담금 시간】" in d2
+    # Common soak appears before Step for blood (motions reference it, don't embed heading)
+    assert d2.index("【담금 시간】") < d2.index("Step 1") or "담가" in d2
 
 
 def test_l1_full_coverage():
@@ -202,10 +258,16 @@ def test_vi_inject_uses_vi_steps():
     assert "장갑" not in detail
     assert "Spot-test first" not in detail
     assert not re.search(r"[가-힣]", detail)
+    assert detail.count("【Thời gian ngâm】") == 1
+    assert "thông gió" in detail.lower() or "Thông gió" in detail
+    assert "70%" in detail or "isopropyl" in detail.lower()
+    assert "70~80" not in out and "50~60" not in out and "80%" not in out
+    assert "Kiểm tra trước" in parts[0] or "ướt" in parts[0].lower()
 
 
 if __name__ == "__main__":
     test_hair_motions_present()
+    test_hair_dye_clarity_p0()
     test_l1_full_coverage()
     test_l2_priority_coverage()
     test_l2_milk_coffee_order()

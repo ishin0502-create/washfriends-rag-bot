@@ -66,6 +66,9 @@ def test_two_message_split():
     assert "말리기 전" in detail
     assert "보류하며 진행" not in out
     assert "30–180" not in out
+    assert "이소프로필" in flow or "70%" in flow
+    assert detail.count("【담금 시간】") == 1
+    assert "70~80" not in out and "50~60" not in out and "80%" not in out
     disp = for_ask_display(out)
     assert "메시지 1/" not in disp
     assert "—— 1/" in disp
