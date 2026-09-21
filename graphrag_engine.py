@@ -3614,7 +3614,19 @@ def _polish_owner_ko_phrasing(answer: str, *, item_wash: bool = False) -> str:
         ("사용 금지", "사용하지 마세요"),
         ("건조 금지.", "말리지 마세요."),
         ("건조 금지", "말리지 마세요"),
+        ("잔색 채 건조 금지.", "잔색이 남은 채로 말리지 마세요."),
+        ("잔색 채 건조 금지", "잔색이 남은 채로 말리지 마세요"),
+        ("잔색·냄새 채 건조 금지.", "잔색·냄새가 남은 채로 말리지 마세요."),
+        ("잔색·냄새 채 건조 금지", "잔색·냄새가 남은 채로 말리지 마세요"),
         ("열고착.", "열이 닿으면 얼룩이 영구 고정됩니다."),
+        ("사전 고지.", "미리 고객에게 고지하세요."),
+        ("사전 고지", "미리 고객에게 고지하세요"),
+        ("부분 제거 고지.", "부분 제거만 가능하다고 고지하세요."),
+        ("성공률↓ 고지하세요", "성공률이 낮아질 수 있다고 고지하세요"),
+        ("성공률↓ 고지", "성공률이 낮아질 수 있다고 고지하세요"),
+        ("원칙 금지.", "원칙적으로 하지 마세요."),
+        ("원칙 금지", "원칙적으로 하지 마세요"),
+        ("산소 원칙 금지", "산소는 원칙적으로 쓰지 마세요"),
         ("적어 둔다.", "적어 두세요."),
         ("적어 둔다", "적어 두세요"),
         ("진행한다.", "진행하세요."),
@@ -3623,17 +3635,23 @@ def _polish_owner_ko_phrasing(answer: str, *, item_wash: bool = False) -> str:
         ("세탁한다.", "세탁하세요."),
         ("흡수한다.", "흡수하세요."),
         ("바른다.", "바르세요."),
-        ("바른다.", "바르세요."),
         ("담근다.", "담그세요."),
         ("분리한다.", "분리하세요."),
         ("뒤집는다.", "뒤집으세요."),
+        ("제거한다.", "제거하세요."),
+        ("반복한다.", "반복하세요."),
+        ("고지한다.", "고지하세요."),
         ("금지.", "하지 마세요."),
         ("안 됨.", "안 됩니다."),
         ("불가.", "할 수 없습니다."),
+        ("필수.", "필수입니다."),
+        ("권장.", "권장합니다."),
     )
     for a, b in replacements:
         if a in out:
             out = out.replace(a, b)
+    # Bare "… 고지." at clause end (not already 고지하세요)
+    out = re.sub(r"(?<!에게\s)(?<!고객에게\s)고지\.(?!\s*하세요)", "고지하세요.", out)
     out = re.sub(r"식초(\([^)]*\))을", r"식초\1를", out)
     out = out.replace("식초)을", "식초)를")
     out = re.sub(
@@ -3673,6 +3691,8 @@ def _polish_owner_ko_phrasing(answer: str, *, item_wash: bool = False) -> str:
     out = out.replace("라벨에 라벨 붙임", "라벨에 약 이름·희석비를 적어 두세요")
     out = out.replace("라벨에 라벨", "라벨에 약 이름·희석비")
     out = out.replace("적어 둔다", "적어 두세요")
+    # Promote path blocks 【확인】【도구】【절대】 so they sit cleanly with (1)~(6) TOC
+    out = _promote_ko_path_blocks(out)
     # Promote step / education headers for Zalo readability (no true font size in Zalo)
     out = _promote_ko_section_headers(out, item_wash=item_wash)
     try:
@@ -3681,6 +3701,22 @@ def _polish_owner_ko_phrasing(answer: str, *, item_wash: bool = False) -> str:
         out = shop_speak_ko(out)
     except Exception:
         pass
+    return out
+
+
+def _promote_ko_path_blocks(text: str) -> str:
+    """Lift 【확인】【도구】【절대】 into clear section lines (no emoji — TOC only)."""
+    if not text:
+        return text
+    out = text
+    # Idempotent: already promoted titles
+    out = re.sub(r"◆\s*【확인 먼저】", "【확인】", out)
+    out = re.sub(r"◆\s*【도구 준비】", "【도구】", out)
+    out = re.sub(r"◆\s*【절대 하지 말 것】", "【절대】", out)
+    out = out.replace("【확인】", "\n◆ 【확인 먼저】\n")
+    out = out.replace("【도구】", "\n◆ 【도구 준비】\n")
+    out = out.replace("【절대】", "\n◆ 【절대 하지 말 것】\n")
+    out = re.sub(r"\n{3,}", "\n\n", out)
     return out
 
 

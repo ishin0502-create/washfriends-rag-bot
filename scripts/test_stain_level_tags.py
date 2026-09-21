@@ -130,6 +130,24 @@ def test_item_wash_toc_emoji():
     assert "오염·원단·두께·색상" not in out
 
 
+def test_tone_complement_polish():
+    from graphrag_engine import _polish_owner_ko_phrasing
+
+    raw = (
+        "【확인】흰옷인가요. 【도구】식초. "
+        "문지르기 금지. 잔색 채 건조 금지. 사전 고지. "
+        "(1) 핏자국. (2) 천. 식초 1:4."
+    )
+    out = _polish_owner_ko_phrasing(raw)
+    assert "세게 문지르지 마세요" in out
+    assert "잔색이 남은 채로 말리지 마세요" in out
+    assert "미리 고객에게 고지하세요" in out
+    assert "◆ 【확인 먼저】" in out
+    assert "◆ 【도구 준비】" in out
+    assert "식초 1:4" in out  # chemistry intact
+    assert "👕" in out
+
+
 if __name__ == "__main__":
     test_resolve_levels()
     test_skip_without_stain_id()
@@ -137,4 +155,5 @@ if __name__ == "__main__":
     test_l1_twelve_instructional()
     test_toc_emoji_only_on_headers()
     test_item_wash_toc_emoji()
+    test_tone_complement_polish()
     print("OK test_stain_level_tags")
