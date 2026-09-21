@@ -1103,6 +1103,26 @@ def inject_clarity_into_answer(
 
     front, body = _split_glossary_and_body(out)
     if not front:
+        # Still attach mid-tier keyword blocks (fabric/mix/retry) when glossary missing
+        try:
+            import owner_mid_blocks_v40 as _mid
+
+            extras: list[str] = []
+            fab = _mid.block_fabric(g, lang)
+            if fab:
+                extras.append(fab)
+            if _mid.wants_mix_block(g, lang):
+                chem = _mid.block_chem(g, lang)
+                if chem:
+                    extras.append(chem)
+            if _mid.wants_retry_full(g, lang):
+                rb = _mid.block_retry(_motion_stain_id(g), "L2", g, lang)
+                if rb:
+                    extras.append(rb)
+            if extras:
+                out = out.rstrip() + "\n\n" + "\n\n".join(extras)
+        except Exception as _e:
+            print(f"[CLARITY] mid early-attach skip: {type(_e).__name__}: {_e}")
         foot = (_GRADE_FOOTER.get(lang) or _GRADE_FOOTER["ko"]).get(grade, "")
         if foot and "【다시 한번 고객 고지】" not in out and "【Nhắc khách】" not in out:
             out = out.rstrip() + "\n\n" + foot

@@ -1573,7 +1573,25 @@ def _infer_fabric_curriculum_item(raw: str, t: str) -> str:
     from fabric_care import FABRIC_TOKEN_TO_ITEM
 
     token = _infer_fabric_from_text(raw)
-    return FABRIC_TOKEN_TO_ITEM.get(token or "", "")
+    item = FABRIC_TOKEN_TO_ITEM.get(token or "", "")
+    if item:
+        return item
+    # Unknown fabric / how to identify — general blend card + mid fabric guide
+    if any(
+        k in raw
+        for k in (
+            "원단이 뭔", "원단 뭐", "원단을 모르", "원단 모르", "소재를 모르",
+            "무슨 원단", "어떤 원단", "라벨이 없", "라벨 없",
+        )
+    ) or any(
+        k in t
+        for k in (
+            "what fabric", "unknown fabric", "no label", "khong biet vai",
+            "không biết vải", "chat lieu gi",
+        )
+    ):
+        return "I_FABRIC_BLEND"
+    return ""
 
 
 def _infer_item_from_text(text: str) -> str:

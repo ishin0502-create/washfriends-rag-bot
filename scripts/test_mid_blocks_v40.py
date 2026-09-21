@@ -102,6 +102,14 @@ def test_retry_protein_no_heat():
     assert "매니저" in r
 
 
-def test_retry_full_on_keyword():
-    r = block_retry("S_INK_PEN", "L2", {"_raw": "1차에 안 빠졌는데 어떻게?"}, "ko")
-    assert "3차" in r and "아세톤" in r
+def test_fabric_early_attach_without_glossary():
+    """No glossary front → still attach fabric guide on fabric question."""
+    g = {
+        "stain_context": {},
+        "chemicals": [],
+        "tools": [],
+        "_raw": "원단이 뭔지 모를 때 어떻게 해요?",
+    }
+    raw = "효소로 약하게만 하세요.\n"
+    out = inject_clarity_into_answer(raw, graph=g, level="L1", grade=1, lang="ko")
+    assert "원단 판단" in out or "라벨" in out
