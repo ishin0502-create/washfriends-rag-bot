@@ -776,5 +776,5 @@ def for_ask_display(text: str) -> str:
     parts = split_zalo_messages(text, max_len=100000)
     joined = []
     for i, p in enumerate(parts, 1):
-        joined.append(f"—— 메시지 {i}/{len(parts)} ——\n{p}")
+        joined.append(f"—— {i}/{len(parts)} ——\n{p}")
     return "\n\n".join(joined)

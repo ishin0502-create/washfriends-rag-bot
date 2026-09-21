@@ -67,7 +67,8 @@ def test_two_message_split():
     assert "보류하며 진행" not in out
     assert "30–180" not in out
     disp = for_ask_display(out)
-    assert "메시지 1/" in disp
+    assert "메시지 1/" not in disp
+    assert "—— 1/" in disp
     assert "<<<ZALO_MSG2>>>" not in disp
 
 
