@@ -99,7 +99,7 @@ def test_vi_clarity_no_ko_en_stubs():
     }
     body = (
         "┌─ Hướng dẫn ─┐\nthuật ngữ…\n└──┘\n"
-        "▼ Giáo dục giặt lần này\n"
+        "▼ SOP cho vết này\n"
         "━━━━━━━━━━━━━━━━\n"
         "◆ (1) Kiểm tra\n"
         "Nội dung VI dài.\n"
