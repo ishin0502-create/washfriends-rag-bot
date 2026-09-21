@@ -4234,6 +4234,14 @@ def _prepend_stain_level_banner(
         g = graph_context.get("graph") if isinstance(graph_context, dict) else {}
         if not isinstance(g, dict):
             return answer
+        # Prefer hard-override entity stain id over Neo4j fuzzy match (e.g. dry blood)
+        ent_sid = str((entities or {}).get("stain_id") or "").strip()
+        if ent_sid.startswith("S_"):
+            g = dict(g)
+            g["_owner_stain_id"] = ent_sid
+        g = dict(g)
+        g["_raw"] = user_text or ""
+        g["entities"] = entities if isinstance(entities, dict) else {}
         sid = str(
             g.get("_owner_stain_id")
             or (g.get("stain_context") or {}).get("id")

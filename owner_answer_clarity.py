@@ -218,11 +218,21 @@ def _stain_id(graph: dict) -> str:
 def _motion_stain_id(graph: dict) -> str:
     """Stain id for hand-motions / status / donts (age-aware blood remap)."""
     sid = _stain_id(graph)
-    if sid == "S_BLOOD_FRESH":
-        sc = graph.get("stain_context") if isinstance(graph.get("stain_context"), dict) else {}
-        age = str(sc.get("age_bucket") or graph.get("age_bucket") or "")
-        if age in {"dried", "hard"}:
-            return "S_BLOOD_DRY"
+    if sid != "S_BLOOD_FRESH":
+        return sid
+    sc = graph.get("stain_context") if isinstance(graph.get("stain_context"), dict) else {}
+    age = str(sc.get("age_bucket") or graph.get("age_bucket") or "")
+    if age in {"dried", "hard"}:
+        return "S_BLOOD_DRY"
+    ents = graph.get("entities") if isinstance(graph.get("entities"), dict) else {}
+    raw = str(
+        graph.get("_raw")
+        or ents.get("_raw")
+        or graph.get("raw_question")
+        or ""
+    )
+    if any(k in raw for k in ("마른", "말라", "말랐", "굳은", "오래된", "고착", "갈색")):
+        return "S_BLOOD_DRY"
     return sid
 
 
@@ -423,7 +433,7 @@ def build_donts_block(graph: dict, lang: str = "ko") -> str:
             "◆ Do not: hot rinse · rub hard · pour chem on fabric · "
             "mix chems · dry/iron over remaining marks"
         )
-    sid = _stain_id(graph)
+    sid = _motion_stain_id(graph)
     lines = ["◆ 【절대 하지 마세요】"]
     lines.append("[공통]")
     for d in COMMON_DONTS_KO:
