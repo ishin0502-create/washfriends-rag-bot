@@ -135,8 +135,8 @@ def test_tone_complement_polish():
 
     raw = (
         "【확인】흰옷인가요. 【도구】식초. "
-        "문지르기 금지. 잔색 채 건조 금지. 사전 고지. "
-        "(1) 핏자국. (2) 천. 식초 1:4."
+        "문지르기 금지. 잔색 채 건조 금지. 사전 고지.\n"
+        "(1) 핏자국.\n(2) 천.\n식초 1:4."
     )
     out = _polish_owner_ko_phrasing(raw)
     assert "세게 문지르지 마세요" in out
