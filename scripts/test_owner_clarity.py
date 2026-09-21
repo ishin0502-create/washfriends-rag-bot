@@ -85,7 +85,7 @@ def test_vi_clarity_no_ko_en_stubs():
 
     from owner_hand_motions import build_hand_motions
 
-    assert build_hand_motions("S_HAIR_DYE", "vi") == ""
+    assert "Bước" in build_hand_motions("S_HAIR_DYE", "vi")
     assert build_hand_motions("S_HAIR_DYE", "en") == ""
 
     proto = _proto("S_HAIR_DYE")
@@ -112,6 +112,7 @@ def test_vi_clarity_no_ko_en_stubs():
     detail = "\n".join(parts[1:])
     assert "Chi tiết thao tác" in detail
     assert "Thử góc" in detail or "Thời gian ngâm" in detail or "Tuyệt đối không" in detail
+    assert "Bước 1" in detail
     assert "Spot-test first" not in detail
     assert "Do not: hot rinse" not in detail
     assert "Before drying:" not in detail

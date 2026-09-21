@@ -109,10 +109,44 @@ def test_inject_drops_toc():
 
 
 def test_vi_no_ko_motions():
-    from owner_hand_motions import build_hand_motions
+    import re
+    from owner_hand_motions import build_hand_motions, HAND_MOTIONS_VI, vi_priority_coverage
 
-    assert build_hand_motions("S_HAIR_DYE", "vi") == ""
+    assert not vi_priority_coverage()
+    assert len(HAND_MOTIONS_VI) == 10
+    m = build_hand_motions("S_HAIR_DYE", "vi")
+    assert "Bước 1" in m
+    assert "cồn" in m.lower() or "Cồn" in m or "chấm cồn" in m.lower() or "Chấm cồn" in m
+    assert "이제 시작합니다" not in m
+    assert not re.search(r"[가-힣]", m)
     assert build_hand_motions("S_MILK_COFFEE", "en") == ""
+    assert "Bước" in build_hand_motions("S_MILK_COFFEE", "vi")
+
+
+def test_vi_inject_uses_vi_steps():
+    import re
+
+    proto = PROTOCOL_BUILDERS["S_HAIR_DYE"]()
+    g = {
+        "protocol": proto.to_dict(),
+        "stain_context": {"id": "S_HAIR_DYE"},
+        "chemicals": [{"code": "A1"}, {"code": "B1"}],
+        "tools": [{"id": "T_CLOTH", "name_vi": "Khăn trắng"}],
+    }
+    body = (
+        "┌─ Hướng dẫn ─┐\n└──┘\n"
+        "▼ SOP cho vết này\n"
+        "━━━━━━━━━━━━━━━━\n"
+        "◆ (1) Kiểm tra\nNội dung LLM\n"
+    )
+    out = inject_clarity_into_answer(body, graph=g, level="L2", grade=2, lang="vi")
+    parts = split_zalo_messages(out)
+    detail = "\n".join(parts[1:])
+    assert "Bước 2" in detail
+    assert "Lộn trái" in detail
+    assert "장갑" not in detail
+    assert "Spot-test first" not in detail
+    assert not re.search(r"[가-힣]", detail)
 
 
 if __name__ == "__main__":
@@ -125,4 +159,5 @@ if __name__ == "__main__":
     test_oil_starch()
     test_inject_drops_toc()
     test_vi_no_ko_motions()
-    print("OK hand motions L1+L2 priority complete")
+    test_vi_inject_uses_vi_steps()
+    print("OK hand motions L1+L2+VI priority complete")

@@ -803,13 +803,280 @@ _L2_PRIORITY = {
 assert _L1_REQUIRED.issubset(HAND_MOTIONS_KO.keys()), "L1 hand-motion coverage incomplete"
 assert _L2_PRIORITY.issubset(HAND_MOTIONS_KO.keys()), "L2 priority hand-motion coverage incomplete"
 
+_START_VI = "▼ Bắt đầu — làm lần lượt từ trên xuống\n\n"
+
+
+def _step_vi(n: int, title: str, body: str) -> str:
+    return f"Bước {n}. {title}\n─────\n{body.strip()}\n"
+
+
+# Top-frequency VI hand motions (franchise HQ). Cap = lực, not ml.
+HAND_MOTIONS_VI: dict[str, str] = {
+    "S_HAIR_DYE": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Đeo găng và xả nước lạnh",
+            "Đeo găng trước.\n"
+            "Xả nước lạnh từ mặt trái 2–3 phút.\n"
+            "Không chà mạnh — chỉ để nước cuốn màu.\n"
+            "→ Thấy màu ra theo nước là đang đúng.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "Chấm cồn lấy màu",
+            "① Lộn trái áo\n"
+            "② Lót khăn trắng sạch dưới vết\n"
+            "③ Thấm cồn lên khăn trắng khác (không đổ trực tiếp lên áo)\n"
+            "④ Ấn thẳng đứng 3 giây → nhấc (không chà ngang)\n"
+            "⑤ Màu sang khăn dưới = đang lấy được\n"
+            "⑥ Khăn dính màu → đổi khăn mới ngay\n"
+            "⑦ Lặp 5–10 lần. Hết dính màu → bước tiếp",
+        )
+        + "\n"
+        + _step_vi(
+            3,
+            "Ngâm oxy (chỉ áo trắng!)",
+            "⚠️ Áo màu / lụa / len → bỏ bước này.\n"
+            "Pha 1L nước ấm nhẹ + 1 thìa oxy.\n"
+            "Chỉ ngâm chỗ vết. (Thời gian theo 【Thời gian ngâm】 phía trên)",
+        )
+        + "\n"
+        + _step_vi(
+            4,
+            "Giặt",
+            "Giặt theo nhiệt độ cho phép.\n"
+            "Nhắc khách trước: có thể còn vết.",
+        )
+    ),
+    "S_BLOOD_FRESH": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Chỉ xả nước lạnh",
+            "Đeo găng.\n"
+            "Chỉ nước lạnh. Nước nóng tuyệt đối không — máu sẽ đông.\n"
+            "Xả mặt trái 2–3 phút. Không chà mạnh.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "Ngâm enzyme (hoặc trung tính)",
+            "Pha enzyme với nước lạnh rồi ngâm. (Theo 【Thời gian ngâm】)\n"
+            "Lụa/len: chỉ trung tính, ngắn, hỏi quản lý.",
+        )
+        + "\n"
+        + _step_vi(
+            3,
+            "Xả và giặt",
+            "Xả lạnh kỹ rồi giặt.\n"
+            "Áo trắng còn vết: hỏi quản lý rồi mới xem oxy.",
+        )
+    ),
+    "S_BLOOD_DRY": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Hỏi quản lý · báo vết nâu",
+            "Máu khô khó sạch hoàn toàn. Báo khách trước: có thể còn vết nâu / chỉ sạch một phần.\n"
+            "Cấm nước nóng và máy sấy (sẽ cố định hơn).",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "Ngâm lạnh + enzyme",
+            "Pha enzyme nước lạnh, ngâm 20–45 phút. Lắc nhẹ giữa chừng.\n"
+            "Lụa/len: cấm enzyme → chỉ trung tính + lạnh.",
+        )
+        + "\n"
+        + _step_vi(
+            3,
+            "(Chỉ cotton trắng) thử H2O2",
+            "Chỉ cotton trắng: nhỏ 1 giọt H2O2 3% (nhà thuốc) góc kín · 30 giây.\n"
+            "OK → thấm lên vết 10 phút, xả lạnh ngay.\n"
+            "Áo màu / lụa / len → bỏ bước này.",
+        )
+        + "\n"
+        + _step_vi(4, "Giặt · kiểm trước khi sấy", "Giặt xong kiểm dưới ánh sáng. Còn nâu → không sấy.")
+    ),
+    "S_MILK_COFFEE": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Giữ thứ tự · đạm/mỡ trước",
+            "① Enzyme / nước rửa chén → ② giấm. Đổi thứ tự dễ cố định màu.\n"
+            "Chỉ nước lạnh. Cấm nóng / sấy trước.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "Nước rửa chén + enzyme",
+            "Chấm nhẹ nước rửa chén, chờ 30 giây.\n"
+            "Ngâm enzyme 15–30 phút. Lụa/len: cấm enzyme → chỉ trung tính.",
+        )
+        + "\n"
+        + _step_vi(
+            3,
+            "Giấm lấy tannin",
+            "Giấm trắng Cap1 + nước Cap4 (≈1:4). Thoa lên vết 5–10 phút.\n"
+            "Áo màu / lụa / len: cấm oxy. Áo trắng mới oxy (sau thử góc).",
+        )
+        + "\n"
+        + _step_vi(4, "Giặt · kiểm", "Giặt xong kiểm. Còn nâu → không sấy.")
+    ),
+    "S_RED_WINE": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Thấm · không rắc muối",
+            "Ấn khăn trắng từ trên xuống. Không chà ngang.\n"
+            "Không rắc muối (có thể để lại vết).",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "Áo trắng / áo màu",
+            "Cotton/linen trắng: ngâm oxy 15–45 phút (thử góc).\n"
+            "Áo màu / lụa / len: chỉ giấm Cap1+nước Cap4 lặp lại. Cấm oxy.",
+        )
+        + "\n"
+        + _step_vi(3, "Giặt · kiểm", "Giặt xong kiểm. Còn tím → không sấy.")
+    ),
+    "S_BLACK_COFFEE": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Lộn trái · thấm lạnh",
+            "Lộn trái áo.\n"
+            "Thấm nước lạnh từ trong. Không chà mạnh — dễ loang.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "Pha giấm 1:4 và xịt",
+            "Giấm trắng 1 : nước 4 (vd 50ml giấm + 200ml nước).\n"
+            "Cho vào bình xịt, ghi nhãn 「giấm 1:4」.\n"
+            "Xịt 1–2 lần lên vết, chờ 5–15 phút. Không ướt đẫm.\n"
+            "Xả lạnh.",
+        )
+        + "\n"
+        + _step_vi(
+            3,
+            "Giặt",
+            "Giặt bình thường.\n"
+            "Áo trắng còn vết: thử góc rồi oxy (bỏ nếu lụa/len/áo màu).",
+        )
+    ),
+    "S_LIPSTICK": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Chỉ lấy lớp sáp ngoài",
+            "Dùng bàn chải mềm / khăn giấy, nhẹ trên bề mặt. Không cạo sâu Cap2.\n"
+            "Chà ngang sẽ loang.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "Chấm cồn từ trong ra ngoài",
+            "Lộn trái, lót khăn thấm.\n"
+            "Thấm cồn khăn trắng, ấn từ trong ra ngoài. 3–5 lần, đổi khăn mỗi lần.\n"
+            "Thử góc trước.",
+        )
+        + "\n"
+        + _step_vi(
+            3,
+            "Nước rửa chén lấy màu còn lại",
+            "Nước ấm nhẹ (~40°) + nước rửa chén, chà nhẹ.\n"
+            "Lụa/len: cấm ấm → chỉ lạnh + trung tính.",
+        )
+        + "\n"
+        + _step_vi(4, "Giặt · kiểm", "Giặt xong kiểm. Còn đỏ → không sấy.")
+    ),
+    "S_KIMCHI": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Gỡ ớt bột / xác",
+            "Phủi hoặc gạt nhẹ ớt bột.\n"
+            "Không chà — dễ loang.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "Xả lạnh · chấm nước rửa chén",
+            "Xả lạnh từ trong.\n"
+            "Chấm 1–2 giọt nước rửa chén lên khăn, thoa, chờ 30 giây.\n"
+            "Chải mềm nhẹ → xả ngay.",
+        )
+        + "\n"
+        + _step_vi(
+            3,
+            "Giấm 1:4",
+            "Xịt/thoa giấm 1:4, chờ 5–10 phút (màu + mùi).\n"
+            "Xả rồi: chỉ áo trắng oxy sau thử góc.\n"
+            "⚠️ Áo màu: cấm oxy. Không dùng kem đánh răng.",
+        )
+        + "\n"
+        + _step_vi(
+            4,
+            "Giặt",
+            "Giặt.\n"
+            "Còn màu/mùi ớt → không sấy.",
+        )
+    ),
+    "S_COOKING_OIL": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Hút dầu · kiểm trơn",
+            "Rắc bột (tinh bột / bột mì) lên vết, chờ rồi phủi.\n"
+            "Còn trơn / còn mùi → chưa được sấy.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "Nước rửa chén · enzyme",
+            "Chấm nước rửa chén, chờ 1–2 phút.\n"
+            "Ngâm enzyme 15–30 phút (trừ lụa/len).",
+        )
+        + "\n"
+        + _step_vi(3, "Giặt · kiểm", "Giặt xong kiểm. Còn dầu → không sấy.")
+    ),
+    "S_DYE_TRANSFER": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Tách ngay · cấm sấy",
+            "Tách khỏi đồ khác ngay. Cấm sấy / ủi (cố định).\n"
+            "Đã qua máy sấy → rất khó phục hồi — báo khách trước.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "Xả lạnh · (chỉ trắng) javel thận trọng",
+            "Xả lạnh ngay.\n"
+            "Chỉ cotton/poly trắng 100%: hỏi quản lý rồi javel tối đa 5–10 phút → xả kỹ ngay.\n"
+            "Spandex / áo màu / lụa / len: cấm javel.",
+        )
+        + "\n"
+        + _step_vi(3, "Giặt · kiểm", "Giặt xong kiểm. Còn phai → không sấy.")
+    ),
+}
+
+_VI_PRIORITY = set(HAND_MOTIONS_VI.keys())
+assert len(_VI_PRIORITY) == 10, "VI priority hand-motion count drift"
+
 
 def build_hand_motions(stain_id: str, lang: str = "ko") -> str:
-    """KO-only scripts for now. VI/EN must not receive Korean Steps."""
+    """KO full scripts; VI top-frequency; EN empty (SOP body fallback)."""
     sid = str(stain_id or "").strip()
-    if lang != "ko":
-        return ""
-    return HAND_MOTIONS_KO.get(sid, "")
+    if lang == "ko":
+        return HAND_MOTIONS_KO.get(sid, "")
+    if lang == "vi":
+        return HAND_MOTIONS_VI.get(sid, "")
+    return ""
 
 
 def has_hand_motions(stain_id: str, lang: str = "ko") -> bool:
@@ -826,3 +1093,8 @@ def l1_motion_coverage() -> list[str]:
 def l2_priority_coverage() -> list[str]:
     """Return priority L2 stain ids missing hand motions (should be empty)."""
     return sorted(sid for sid in _L2_PRIORITY if sid not in HAND_MOTIONS_KO)
+
+
+def vi_priority_coverage() -> list[str]:
+    """Return VI priority ids missing scripts (should be empty)."""
+    return sorted(sid for sid in _VI_PRIORITY if sid not in HAND_MOTIONS_VI)
