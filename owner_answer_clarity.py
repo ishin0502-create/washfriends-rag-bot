@@ -80,10 +80,19 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
         if n >= 8:
             break
     if not lines:
-        # Fallback: compress fresh_path arrows
+        # Fallback: compress fresh_path arrows or numbered lines
         sc = graph.get("stain_context") if isinstance(graph.get("stain_context"), dict) else {}
         path = str(sc.get("fresh_path_ko") or graph.get("fresh_path_ko") or "")
-        if "→" in path and lang == "ko":
+        if lang == "vi":
+            path = str(sc.get("fresh_path_vi") or path)
+        numbered = re.findall(r"\((\d+)\)\s*([^\n→]+)", path)
+        if numbered:
+            for i, (_n, bit) in enumerate(numbered[:8], 1):
+                bit = bit.strip().rstrip(".")
+                if lang == "ko":
+                    bit = _soften_step_label(bit)
+                lines.append(f"{i}) {bit}")
+        elif "→" in path and lang == "ko":
             bits = [b.strip() for b in path.split("→") if b.strip()]
             lines = [f"{i}) {_soften_step_label(b)}" for i, b in enumerate(bits[:8], 1)]
     if not lines:

@@ -1457,12 +1457,18 @@ def _curriculum_blocked(raw: str, t: str) -> bool:
         for k in (
             "넥타이", "아오자이", "한복", "유니폼", "교복", "근무복",
             "커튼", "청바지", "고어텍스", "수영복", "아기옷", "골프",
+            # Stain intent must beat fabric curriculum (면+어떻게 → I_COTTON)
+            "염색약", "염모제", "헤어염색", "마스카라", "선크림", "타르",
+            "얼룩", "오염", "묻었", "묻은", "지울", "지워", "제거해", "빼는 법",
+            "커피", "와인", "김치", "혈액", "피묻", "잉크", "페인트",
         )
     ) or any(
         k in t
         for k in (
             "necktie", "ao dai", "aodai", "hanbok", "uniform", "curtain",
             "denim jeans", "gore-tex", "goretex", "swimwear", "baby",
+            "stain", "hair dye", "thuoc nhuom", "mascara", "sunscreen",
+            "remove stain", "vet ", "lam sach",
         )
     )
 
@@ -4784,11 +4790,7 @@ def _generate_response_core(
         entities["item_id"] = _infer_chem_safety_item(user_message, raw_n)
         entities["stain_id"] = ""
         entities["stain_type"] = ""
-    elif _infer_fabric_curriculum_item(user_message, raw_n):
-        entities["intent"] = "treatment"
-        entities["item_id"] = _infer_fabric_curriculum_item(user_message, raw_n)
-        entities["stain_id"] = ""
-        entities["stain_type"] = ""
+    # Stain rail-c BEFORE fabric curriculum (면 티셔츠+염색약 must not become I_COTTON)
     elif any(k in user_message for k in ("선크림", "자외선차단", "자외선 차단")) or "kem chong nang" in raw_n or "sunscreen" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_SUNSCREEN"
@@ -4805,6 +4807,12 @@ def _generate_response_core(
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_HAIR_DYE"
         entities["stain_type"] = "thuoc nhuom toc"
+        entities.pop("item_id", None)
+    elif _infer_fabric_curriculum_item(user_message, raw_n):
+        entities["intent"] = "treatment"
+        entities["item_id"] = _infer_fabric_curriculum_item(user_message, raw_n)
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
     elif any(k in user_message for k in ("야구모자", "볼캡")) or (
         any(k in user_message for k in ("모자", "캡")) and any(k in user_message for k in ("세탁", "빨래", "빨", "청소", "방법", "어떻게"))
         and "골프" not in user_message
