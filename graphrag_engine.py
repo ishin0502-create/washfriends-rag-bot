@@ -3158,25 +3158,26 @@ def _build_llm_prompt(user_message: str, graph_context: dict, lang: str = "vi") 
         else:
             lang_rule = (
             "한국어만. 베트남어·영어 금지. "
-            "톤: 본사 현장 교육 — 짧고 단호. 행동 지시 위주. "
+            "톤: 본사 현장 교육 — 친절하고 알기 쉽게. '~하세요'·'~마세요'로 짧게 지시. "
             "번역투·장황한 접속어·브랜드 날조 금지. "
             "단계: (1)오염·원단·두께·색상 — match_diagnosis의 chemistry·fabric_type·fabric_weight·"
             "fabric_rule을 반드시 반영(소수성 오일 vs 단백질 vs 탄닌 등). "
             "원단·두께 미확인이면 weight_bands를 (1)에 넣고 "
-            "「약하게(흡수·찍기만)·표백 보류 → 확인 후 조정」으로 말할 것. 「보수적으로 안내」·단독 Cap1/Cap2는 쓰지 말 것. "
+            "「원단·두께를 모르면 약하게만 하세요. 표백은 매니저 확인 후 하세요」로 말할 것. "
+            "「보류하며 진행」·「보수적으로 안내」·단독 Cap1/Cap2는 쓰지 말 것. "
             "force_guide가 있으면 (3)힘·방향에 평어로 넣고 Cap은 괄호 보조만. "
             "SOP는 보통 두께 기준으로 (2)–(6)까지 완결할 것. "
             "색 미확인·유색이면 chemicals[]에 없는 산소/염소 표백을 (4)에 넣지 말 것 — "
-            "‘흰옷 확인 후·구석 테스트’만 안내. "
+            "「흰옷인지 확인하세요. 유색이면 산소는 쓰지 마세요(매니저 확인 후)」만 안내. "
             "ask_if_needed는 선택 안내일 뿐 — 질문만 하고 SOP를 비우지 말 것. "
             "그래프에 _compact_followup이 true이면: (1)에서 원단·두께·색 확정만 짧게, "
             "(2)–(6)은 변경점만(도구 Cap·표백 여부). 전체 SOP 장황 반복 금지. "
             "한국어만 자연스럽게(‘식초로’ 등). 어색한 조사·외국어 혼용 금지. "
-            "(2)도구 — tools[]의 각 항목을 'name_ko: use_for_ko' 한 줄로 "
-            "(사용법 생략·지어내기 금지; 없으면 해당 없음). "
-            "타이머·담금통은 use_for_ko에 적힌 정확한 분(예: 15–45분)을 그대로 말할 것. "
-            "분무기는 use_for_ko 그대로 — 「분무기 겉면 라벨에 약 이름과 희석비를 적어 둔다」. "
-            "「식초 1 물 4라고 적는다」처럼 어색하게 줄이지 말 것. "
+            "(2)도구 — tools[]의 name_ko만 짧게 나열하세요(이름만). "
+            "use_for_ko 전문을 길게 복사하지 마세요. "
+            "타이머가 있으면 「먼저 ○○분 → 확인 → 필요하면 더」처럼 단계로 말하세요. "
+            "알코올·용제(A1/D1)는 분무기에 타지 말고 흰 천에 묻혀 찍으라고만 말하세요. "
+            "식초·주방세제처럼 진짜 분무 단계만 분무기 희석을 말하세요. "
             "(3)힘·방향 — force_guide 또는 「약하게(흡수·찍기만, 문지르기 금지)」 등 평어. Cap1 단독 금지. "
             "(4)약품 — chem_owner_lines[] 각 줄을 빠짐없이: 제품명·매장/구매처·희석·시간. "
             "name_ko·dilution_ko만 던지지 말 것. execution_path·protocol.steps 순서를 생략하지 말 것. "
@@ -3577,14 +3578,20 @@ def _polish_owner_ko_phrasing(answer: str, *, item_wash: bool = False) -> str:
         out,
     )
     replacements = (
-        ("보수적으로 안내", "약하게(흡수·찍어 바름만)·표백 보류로 진행하세요"),
-        ("보수적으로(약하게) 안내하고", "약하게(흡수·찍어 바름만)·표백 보류로 진행하고"),
-        ("보수적으로(약하게) 안내", "약하게(흡수·찍어 바름만)·표백 보류로 진행하세요"),
-        ("원단 두께 미상일시 보수적으로 안내", "원단·두께 미확인 시 약하게·표백 보류로 진행하세요"),
-        ("원단·두께 미상일 시 보수적으로 안내", "원단·두께 미확인 시 약하게·표백 보류로 진행하세요"),
-        ("원단·두께 미상일시 보수적으로 안내", "원단·두께 미확인 시 약하게·표백 보류로 진행하세요"),
-        ("Cap1·표백 보류", "약하게(흡수·찍어 바름만)·표백 보류"),
-        ("Cap1·표백 보류로 진행", "약하게(흡수·찍어 바름만)·표백 보류로 진행하세요"),
+        ("보수적으로 안내", "약하게만 하세요. 표백은 매니저 확인 후 하세요"),
+        ("보수적으로(약하게) 안내하고", "약하게만 하고, 표백은 매니저 확인 후 "),
+        ("보수적으로(약하게) 안내", "약하게만 하세요. 표백은 매니저 확인 후 하세요"),
+        ("원단 두께 미상일시 보수적으로 안내", "원단·두께를 모르면 약하게만 하세요. 표백은 매니저 확인 후 하세요"),
+        ("원단·두께 미상일 시 보수적으로 안내", "원단·두께를 모르면 약하게만 하세요. 표백은 매니저 확인 후 하세요"),
+        ("원단·두께 미상일시 보수적으로 안내", "원단·두께를 모르면 약하게만 하세요. 표백은 매니저 확인 후 하세요"),
+        ("Cap1·표백 보류", "약하게(흡수·찍어 바름만). 표백은 매니저 확인 후"),
+        ("Cap1·표백 보류로 진행", "약하게만 하세요. 표백은 매니저 확인 후 하세요"),
+        ("약하게(흡수·찍어 바름만)·표백 보류로 진행하세요", "약하게만 하세요. 표백은 매니저 확인 후 하세요"),
+        ("약하게(흡수·찍어 바름만)·표백 보류로 진행하고", "약하게만 하고, 표백은 매니저 확인 후 "),
+        ("약하게(흡수·찍어 바름만)·표백 보류", "약하게만. 표백은 매니저 확인 후"),
+        ("약하게·표백 보류로 진행하세요", "약하게만 하세요. 표백은 매니저 확인 후 하세요"),
+        ("표백을 보류하며 진행합니다. 확인 후 조정하세요.", "약하게만 하세요. 표백은 매니저 확인 후 하세요."),
+        ("보류하며 진행합니다. 확인 후 조정하세요.", "약하게만 하세요. 표백은 매니저 확인 후 하세요."),
         ("미확인시 얇음으로 약하게(흡수·찍기만)", "미확인 시 약하게(흡수·찍어 바름만)"),
         ("미확인 시 얇음으로 약하게(흡수·찍기만)", "미확인 시 약하게(흡수·찍어 바름만)"),
         ("미확인시 얇음으로 약하게", "미확인 시 약하게(흡수·찍어 바름만)"),
@@ -4216,7 +4223,7 @@ def _prepend_stain_level_banner(
     lang: str,
 ) -> str:
     try:
-        from stain_level_tags import prepend_level_to_answer
+        from stain_level_tags import prepend_level_to_answer, resolve_level
 
         g = graph_context.get("graph") if isinstance(graph_context, dict) else {}
         if not isinstance(g, dict):
@@ -4231,7 +4238,7 @@ def _prepend_stain_level_banner(
             return answer
         if not sid:
             return answer
-        return prepend_level_to_answer(
+        out = prepend_level_to_answer(
             answer,
             stain_id=sid,
             graph=g,
@@ -4239,6 +4246,25 @@ def _prepend_stain_level_banner(
             user_text=user_text or "",
             lang=lang,
         )
+        try:
+            from owner_answer_clarity import inject_clarity_into_answer
+
+            level, grade = resolve_level(
+                sid,
+                graph=g,
+                entities=entities if isinstance(entities, dict) else {},
+                user_text=user_text or "",
+            )
+            out = inject_clarity_into_answer(
+                out,
+                graph=g,
+                level=level,
+                grade=grade,
+                lang=lang if lang in {"ko", "vi", "en"} else "ko",
+            )
+        except Exception as e2:
+            print(f"[CLARITY] inject skip: {type(e2).__name__}: {e2}")
+        return out
     except Exception as e:
         print(f"[LEVEL] banner skip: {type(e).__name__}: {e}")
         return answer

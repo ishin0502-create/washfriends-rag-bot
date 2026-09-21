@@ -294,8 +294,10 @@ class Protocol:
         return [s for s in self.steps if not s.blocked]
 
     def spray_step(self) -> Optional[Step]:
+        # A1/A2/D1 are blot-on-cloth — never treat as spray-bottle mix
+        _blot = {"A1", "A2", "D1"}
         for s in self.active_steps():
-            if s.spray and s.chem:
+            if s.spray and s.chem and str(s.chem).upper() not in _blot:
                 return s
         return None
 
@@ -1202,15 +1204,41 @@ def _tpl_mascara() -> Protocol:
 def _tpl_hair_dye() -> Protocol:
     return Protocol(
         stain_id="S_HAIR_DYE",
-        why_ko="[왜 이 순서] 염모제=강한 염료. 즉시 찬물→알코올→산소(흰). 유색·실크 위험 — 테스트·고지. 100% 비보장.",
-        why_vi="[Tại sao] Thuốc nhuộm tóc = dye mạnh. Lạnh → A1 → B1 trắng. Báo không 100%.",
+        why_ko=(
+            "[왜 이 순서] 염색약(염모제)은 옷에 잘 남는 강한 색소입니다. "
+            "먼저 찬물로 헹구고 → 알코올은 흰 천에 묻혀 찍어 흡수 → "
+            "흰옷만 산소표백제로 담급니다. 유색·실크는 위험하니 구석 테스트와 고객 고지를 꼭 하세요. "
+            "완전 제거는 보장드리기 어렵습니다."
+        ),
+        why_vi=(
+            "[Tại sao] Thuốc nhuộm tóc = dye mạnh. Xả lạnh → A1 thấm khăn → "
+            "B1 chỉ áo trắng. Test góc + báo khách. Không đảm bảo 100%."
+        ),
         steps=[
-            Step("id", "염모제·즉시·원단", "Nhận thuốc nhuộm", force="Cap1"),
-            Step("rinse", "즉시 찬물", "Xả lạnh ngay", force="Cap1"),
-            Step("alcohol", "알코올 블롯(테스트)", "A1 blot test", chem="A1", force="Cap1", spray=True),
-            Step("oxygen", "흰옷 산소 장침지", "Trắng: B1 dài", chem="B1", when="white_only", soak=True, minutes_lo=30, minutes_hi=180),
-            Step("wash", "세탁; 잔색 고지", "Giặt; báo còn màu", force="Cap2"),
-            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+            Step("id", "염색약·원단·색 확인", "Nhận thuốc nhuộm + vải", force="Cap1"),
+            Step("rinse", "바로 찬물로 헹구세요", "Xả lạnh ngay", force="Cap1"),
+            Step(
+                "alcohol",
+                "알코올은 흰 천에 묻혀 찍어 흡수하세요(구석 테스트 먼저)",
+                "A1 thấm khăn (test góc)",
+                chem="A1",
+                force="Cap1",
+                spray=False,
+                tool_ids=["T_CLOTH"],
+            ),
+            Step(
+                "oxygen",
+                "흰옷만 산소표백제로 담그세요",
+                "Trắng: ngâm B1",
+                chem="B1",
+                when="white_only",
+                soak=True,
+                minutes_lo=30,
+                minutes_hi=120,
+                tool_ids=["T_SOAK_BIN", "T_TIMER"],
+            ),
+            Step("wash", "세탁하세요. 잔색이 남을 수 있다고 고지하세요", "Giặt; báo còn màu", force="Cap2"),
+            Step("light", "말리기 전 밝은 조명에서 잔색을 확인하세요", "Ánh sáng trước sấy", force="Cap1"),
         ],
     )
 
@@ -1223,9 +1251,9 @@ def _tpl_shoe_polish() -> Protocol:
         steps=[
             Step("id", "구두약·환기·원단", "Nhận xi giày + thông gió", force="Cap1"),
             Step("scrape", "여분 제거", "Cạo", force="Cap1"),
-            Step("solvent", "용제 안쪽 블롯(환기)", "D1 thấm mặt trái", chem="D1", tool_ids=["T_CLOTH", "T_GLOVE_NITRILE"], force="Cap1", spray=True),
+            Step("solvent", "용제 안쪽 블롯(환기)", "D1 thấm mặt trái", chem="D1", tool_ids=["T_CLOTH", "T_GLOVE_NITRILE"], force="Cap1", spray=False),
             Step("dish", "주방세제", "D2", chem="D2", force="Cap2"),
-            Step("alcohol", "잔색 알코올(테스트)", "A1", chem="A1", optional=True),
+            Step("alcohol", "잔색 알코올(테스트)", "A1", chem="A1", optional=True, spray=False, tool_ids=["T_CLOTH"]),
             Step("oxygen", "흰옷 산소", "Trắng: B1", chem="B1", when="white_only"),
             Step("wash", "세탁", "Giặt", force="Cap2"),
             Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
@@ -2431,6 +2459,11 @@ def bind_tools_from_protocol(proto: Protocol, tools: list, *, item_id: str = "")
     spray_name_vi = "dung dịch pha"
     spray_dil_vi = "theo pha"
     spray_chem = (sp.chem.upper() if sp and sp.chem else "")
+    # Blot-on-cloth solvents — never instruct mixing into a spray bottle
+    _BLOT_CHEM = {"A1", "A2", "D1"}
+    if spray_chem in _BLOT_CHEM:
+        spray_chem = ""
+        sp = None
     soak_chem = (
         minute_step.chem.upper()
         if minute_step and minute_step.chem
@@ -2502,19 +2535,58 @@ def bind_tools_from_protocol(proto: Protocol, tools: list, *, item_id: str = "")
                     f"Label the bottle. Mist 1–2 sprays — do not soak."
                 )
         elif tid == "T_SPRAY":
-            # No spray step — strip any Neo4j vinegar/example howto
-            t["use_for_ko"] = "이 경로: 분무 단계 없음. (4)약품을 국소 도포·블롯만. 식초 예시 문구 무시."
-            t["use_for_vi"] = "Không bước xịt — chỉ chấm/thấm theo (4). Bỏ hướng dẫn giấm mẫu."
-            t["use_for_en"] = "No spray step — dab/blot per (4) chemicals only. Ignore sample vinegar howto."
+            # No true spray step (or blot solvent only) — cloth dab, not spray mix
+            blot_code = ""
+            for s in proto.active_steps():
+                c = (s.chem or "").upper()
+                if c in _BLOT_CHEM:
+                    blot_code = c
+                    break
+            if blot_code:
+                bm = CHEM_META.get(blot_code, {})
+                bn = bm.get("name_ko") or blot_code
+                t["name_ko"] = t.get("name_ko") or "흰 면 천"
+                t["use_for_ko"] = (
+                    f"「{bn}」은 분무기에 타지 마세요. 흰 면 천에 조금 묻혀 "
+                    f"안쪽에서 바깥으로 찍어 흡수하세요(구석 테스트 먼저). 문지르지 마세요."
+                )
+                t["use_for_vi"] = (
+                    f"Không pha 「{bm.get('name_vi') or blot_code}」 vào bình xịt. "
+                    f"Thấm khăn trắng, chấm từ trong ra ngoài (test góc). Không chà."
+                )
+                t["use_for_en"] = (
+                    f"Do not mix 「{bn}」 into a spray bottle. Dab on a white cloth, "
+                    f"blot inside→out (spot-test first). Do not rub."
+                )
+            else:
+                t["use_for_ko"] = "이 경로: 분무 단계 없음. (4)약품을 국소 도포·블롯만. 식초 예시 문구 무시."
+                t["use_for_vi"] = "Không bước xịt — chỉ chấm/thấm theo (4). Bỏ hướng dẫn giấm mẫu."
+                t["use_for_en"] = "No spray step — dab/blot per (4) chemicals only. Ignore sample vinegar howto."
         elif tid == "T_TIMER":
-            t["use_for_ko"] = (
-                f"이 오염·약품 기준 처리 시간은 {min_ko}. 타이머를 {min_ko}에 맞추고, "
-                f"울리면 즉시 찬물로 헹군다. 감시 없이 밤새 담그지 말 것."
-            )
-            t["use_for_vi"] = (
-                f"Thời gian xử lý: {min_vi}. Hẹn giờ {min_vi}; hết giờ → xả lạnh ngay. "
-                f"Không để qua đêm không giám sát."
-            )
+            # Long oxygen windows: stepwise timer (not "set 30–180 at once")
+            if soak_chem == "B1" and lo is not None and hi and hi >= 90:
+                t["use_for_ko"] = (
+                    f"산소 담금은 먼저 타이머 {lo}분에 맞추세요. 울리면 꺼내서 확인하세요. "
+                    f"아직 남으면 같은 시간만큼 더 담그세요(합쳐서 최대 {hi}분). "
+                    f"한꺼번에 길게 맞추거나 밤새 담그지 마세요."
+                )
+                t["use_for_vi"] = (
+                    f"Ngâm oxy: hẹn {lo} phút trước → kiểm tra → nếu còn thì thêm "
+                    f"(tối đa {hi} phút). Không để qua đêm."
+                )
+                t["use_for_en"] = (
+                    f"Oxygen soak: timer {lo} min first → check → add more if needed "
+                    f"(max {hi} min total). Do not soak overnight."
+                )
+            else:
+                t["use_for_ko"] = (
+                    f"이 오염·약품 기준 처리 시간은 {min_ko}. 타이머를 {min_ko}에 맞추고, "
+                    f"울리면 즉시 찬물로 헹군다. 감시 없이 밤새 담그지 말 것."
+                )
+                t["use_for_vi"] = (
+                    f"Thời gian xử lý: {min_vi}. Hẹn giờ {min_vi}; hết giờ → xả lạnh ngay. "
+                    f"Không để qua đêm không giám sát."
+                )
         elif tid == "T_SOAK_BIN":
             if delicate_s1:
                 t["use_for_ko"] = (
@@ -2732,6 +2804,17 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
         sc["why_ko"] = proto.why_ko
     if proto.why_vi:
         sc["why_vi"] = proto.why_vi
+    # Prefer owner-facing instructional copy from KO_STAIN_EDU when present
+    # (protocol render is telegram-short; education is the shop-floor wording).
+    try:
+        from ko_stain_education import KO_STAIN_EDU
+
+        edu = KO_STAIN_EDU.get(proto.stain_id) or {}
+        for k in ("why_ko", "fresh_path_ko", "dried_path_ko", "why_vi", "fresh_path_vi", "dried_path_vi"):
+            if edu.get(k):
+                sc[k] = edu[k]
+    except Exception:
+        pass
     if proto.water_temp_ko:
         sc["water_temp_ko"] = proto.water_temp_ko
     if proto.water_temp_vi:
