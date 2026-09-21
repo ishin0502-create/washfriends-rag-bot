@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-09-21-mid-edu-v40b",
+            "build": "2026-09-21-vn-l2-v41",
             "checks": checks,
         },
         status_code=200,
@@ -2341,9 +2341,16 @@ RETURN count(s) AS updated
                 vn_specialty_stain_seed_rows_v8 as _vn_v8,
             )
             from education_gaps_v10 import vn_specialty_stain_seed_rows_v10 as _vn_v10
+            from education_vn_l2_v41 import vn_specialty_stain_seed_rows_v41 as _vn_v41
             from vi_text_canon import seed_canon_from_records as _vi_canon_rows
 
-            _vn = list(_vn_stain_rows()) + list(_vn_v7()) + list(_vn_v8()) + list(_vn_v10())
+            _vn = (
+                list(_vn_stain_rows())
+                + list(_vn_v7())
+                + list(_vn_v8())
+                + list(_vn_v10())
+                + list(_vn_v41())
+            )
             # Create/update stain nodes first (Group label is StainGroup, not Group).
             res_vn = s.run(
                 """

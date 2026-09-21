@@ -1560,6 +1560,190 @@ def _tpl_softener_spot() -> Protocol:
     )
 
 
+def _vn_meta(sid: str) -> dict:
+    from education_vn_l2_v41 import NEW_VN_STAINS_V41
+
+    return next(x for x in NEW_VN_STAINS_V41 if x["id"] == sid)
+
+
+def _tpl_vn_mangosteen() -> Protocol:
+    m = _vn_meta("S_VN_MANGOSTEEN")
+    return Protocol(
+        stain_id="S_VN_MANGOSTEEN",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "망고스틴·원단", "Nhận măng cụt", force="Cap1"),
+            Step("rinse", "즉시 찬물", "Xả lạnh ngay", force="Cap1"),
+            Step("alcohol", "알코올 블롯", "Chấm cồn", chem="A1", force="Cap1", tool_ids=["T_CLOTH"]),
+            Step("oxygen", "흰옷 산소 1–2시간", "Oxy trắng 1–2h", chem="B1", when="white_only", soak=True, minutes_lo=60, minutes_hi=120),
+            Step("wash", "세탁+직사광선", "Giặt + nắng", force="Cap2"),
+            Step("light", "잔색 고지", "Báo còn vết", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_vn_durian() -> Protocol:
+    m = _vn_meta("S_VN_DURIAN")
+    return Protocol(
+        stain_id="S_VN_DURIAN",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "두리안·원단", "Nhận sầu riêng", force="Cap1"),
+            Step("dish", "주방세제(지방)", "D2", chem="D2", force="Cap2", spray=True),
+            Step("baking", "베이킹소다 페이스트 30분", "Baking paste 30'", chem="N1", minutes_lo=20, minutes_hi=40, soak=True),
+            Step("vinegar", "식초 1:4 탈취", "Giấm 1:4", chem="A3", minutes_lo=15, minutes_hi=30, soak=True),
+            Step("wash", "세탁+직사광선", "Giặt + nắng", force="Cap2"),
+            Step("light", "냄새 확인·반복 가능", "Kiểm mùi — có thể lặp", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_vn_jackfruit() -> Protocol:
+    m = _vn_meta("S_VN_JACKFRUIT")
+    return Protocol(
+        stain_id="S_VN_JACKFRUIT",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "미 수액·원단", "Nhận nhựa mít", force="Cap1"),
+            Step("oil", "식용유 소량으로 수액 녹이기", "Thoa dầu ăn", force="Cap1"),
+            Step("dish", "주방세제로 기름 제거", "D2 lấy dầu", chem="D2", force="Cap2"),
+            Step("rinse", "찬물(당분)", "Xả lạnh", force="Cap1"),
+            Step("oxygen", "흰옷 산소", "Oxy trắng", chem="B1", when="white_only", soak=True),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+        ],
+    )
+
+
+def _tpl_vn_banh_xeo() -> Protocol:
+    m = _vn_meta("S_VN_BANH_XEO")
+    return Protocol(
+        stain_id="S_VN_BANH_XEO",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "반쎄오·원단", "Nhận bánh xèo", force="Cap1"),
+            Step("scrape", "전분 긁기·찬물", "Gạt tinh bột + xả lạnh", force="Cap1"),
+            Step("dish", "미지근+주방세제(오일)", "Ấm nhẹ + D2", chem="D2", force="Cap2"),
+            Step("alcohol", "강황 색소: 알코올(테스트)", "Cồn lấy nghệ", chem="A1", optional=True, force="Cap1"),
+            Step("oxygen", "흰옷 산소", "Oxy trắng", chem="B1", when="white_only", soak=True),
+            Step("wash", "세탁+직사광선", "Giặt + nắng", force="Cap2"),
+        ],
+    )
+
+
+def _tpl_vn_dragon() -> Protocol:
+    m = _vn_meta("S_VN_DRAGON_FRUIT")
+    return Protocol(
+        stain_id="S_VN_DRAGON_FRUIT",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "용과·원단", "Nhận thanh long", force="Cap1"),
+            Step("rinse", "즉시 찬물", "Xả lạnh ngay", force="Cap1"),
+            Step("oxygen", "흰옷 산소(잔색)", "Oxy trắng", chem="B1", when="white_only", soak=True),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+        ],
+    )
+
+
+def _tpl_vn_mango() -> Protocol:
+    m = _vn_meta("S_VN_MANGO")
+    return Protocol(
+        stain_id="S_VN_MANGO",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "망고·원단", "Nhận xoài", force="Cap1"),
+            Step("rinse", "찬물", "Xả lạnh", force="Cap1"),
+            Step("dish", "주방세제(카로틴)", "D2", chem="D2", force="Cap2"),
+            Step("oxygen", "흰옷 산소", "Oxy trắng", chem="B1", when="white_only", soak=True),
+            Step("wash", "세탁+직사광선", "Giặt + nắng", force="Cap2"),
+        ],
+    )
+
+
+def _tpl_vn_rambutan() -> Protocol:
+    m = _vn_meta("S_VN_RAMBUTAN")
+    return Protocol(
+        stain_id="S_VN_RAMBUTAN",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "람부탄·원단", "Nhận chôm chôm", force="Cap1"),
+            Step("rinse", "찬물", "Xả lạnh", force="Cap1"),
+            Step("oxygen", "흰옷 산소 약하게", "Oxy nhẹ", chem="B1", when="white_only", soak=True, minutes_lo=10, minutes_hi=20),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+        ],
+    )
+
+
+def _tpl_vn_coconut() -> Protocol:
+    m = _vn_meta("S_VN_COCONUT_OIL")
+    return Protocol(
+        stain_id="S_VN_COCONUT_OIL",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "코코넛오일·원단", "Nhận dầu dừa", force="Cap1"),
+            Step("warm", "미지근(~40°C)으로 녹이기", "Ấm nhẹ ~40°C", force="Cap1"),
+            Step("dish", "주방세제 원액 15분", "D2 nguyên 15'", chem="D2", force="Cap2", minutes_lo=10, minutes_hi=20),
+            Step("wash", "미지근 세탁(미끄럼 채 건조 금지)", "Giặt ấm — CAM sấy nhờn", force="Cap2"),
+        ],
+    )
+
+
+def _tpl_vn_incense() -> Protocol:
+    m = _vn_meta("S_VN_INCENSE_ASH")
+    return Protocol(
+        stain_id="S_VN_INCENSE_ASH",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "향재·원단", "Nhận tro nhang", force="Cap1"),
+            Step("dry", "마른 채 털기/테이프", "Phủi khô / băng keo", force="Cap1"),
+            Step("dish", "주방세제(향유)", "D2", chem="D2", force="Cap2"),
+            Step("vinegar", "냄새면 식초 1:4", "Giấm 1:4 nếu mùi", chem="A3", optional=True, minutes_lo=5, minutes_hi=15, soak=True),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+        ],
+    )
+
+
+def _tpl_vn_sa_te() -> Protocol:
+    m = _vn_meta("S_VN_SA_TE")
+    return Protocol(
+        stain_id="S_VN_SA_TE",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "사테·원단", "Nhận sa tế", force="Cap1"),
+            Step("dish", "주방세제(기름)·문지르기 금지", "D2 — CẤM chà", chem="D2", force="Cap2", spray=True),
+            Step("alcohol", "알코올로 고추 색소", "Cồn lấy màu ớt", chem="A1", force="Cap1", tool_ids=["T_CLOTH"]),
+            Step("oxygen", "흰옷 산소", "Oxy trắng", chem="B1", when="white_only", soak=True),
+            Step("wash", "세탁+직사광선", "Giặt + nắng", force="Cap2"),
+        ],
+    )
+
+
+def _tpl_vn_nuoc_cham() -> Protocol:
+    m = _vn_meta("S_VN_NUOC_CHAM")
+    return Protocol(
+        stain_id="S_VN_NUOC_CHAM",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "느엉쩜·원단(느억맘 구분)", "Nhận nước chấm", force="Cap1"),
+            Step("rinse", "찬물로 당분", "Xả lạnh lấy đường", force="Cap1"),
+            Step("enzyme", "효소(단백질)", "E1", chem="E1", minutes_lo=15, minutes_hi=45, soak=True),
+            Step("vinegar", "식초 1:4 냄새", "Giấm 1:4", chem="A3", minutes_lo=10, minutes_hi=20, soak=True),
+            Step("alcohol", "고추 잔색: 알코올", "Còn đỏ: cồn", chem="A1", optional=True, force="Cap1"),
+            Step("wash", "세탁+통풍", "Giặt + thông gió", force="Cap2"),
+        ],
+    )
+
+
 PROTOCOL_BUILDERS = {
     "S_RED_WINE": _tpl_red_wine,
     "S_BLACK_COFFEE": lambda: _tpl_tannin_simple("S_BLACK_COFFEE", "커피(블랙)", "cà phê đen"),
@@ -1634,6 +1818,18 @@ PROTOCOL_BUILDERS = {
     "S_PERSIMMON": _tpl_persimmon,
     "S_CRAYON": _tpl_crayon,
     "S_SOFTENER_SPOT": _tpl_softener_spot,
+    # VN L2 v41 specialty
+    "S_VN_MANGOSTEEN": _tpl_vn_mangosteen,
+    "S_VN_DURIAN": _tpl_vn_durian,
+    "S_VN_JACKFRUIT": _tpl_vn_jackfruit,
+    "S_VN_BANH_XEO": _tpl_vn_banh_xeo,
+    "S_VN_DRAGON_FRUIT": _tpl_vn_dragon,
+    "S_VN_MANGO": _tpl_vn_mango,
+    "S_VN_RAMBUTAN": _tpl_vn_rambutan,
+    "S_VN_COCONUT_OIL": _tpl_vn_coconut,
+    "S_VN_INCENSE_ASH": _tpl_vn_incense,
+    "S_VN_SA_TE": _tpl_vn_sa_te,
+    "S_VN_NUOC_CHAM": _tpl_vn_nuoc_cham,
 }
 
 

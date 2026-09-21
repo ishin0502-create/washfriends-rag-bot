@@ -38,6 +38,10 @@ _VI_ASCII_HINTS = (
     "bao ho", "bảo hộ", "ngam enzyme", "ngâm enzyme", "bot tay", "bột tẩy",
     "da bong", "da bóng", "ao da", "giay da", "tui da", "nam moc", "nấm mốc",
     "son mong", "sơn móng", "ve sinh da", "kem da", "xit bao ve",
+    # VN L2 specialty (unsigned Vietnamese / local spellings — not English fruit names)
+    "mang cut", "sau rieng", "banh xeo", "thanh long",
+    "nuoc cham", "sa te", "mam tom", "nuoc mam", "nhua mit", "chom chom",
+    "dau dua", "tro nhang",
 )
 
 # English chem/fabric tokens: keep VI only for short follow-ups after a VI turn

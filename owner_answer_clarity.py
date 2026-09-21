@@ -1229,6 +1229,8 @@ def inject_clarity_into_answer(
 
     detail_bits.append(build_donts_block(g, lang))
     if _mid is not None:
+        for tip in _mid.block_vn_tips(sid, lang):
+            detail_bits.append(tip)
         chem_blk = _mid.block_chem(g, lang)
         if chem_blk:
             detail_bits.append(chem_blk)
@@ -1324,3 +1326,4 @@ def _merge_clarity_pack(mod_name: str) -> None:
 
 _merge_clarity_pack("owner_clarity_pack_v38")
 _merge_clarity_pack("owner_clarity_pack_v39")
+_merge_clarity_pack("owner_vn_motions_v41")

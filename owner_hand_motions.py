@@ -855,6 +855,16 @@ HAND_MOTIONS_KO.update(HAND_MOTIONS_KO_L2_REST)
 HAND_MOTIONS_KO.update(HAND_MOTIONS_KO_L3)
 HAND_MOTIONS_KO.update(HAND_MOTIONS_KO_TAIL)
 
+# VN L2 v41 — enrich existing + new specialty (override with richer scripts)
+try:
+    from owner_vn_motions_v41 import all_motion_maps as _vn_motion_maps
+
+    _vn_ko, _vn_vi, _vn_en = _vn_motion_maps()
+    HAND_MOTIONS_KO.update(_vn_ko)
+except Exception as _e:
+    print(f"[MOTIONS] vn_v41 ko skip: {type(_e).__name__}: {_e}")
+    _vn_vi, _vn_en = {}, {}
+
 _L1_REQUIRED = {
     "S_BLOOD_FRESH",
     "S_BLACK_COFFEE",
@@ -1194,6 +1204,16 @@ HAND_MOTIONS_VI: dict[str, str] = {
 
 HAND_MOTIONS_VI.update(HAND_MOTIONS_VI_EXTRA)
 HAND_MOTIONS_VI.update(HAND_MOTIONS_VI_TAIL)
+try:
+    HAND_MOTIONS_VI.update(_vn_vi)
+except Exception:
+    pass
+
+HAND_MOTIONS_EN: dict[str, str] = {}
+try:
+    HAND_MOTIONS_EN.update(_vn_en)
+except Exception:
+    pass
 
 _VI_CORE = {
     "S_HAIR_DYE",
@@ -1403,6 +1423,8 @@ def build_hand_motions(
         return HAND_MOTIONS_KO.get(sid, "")
     if lang == "vi":
         return HAND_MOTIONS_VI.get(sid, "")
+    if lang == "en":
+        return HAND_MOTIONS_EN.get(sid, "")
     return ""
 
 

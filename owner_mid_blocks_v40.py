@@ -35,7 +35,21 @@ COMPOUND_STAINS = frozenset({
     "S_BBQ_SAUCE",
     "S_CURRY",
     "S_FISH_SAUCE",
+    # VN L2 v41 compound
+    "S_VN_BANH_XEO",
+    "S_VN_NUOC_CHAM",
+    "S_VN_SA_TE",
+    "S_VN_DURIAN",
+    "S_VN_JACKFRUIT",
+    "S_SHRIMP_PASTE",
 })
+
+try:
+    from education_vn_l2_v41 import ODOR_HEAVY, OIL_FIRST, PIGMENT_HARD
+except Exception:
+    ODOR_HEAVY = frozenset({"S_FISH_SAUCE", "S_SHRIMP_PASTE", "S_MILDEW"})
+    PIGMENT_HARD = frozenset({"S_BETEL", "S_CURRY", "S_CHILI"})
+    OIL_FIRST = frozenset({"S_MOTORBIKE_OIL", "S_SUNSCREEN"})
 
 PROTEIN_NO_HEAT_UP = frozenset({
     "S_BLOOD_FRESH",
@@ -428,3 +442,122 @@ def block_retry(sid: str, level: str, graph: Optional[dict], lang: str) -> str:
     if wants_retry_full(graph, lang):
         return retry_full(sid, lang)
     return RETRY_SHORT.get(lang) or RETRY_SHORT["ko"]
+
+
+# ── VN L2 tip modules (language-pure; short; no %) ─────────────────────────
+
+ODOR_TIP = {
+    "ko": (
+        "◆ 【냄새 팁】\n"
+        "· 향수·섬유유연제로 덮지 마세요 — 냄새가 더 고착돼요\n"
+        "· 식초 1:4 또는 베이킹소다 페이스트 → 찬물 헹굼 → 직사광선 통풍\n"
+        "· 락스로 냄새만 지우지 마세요"
+    ),
+    "vi": (
+        "◆ 【Mẹo khử mùi】\n"
+        "· Không xịt nước hoa / nước xả để che — mùi dễ cố định hơn\n"
+        "· Giấm 1:4 hoặc baking soda paste → xả lạnh → nắng + thông gió\n"
+        "· Không chỉ dùng javel để khử mùi"
+    ),
+    "en": (
+        "◆ 【Odor tip】\n"
+        "· Do not cover with perfume/softener — odor can set\n"
+        "· Vinegar 1:4 or baking-soda paste → cold rinse → sun + air\n"
+        "· Do not use chlorine bleach only to kill odor"
+    ),
+}
+
+PIGMENT_TIP = {
+    "ko": (
+        "◆ 【색소 팁】\n"
+        "· 문지르지 마세요 — 번져요. 찍기(블롯)만\n"
+        "· 흰옷: 산소 가능 · 유색·실크: 산소·강한 표백 보류\n"
+        "· 강황·천연염료는 직사광선이 잔색을 옅게 해요"
+    ),
+    "vi": (
+        "◆ 【Mẹo màu】\n"
+        "· Không chà — chỉ thấm/chấm\n"
+        "· Áo trắng: oxy OK · Áo màu/lụa: tạm dừng oxy/tẩy mạnh\n"
+        "· Nghệ/màu tự nhiên: nắng giúp nhạt vết"
+    ),
+    "en": (
+        "◆ 【Pigment tip】\n"
+        "· Do not rub — blot only\n"
+        "· Whites: oxygen OK · Colors/silk: hold strong bleach\n"
+        "· Turmeric/natural dyes: sun helps fade residual"
+    ),
+}
+
+OIL_TIP = {
+    "ko": (
+        "◆ 【오일·유지 팁】\n"
+        "· 굳은 오일: 미지근(~40°C)으로 먼저 녹이기\n"
+        "· 주방세제(원액) → 헹굼 후 다음 단계\n"
+        "· 미끄러운 채 건조기·다림질 금지"
+    ),
+    "vi": (
+        "◆ 【Mẹo dầu/mỡ】\n"
+        "· Dầu đông: làm tan ấm nhẹ ~40°C trước\n"
+        "· Nước rửa chén nguyên → xả rồi mới bước sau\n"
+        "· Cấm sấy/ủi khi còn nhờn"
+    ),
+    "en": (
+        "◆ 【Oil tip】\n"
+        "· Solid oil: melt lukewarm ~40°C first\n"
+        "· Neat dish soap → rinse before next step\n"
+        "· No dryer/iron while greasy"
+    ),
+}
+
+SOFTENER_WARN = {
+    "ko": (
+        "◆ 【유연제 주의】\n"
+        "· 냄새·얼룩 처리 전에 섬유유연제 쓰지 마세요\n"
+        "· 유연제는 마무리(건조·다림질 후)에만 — 냄새 덮개 아님"
+    ),
+    "vi": (
+        "◆ 【Lưu ý nước xả】\n"
+        "· Không dùng nước xả trước khi xử lý mùi/vết\n"
+        "· Chỉ dùng lúc hoàn thiện (sau sấy/ủi) — không phải để che mùi"
+    ),
+    "en": (
+        "◆ 【Softener note】\n"
+        "· Do not use fabric softener before odor/stain work\n"
+        "· Softener is finishing only — not an odor cover"
+    ),
+}
+
+
+def block_odor_tip(sid: str, lang: str) -> str:
+    if sid not in ODOR_HEAVY:
+        return ""
+    return ODOR_TIP.get(lang) or ODOR_TIP["ko"]
+
+
+def block_pigment_tip(sid: str, lang: str) -> str:
+    if sid not in PIGMENT_HARD:
+        return ""
+    return PIGMENT_TIP.get(lang) or PIGMENT_TIP["ko"]
+
+
+def block_oil_tip(sid: str, lang: str) -> str:
+    if sid not in OIL_FIRST:
+        return ""
+    return OIL_TIP.get(lang) or OIL_TIP["ko"]
+
+
+def block_softener_warn(sid: str, lang: str) -> str:
+    # Softener warn pairs with odor-heavy (masking risk) or oil-first (film)
+    if sid not in ODOR_HEAVY and sid not in OIL_FIRST:
+        return ""
+    return SOFTENER_WARN.get(lang) or SOFTENER_WARN["ko"]
+
+
+def block_vn_tips(sid: str, lang: str) -> list[str]:
+    """Ordered short tips; empty list when not applicable."""
+    out: list[str] = []
+    for fn in (block_oil_tip, block_pigment_tip, block_odor_tip, block_softener_warn):
+        t = fn(sid, lang)
+        if t:
+            out.append(t)
+    return out

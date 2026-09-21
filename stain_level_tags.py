@@ -29,6 +29,13 @@ L1: set[str] = {
     "S_SOY_SAUCE",
 }
 
+try:
+    from education_vn_l2_v41 import L1_VN_NEW as _L1_VN
+
+    L1 |= set(_L1_VN)
+except Exception:
+    pass
+
 L3: set[str] = {
     "S_ENGINE_OIL",
     "S_MOTORBIKE_OIL",

@@ -2458,6 +2458,8 @@ def _sanitize_graph_for_owner(graph, lang: str):
     """
     if not isinstance(graph, dict):
         return graph
+    from protocol import CHEM_META
+
     g = dict(graph)
     lang = lang if lang in ("ko", "vi", "en") else "vi"
 
@@ -4567,10 +4569,16 @@ def _generate_response_core(
     # Hard override for high-value franchise phrases (before graph routing)
     # More specific phrases first.
     raw_n = _normalize_text(user_message)
-    from stain_hard_bind import bind_sweat_or_yellow_stain
+    from stain_hard_bind import bind_sweat_or_yellow_stain, bind_vn_specialty_stain
 
     _sy_bind = bind_sweat_or_yellow_stain(user_message, raw_n)
-    if "laterite" in raw_n or "dat do" in raw_n or any(
+    _vn_bind = bind_vn_specialty_stain(user_message, raw_n)
+    if _vn_bind:
+        entities["intent"] = "treatment"
+        entities["stain_id"] = _vn_bind
+        entities["stain_type"] = _vn_bind.lower().replace("s_vn_", "").replace("_", " ")
+        entities.pop("item_id", None)
+    elif "laterite" in raw_n or "dat do" in raw_n or any(
         k in user_message for k in ("라테라이트", "적토", "붉은 흙", "빨간 흙")
     ):
         entities["intent"] = "treatment"
