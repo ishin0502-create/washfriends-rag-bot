@@ -21,10 +21,33 @@ def test_hair_motions_present():
     assert "◆ (1)" not in m
 
 
-def test_l1_family():
-    assert has_hand_motions("S_TEA")
-    assert has_hand_motions("S_MILK")
-    assert "식초" in build_hand_motions("S_TEA")
+def test_l1_full_coverage():
+    from owner_hand_motions import l1_motion_coverage, HAND_MOTIONS_KO
+    from stain_level_tags import L1
+
+    missing = l1_motion_coverage()
+    assert not missing, f"missing L1 motions: {missing}"
+    for sid in L1:
+        m = HAND_MOTIONS_KO[sid]
+        assert "Step 1" in m
+        assert "◆ (1)" not in m
+
+
+def test_kimchi_specific():
+    from owner_hand_motions import build_hand_motions
+
+    m = build_hand_motions("S_KIMCHI")
+    assert "고춧가루" in m
+    assert "치약" in m
+    assert "주방세제" in m
+
+
+def test_oil_starch():
+    from owner_hand_motions import build_hand_motions
+
+    m = build_hand_motions("S_COOKING_OIL")
+    assert "전분" in m
+    assert "미끄러" in m
 
 
 def test_inject_drops_toc():
@@ -59,6 +82,8 @@ def test_inject_drops_toc():
 
 if __name__ == "__main__":
     test_hair_motions_present()
-    test_l1_family()
+    test_l1_full_coverage()
+    test_kimchi_specific()
+    test_oil_starch()
     test_inject_drops_toc()
-    print("OK hand motions + dedupe")
+    print("OK hand motions L1 complete")
