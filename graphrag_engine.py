@@ -3727,6 +3727,13 @@ def _promote_ko_section_headers(text: str, *, item_wash: bool = False) -> str:
             out,
             count=1,
         )
+        # Drop accidental duplicate title on the next line / remainder
+        out = re.sub(
+            rf"(◆ \({n}\) {re.escape(emoji)} {re.escape(title)}\n){re.escape(title)}[ \t]*",
+            r"\1",
+            out,
+            count=1,
+        )
     edu_map = {
         "왜 이 순서": "왜 이 순서인가요",
         "감각 체크": "감각으로 확인하세요",
