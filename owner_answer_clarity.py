@@ -1253,22 +1253,25 @@ def for_ask_display(text: str) -> str:
     return "\n\n".join(joined)
 
 
-# Phase 6: fill remaining L1/L2 clarity fields (setdefault — never override richer entries)
-try:
-    from owner_clarity_pack_v38 import (
-        EXTRA_SOFT_OUTLOOK,
-        EXTRA_STATUS_KO,
-        EXTRA_STATUS_VI,
-        EXTRA_TOOL_EXTRAS,
-    )
+# Phase 6 packs: fill missing clarity fields (setdefault — never override richer entries)
+def _merge_clarity_pack(mod_name: str) -> None:
+    try:
+        mod = __import__(mod_name)
+        for _k, _v in getattr(mod, "EXTRA_STATUS_KO", {}).items():
+            STAIN_STATUS_KO.setdefault(_k, _v)
+        for _k, _v in getattr(mod, "EXTRA_STATUS_VI", {}).items():
+            STAIN_STATUS_VI.setdefault(_k, _v)
+        for _k, _v in getattr(mod, "EXTRA_TOOL_EXTRAS", {}).items():
+            STAIN_TOOL_EXTRAS.setdefault(_k, _v)
+        for _k, _v in getattr(mod, "EXTRA_SOFT_OUTLOOK", {}).items():
+            STAIN_SOFT_OUTLOOK.setdefault(_k, _v)
+        for _k, _v in getattr(mod, "EXTRA_DONTS_KO", {}).items():
+            STAIN_DONTS_KO.setdefault(_k, _v)
+        for _k, _v in getattr(mod, "EXTRA_DONTS_VI", {}).items():
+            STAIN_DONTS_VI.setdefault(_k, _v)
+    except Exception as _e:
+        print(f"[CLARITY] {mod_name} skip: {type(_e).__name__}: {_e}")
 
-    for _k, _v in EXTRA_STATUS_KO.items():
-        STAIN_STATUS_KO.setdefault(_k, _v)
-    for _k, _v in EXTRA_STATUS_VI.items():
-        STAIN_STATUS_VI.setdefault(_k, _v)
-    for _k, _v in EXTRA_TOOL_EXTRAS.items():
-        STAIN_TOOL_EXTRAS.setdefault(_k, _v)
-    for _k, _v in EXTRA_SOFT_OUTLOOK.items():
-        STAIN_SOFT_OUTLOOK.setdefault(_k, _v)
-except Exception as _e:
-    print(f"[CLARITY] pack_v38 skip: {type(_e).__name__}: {_e}")
+
+_merge_clarity_pack("owner_clarity_pack_v38")
+_merge_clarity_pack("owner_clarity_pack_v39")

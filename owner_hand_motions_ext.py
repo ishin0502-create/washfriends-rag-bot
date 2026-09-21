@@ -862,11 +862,38 @@ HAND_MOTIONS_VI_EXTRA: dict[str, str] = {
     ),
     "S_SWEAT_YELLOW": (
         _START_VI
-        + _step_vi(1, "Cấm javel · báo khách", "Vàng mồ hôi: javel làm tệ hơn. Báo khó sạch hết.")
+        + _step_vi(
+            1,
+            "Cấm javel · báo khách",
+            "Ố vàng nách/mồ hôi: javel làm vàng hơn — tuyệt đối cấm.\n"
+            "Khác mồ hôi mới. Xin đồng ý trước: khó trắng lại hoàn toàn.\n"
+            "Kiểm xem có khử mùi/deodorant không.",
+        )
         + "\n"
-        + _step_vi(2, "Enzyme → (trắng) oxy", "Enzyme → oxy chỉ trắng.")
+        + _step_vi(
+            2,
+            "Ngâm enzyme",
+            "Lạnh~ấm nhẹ (≤30°C) + enzyme, chỉ vùng vàng.\n"
+            "Lụa/len: cấm enzyme → trung tính + hỏi quản lý.\n"
+            "◆ 【Thời gian ngâm】 20 phút → kiểm; thêm 20; tối đa 40 phút.\n"
+            "Không chà mạnh bằng bàn chải.",
+        )
         + "\n"
-        + _step_vi(3, "Giặt", "Giặt. Còn vàng → không sấy.")
+        + _step_vi(
+            3,
+            "Ngâm oxy (áo trắng thôi!)",
+            "⚠️ Áo màu / lụa / len / in: bỏ → Step 4.\n"
+            "Thử góc rồi 1L nước ấm nhẹ + 1 muỗng oxy.\n"
+            "◆ 【Thời gian ngâm】 30 phút; thêm 30; tối đa 120 phút.\n"
+            "Không trộn với javel.",
+        )
+        + "\n"
+        + _step_vi(
+            4,
+            "Giặt · kiểm trước khi sấy",
+            "Giặt xong kiểm mặt trong nách dưới ánh sáng.\n"
+            "Còn vàng → không sấy/ủi. Nhắc khách có thể còn.",
+        )
     ),
     "S_CURRY": (
         _START_VI

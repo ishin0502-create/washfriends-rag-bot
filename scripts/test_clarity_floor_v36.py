@@ -98,7 +98,19 @@ def test_phase3_cotton_wine_keeps_normal():
         },
     )
     assert "흡수" in m
-    assert "식초" in m or "유색·실크" in m
+    assert "【담금 시간】" in m
+    assert "소금" in m
+    assert "식초" in m
+
+
+def test_sweat_yellow_rich_steps():
+    m = build_hand_motions("S_SWEAT_YELLOW", "ko")
+    assert "락스" in m
+    assert "【담금 시간】" in m
+    assert "흰옷만" in m
+    vi = build_hand_motions("S_SWEAT_YELLOW", "vi")
+    assert "javel" in vi.lower() or "Javel" in vi
+    assert "Thời gian ngâm" in vi
 
 
 if __name__ == "__main__":
