@@ -1476,17 +1476,41 @@ def _curriculum_blocked(raw: str, t: str) -> bool:
 def _infer_chem_safety_item(raw: str, t: str) -> str:
     if _curriculum_blocked(raw, t):
         return ""
-    if any(
+    _bleach_tok = any(
+        k in raw for k in ("락스", "자벨", "제이블", "염소계", "염소표백")
+    ) or any(k in t for k in ("javel", "bleach", "chlorine", "nuoc tay", "nước tẩy"))
+    _acid_or_ammonia = any(
+        k in raw for k in ("식초", "암모니아", "암모니아", "초산")
+    ) or any(k in t for k in ("vinegar", "ammonia", "giấm", "giam", "amoniac", "acetic"))
+    _mix_ask = any(
         k in raw
         for k in (
-            "혼합 금지", "약품 혼합", "락스 암모니아", "암모니아 락스", "섞으면 안",
-            "가스 위험", "절대 섞",
+            "혼합", "섞으", "섞어", "섞아", "섞으면", "섞어도", "같이 쓰", "같이쓰",
+            "함께 쓰", "동시", "한 번에 섞",
         )
     ) or any(
         k in t
         for k in (
-            "never mix", "do not mix", "bleach and ammonia", "pha tron",
-            "cam tron", "javel ammonia", "toxic gas",
+            "mix", "pha tron", "pha trộn", "tron chung", "trộn", "together",
+            "cam tron", "never mix",
+        )
+    )
+    if (
+        any(
+            k in raw
+            for k in (
+                "혼합 금지", "약품 혼합", "락스 암모니아", "암모니아 락스", "락스 식초",
+                "식초 락스", "섞으면 안", "가스 위험", "절대 섞",
+            )
+        )
+        or (_bleach_tok and _acid_or_ammonia and _mix_ask)
+        or (_bleach_tok and _acid_or_ammonia and any(k in raw for k in ("위험", "괜찮", "돼요", "되나요", "가능")))
+        or any(
+            k in t
+            for k in (
+                "never mix", "do not mix", "bleach and ammonia", "bleach and vinegar",
+                "pha tron", "cam tron", "javel ammonia", "javel giam", "toxic gas",
+            )
         )
     ):
         return "I_CHEM_NEVER_MIX"
@@ -4713,6 +4737,11 @@ def _generate_response_core(
     elif any(k in user_message for k in ("드라이클리닝", "드라이 클리닝", "물세탁인가", "드라이인가", "드라이로 보내")) or "dry clean" in raw_n or "dry-clean" in raw_n:
         entities["intent"] = "treatment"
         entities["item_id"] = "I_DRY_VS_WET"
+        entities["stain_id"] = ""
+        entities["stain_type"] = ""
+    elif _infer_chem_safety_item(user_message, raw_n) == "I_CHEM_NEVER_MIX":
+        entities["intent"] = "treatment"
+        entities["item_id"] = "I_CHEM_NEVER_MIX"
         entities["stain_id"] = ""
         entities["stain_type"] = ""
     elif any(k in user_message for k in ("락스 희석", "자벨 희석", "표백 안전", "염소표백", "염소 표백")) or (
