@@ -764,6 +764,15 @@ HAND_MOTIONS_KO: dict[str, str] = {
     ),
 }
 
+from owner_hand_motions_ext import (  # noqa: E402
+    HAND_MOTIONS_KO_L2_REST,
+    HAND_MOTIONS_KO_L3,
+    HAND_MOTIONS_VI_EXTRA,
+)
+
+HAND_MOTIONS_KO.update(HAND_MOTIONS_KO_L2_REST)
+HAND_MOTIONS_KO.update(HAND_MOTIONS_KO_L3)
+
 _L1_REQUIRED = {
     "S_BLOOD_FRESH",
     "S_BLACK_COFFEE",
@@ -800,8 +809,12 @@ _L2_PRIORITY = {
     "S_SWEAT_YELLOW",
     "S_DYE_TRANSFER",
 }
+_L2_REST = set(HAND_MOTIONS_KO_L2_REST.keys())
+_L3_REQUIRED = set(HAND_MOTIONS_KO_L3.keys())
 assert _L1_REQUIRED.issubset(HAND_MOTIONS_KO.keys()), "L1 hand-motion coverage incomplete"
 assert _L2_PRIORITY.issubset(HAND_MOTIONS_KO.keys()), "L2 priority hand-motion coverage incomplete"
+assert _L2_REST.issubset(HAND_MOTIONS_KO.keys()), "L2 rest hand-motion coverage incomplete"
+assert _L3_REQUIRED.issubset(HAND_MOTIONS_KO.keys()), "L3 hand-motion coverage incomplete"
 
 _START_VI = "▼ Bắt đầu — làm lần lượt từ trên xuống\n\n"
 
@@ -1065,12 +1078,26 @@ HAND_MOTIONS_VI: dict[str, str] = {
     ),
 }
 
-_VI_PRIORITY = set(HAND_MOTIONS_VI.keys())
-assert len(_VI_PRIORITY) == 10, "VI priority hand-motion count drift"
+HAND_MOTIONS_VI.update(HAND_MOTIONS_VI_EXTRA)
+
+_VI_CORE = {
+    "S_HAIR_DYE",
+    "S_BLOOD_FRESH",
+    "S_BLOOD_DRY",
+    "S_MILK_COFFEE",
+    "S_RED_WINE",
+    "S_BLACK_COFFEE",
+    "S_LIPSTICK",
+    "S_KIMCHI",
+    "S_COOKING_OIL",
+    "S_DYE_TRANSFER",
+}
+assert _VI_CORE.issubset(HAND_MOTIONS_VI.keys()), "VI core hand-motion coverage incomplete"
+assert set(HAND_MOTIONS_VI_EXTRA).issubset(HAND_MOTIONS_VI.keys()), "VI extra merge failed"
 
 
 def build_hand_motions(stain_id: str, lang: str = "ko") -> str:
-    """KO full scripts; VI top-frequency; EN empty (SOP body fallback)."""
+    """KO scripts (L1/L2/L3); VI core+extra; EN empty (SOP body fallback)."""
     sid = str(stain_id or "").strip()
     if lang == "ko":
         return HAND_MOTIONS_KO.get(sid, "")
@@ -1095,6 +1122,14 @@ def l2_priority_coverage() -> list[str]:
     return sorted(sid for sid in _L2_PRIORITY if sid not in HAND_MOTIONS_KO)
 
 
+def l2_rest_coverage() -> list[str]:
+    return sorted(sid for sid in _L2_REST if sid not in HAND_MOTIONS_KO)
+
+
+def l3_motion_coverage() -> list[str]:
+    return sorted(sid for sid in _L3_REQUIRED if sid not in HAND_MOTIONS_KO)
+
+
 def vi_priority_coverage() -> list[str]:
-    """Return VI priority ids missing scripts (should be empty)."""
-    return sorted(sid for sid in _VI_PRIORITY if sid not in HAND_MOTIONS_VI)
+    """Return VI core ids missing scripts (should be empty)."""
+    return sorted(sid for sid in _VI_CORE if sid not in HAND_MOTIONS_VI)

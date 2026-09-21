@@ -113,7 +113,7 @@ def test_vi_no_ko_motions():
     from owner_hand_motions import build_hand_motions, HAND_MOTIONS_VI, vi_priority_coverage
 
     assert not vi_priority_coverage()
-    assert len(HAND_MOTIONS_VI) == 10
+    assert len(HAND_MOTIONS_VI) >= 10
     m = build_hand_motions("S_HAIR_DYE", "vi")
     assert "Bước 1" in m
     assert "cồn" in m.lower() or "Cồn" in m or "chấm cồn" in m.lower() or "Chấm cồn" in m
@@ -121,6 +121,29 @@ def test_vi_no_ko_motions():
     assert not re.search(r"[가-힣]", m)
     assert build_hand_motions("S_MILK_COFFEE", "en") == ""
     assert "Bước" in build_hand_motions("S_MILK_COFFEE", "vi")
+    assert "Bước" in build_hand_motions("S_EGG", "vi")
+    assert "전문" in build_hand_motions("S_ENGINE_OIL", "ko") or "전문 의뢰" in build_hand_motions(
+        "S_ENGINE_OIL", "ko"
+    )
+    assert "chuyên" in build_hand_motions("S_ENGINE_OIL", "vi").lower() or "chuyên" in build_hand_motions(
+        "S_LATERITE", "vi"
+    )
+
+
+def test_l2_rest_and_l3():
+    from owner_hand_motions import (
+        HAND_MOTIONS_KO,
+        l2_rest_coverage,
+        l3_motion_coverage,
+        build_hand_motions,
+    )
+
+    assert not l2_rest_coverage()
+    assert not l3_motion_coverage()
+    assert "락스" in build_hand_motions("S_SHIRT_YELLOW", "ko")
+    assert "거절" in build_hand_motions("S_GLUE", "ko") or "등급 3" in build_hand_motions("S_GLUE", "ko")
+    assert "S_CURRY" in HAND_MOTIONS_KO
+    assert "S_TAR" in HAND_MOTIONS_KO
 
 
 def test_vi_inject_uses_vi_steps():
@@ -159,5 +182,6 @@ if __name__ == "__main__":
     test_oil_starch()
     test_inject_drops_toc()
     test_vi_no_ko_motions()
+    test_l2_rest_and_l3()
     test_vi_inject_uses_vi_steps()
-    print("OK hand motions L1+L2+VI priority complete")
+    print("OK hand motions L1+L2+L3+VI")
