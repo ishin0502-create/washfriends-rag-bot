@@ -108,6 +108,13 @@ def test_inject_drops_toc():
     assert "왜 이 순서" in detail
 
 
+def test_vi_no_ko_motions():
+    from owner_hand_motions import build_hand_motions
+
+    assert build_hand_motions("S_HAIR_DYE", "vi") == ""
+    assert build_hand_motions("S_MILK_COFFEE", "en") == ""
+
+
 if __name__ == "__main__":
     test_hair_motions_present()
     test_l1_full_coverage()
@@ -117,4 +124,5 @@ if __name__ == "__main__":
     test_kimchi_specific()
     test_oil_starch()
     test_inject_drops_toc()
+    test_vi_no_ko_motions()
     print("OK hand motions L1+L2 priority complete")

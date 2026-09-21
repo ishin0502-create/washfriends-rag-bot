@@ -299,7 +299,11 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
             continue
         action = str(s.get("action_ko") or s.get("action_vi") or "").strip()
         if lang == "vi":
-            action = str(s.get("action_vi") or s.get("action_ko") or "").strip()
+            action = str(s.get("action_vi") or "").strip()
+        elif lang == "en":
+            action = str(
+                s.get("action_en") or s.get("action") or s.get("action_vi") or ""
+            ).strip()
         if not action or len(action) < 4:
             continue
         n += 1
@@ -309,12 +313,24 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
             if hi and hi != lo and int(hi) >= int(lo) + 30:
                 if lang == "ko":
                     time_bit = f" (먼저 {lo}분→확인, 최대 {hi}분)"
+                elif lang == "vi":
+                    time_bit = f" (trước {lo} phút→kiểm tra, tối đa {hi} phút)"
                 else:
                     time_bit = f" (first {lo}→check, max {hi})"
             elif hi and hi != lo:
-                time_bit = f" ({lo}–{hi}분)" if lang == "ko" else f" ({lo}-{hi} min)"
+                if lang == "ko":
+                    time_bit = f" ({lo}–{hi}분)"
+                elif lang == "vi":
+                    time_bit = f" ({lo}–{hi} phút)"
+                else:
+                    time_bit = f" ({lo}-{hi} min)"
             else:
-                time_bit = f" ({lo}분)" if lang == "ko" else f" ({lo} min)"
+                if lang == "ko":
+                    time_bit = f" ({lo}분)"
+                elif lang == "vi":
+                    time_bit = f" ({lo} phút)"
+                else:
+                    time_bit = f" ({lo} min)"
         if lang == "ko":
             action = _soften_step_label(action)
         lines.append(f"{n}) {action}{time_bit}")
@@ -322,17 +338,29 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
             break
     if not lines:
         sc = graph.get("stain_context") if isinstance(graph.get("stain_context"), dict) else {}
-        path = str(sc.get("fresh_path_ko") or "")
+        if lang == "vi":
+            path = str(sc.get("fresh_path_vi") or "")
+        elif lang == "en":
+            path = str(sc.get("fresh_path_en") or sc.get("fresh_path") or "")
+        else:
+            path = str(sc.get("fresh_path_ko") or "")
         numbered = re.findall(r"\((\d+)\)\s*([^\n→]+)", path)
-        if numbered:
+        if numbered and lang == "ko":
             for i, (_n, bit) in enumerate(numbered[:8], 1):
                 bit = bit.strip().rstrip(".")
-                if lang == "ko":
-                    bit = _soften_step_label(bit)
+                bit = _soften_step_label(bit)
                 lines.append(f"{i}) {bit}")
+        elif numbered and lang != "ko":
+            for i, (_n, bit) in enumerate(numbered[:8], 1):
+                bit = bit.strip().rstrip(".")
+                if bit:
+                    lines.append(f"{i}) {bit}")
         elif "→" in path and lang == "ko":
             bits = [b.strip() for b in path.split("→") if b.strip()]
             lines = [f"{i}) {_soften_step_label(b)}" for i, b in enumerate(bits[:8], 1)]
+        elif "→" in path and lang != "ko":
+            bits = [b.strip() for b in path.split("→") if b.strip()]
+            lines = [f"{i}) {b}" for i, b in enumerate(bits[:8], 1)]
     if not lines:
         return ""
     if lang == "ko":
@@ -374,7 +402,9 @@ def build_tools_names_only(graph: dict, lang: str = "ko") -> str:
         if not isinstance(t, dict):
             continue
         if lang == "vi":
-            name = str(t.get("name_vi") or t.get("name_ko") or "").strip()
+            name = str(t.get("name_vi") or "").strip()
+        elif lang == "en":
+            name = str(t.get("name") or t.get("name_en") or t.get("name_vi") or "").strip()
         else:
             name = str(t.get("name_ko") or t.get("name_vi") or "").strip()
         if name and name not in names:
@@ -408,12 +438,27 @@ def build_spot_test_block(graph: dict, lang: str = "ko") -> str:
     codes = _chem_codes(graph)
     if not (codes & BLOT_CHEM_CODES):
         return ""
-    if lang != "ko":
+    if lang == "vi":
         return (
-            "◆ Spot-test first (hidden seam / inside label).\n"
-            "Dab chem on white cloth → press 30 sec.\n"
-            "· Color on cloth → stop this chem\n"
-            "· No color change → OK to continue"
+            "◆ 【Thử góc】 Làm trước khi dùng hóa chất\n"
+            "Chỗ kín (lai trong / cạnh nhãn).\n"
+            "1) Thấm hóa chất lên khăn trắng một ít\n"
+            "2) Ấn 30 giây lên chỗ thử\n"
+            "3) Nhấc khăn ra kiểm tra\n"
+            "· Khăn dính màu vải → dừng hóa chất này\n"
+            "· Không đổi màu → có thể tiếp tục\n"
+            "💡 30 giây giúp tránh hỏng vải"
+        )
+    if lang == "en":
+        return (
+            "◆ 【Spot-test】 Do this before using chemicals\n"
+            "Hidden seam / inside label area.\n"
+            "1) Dab a little chem on a white cloth\n"
+            "2) Press on the test spot for 30 seconds\n"
+            "3) Lift and check\n"
+            "· Cloth picks up garment color → stop this chem\n"
+            "· No color change → OK to continue\n"
+            "💡 30 seconds can prevent fabric damage"
         )
     return (
         "◆ 【구석 테스트】 약품 쓰기 전에 해 주세요\n"
@@ -428,10 +473,23 @@ def build_spot_test_block(graph: dict, lang: str = "ko") -> str:
 
 
 def build_donts_block(graph: dict, lang: str = "ko") -> str:
-    if lang != "ko":
+    if lang == "vi":
         return (
-            "◆ Do not: hot rinse · rub hard · pour chem on fabric · "
-            "mix chems · dry/iron over remaining marks"
+            "◆ 【Tuyệt đối không】\n"
+            "· Không xả nước nóng → vết gắn chặt vào sợi\n"
+            "· Không chà mạnh → loang và hỏng vải. Ấn thấm từ trên xuống\n"
+            "· Không đổ hóa chất trực tiếp lên áo → thấm khăn trắng rồi chấm\n"
+            "· Không trộn nhiều hóa chất cùng lúc → dùng lần lượt, xả giữa các bước\n"
+            "· Không sấy/ủi khi còn vết → nhiệt cố định vết"
+        )
+    if lang == "en":
+        return (
+            "◆ 【Do not】\n"
+            "· Do not hot-rinse → stain sets into fibers\n"
+            "· Do not rub hard → spreads and damages fabric; blot from above\n"
+            "· Do not pour chem directly on fabric → dab with a white cloth\n"
+            "· Do not mix chems at once → one chem → rinse → next\n"
+            "· Do not dry/iron over remaining marks → heat sets them"
         )
     sid = _motion_stain_id(graph)
     lines = ["◆ 【절대 하지 마세요】"]
@@ -447,11 +505,19 @@ def build_donts_block(graph: dict, lang: str = "ko") -> str:
 
 
 def build_dry_check_block(lang: str = "ko") -> str:
-    if lang != "ko":
+    if lang == "vi":
         return (
-            "◆ Before drying: check under bright light.\n"
+            "◆ 【Trước khi sấy】 Kiểm tra dưới ánh sáng mạnh\n"
+            "· Sạch → sấy/phơi bình thường\n"
+            "· Còn vết → không sấy/ủi — làm lại bước hoặc phơi tự nhiên và báo khách\n"
+            "💡 Nhiệt có thể làm vết vĩnh viễn"
+        )
+    if lang == "en":
+        return (
+            "◆ 【Before drying】 Check under bright light\n"
             "· Clean → dry OK\n"
-            "· Mark left → no dryer/iron — repeat treatment or air-dry + tell guest"
+            "· Mark left → no dryer/iron — repeat treatment or air-dry and tell the guest\n"
+            "💡 Heat can set marks permanently"
         )
     return (
         "◆ 【말리기 전】 꼭 확인해 주세요\n"
@@ -550,9 +616,9 @@ def _split_glossary_and_body(answer: str) -> tuple[str, str]:
     return "", answer
 
 
-def _extract_why_one_liner(body: str) -> str:
-    """Keep a short [왜] tip if present — drop ◆(1)~(6) TOC."""
-    if not body:
+def _extract_why_one_liner(body: str, lang: str = "ko") -> str:
+    """Keep a short [왜] tip if present — drop ◆(1)~(6) TOC. KO header only for KO."""
+    if not body or lang != "ko":
         return ""
     m = re.search(
         r"◆\s*\[왜[^\]]*\]\s*\n([\s\S]*?)(?=\n◆\s*\[|\n◆\s*\(|\Z)",
@@ -618,7 +684,13 @@ def inject_clarity_into_answer(
         detail_bits.append(spot)
     base, mx = _soak_bounds(g)
     if base is not None and mx is not None and int(mx) >= int(base) + 15:
-        detail_bits.append("◆ 【담금 시간】\n" + format_soak_time(int(base), int(mx), lang))
+        if lang == "vi":
+            soak_head = "◆ 【Thời gian ngâm】"
+        elif lang == "en":
+            soak_head = "◆ 【Soak time】"
+        else:
+            soak_head = "◆ 【담금 시간】"
+        detail_bits.append(soak_head + "\n" + format_soak_time(int(base), int(mx), lang))
 
     sid = _motion_stain_id(g)
     motions = ""
@@ -632,7 +704,7 @@ def inject_clarity_into_answer(
     if motions:
         # Hand-motion Steps replace LLM ◆(1)~(6) — no duplicate TOC
         detail_bits.append(motions)
-        why = _extract_why_one_liner(body)
+        why = _extract_why_one_liner(body, lang)
         if why:
             detail_bits.append(why)
     else:

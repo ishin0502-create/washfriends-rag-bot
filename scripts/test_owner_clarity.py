@@ -78,8 +78,52 @@ def test_chunk_long():
     assert all(len(p) <= 1900 for p in parts)
 
 
+def test_vi_clarity_no_ko_en_stubs():
+    """VI must not get Korean hand-motions or English spot/donts stubs."""
+    import re
+
+    from owner_hand_motions import build_hand_motions
+
+    assert build_hand_motions("S_HAIR_DYE", "vi") == ""
+    assert build_hand_motions("S_HAIR_DYE", "en") == ""
+
+    proto = _proto("S_HAIR_DYE")
+    g = {
+        "protocol": proto.to_dict(),
+        "stain_context": {"id": "S_HAIR_DYE"},
+        "chemicals": [{"code": "A1"}, {"code": "B1"}],
+        "tools": [
+            {"id": "T_CLOTH", "name_vi": "Khăn trắng"},
+            {"id": "T_TIMER", "name_vi": "Hẹn giờ"},
+        ],
+    }
+    body = (
+        "┌─ Hướng dẫn ─┐\nthuật ngữ…\n└──┘\n"
+        "▼ Giáo dục giặt lần này\n"
+        "━━━━━━━━━━━━━━━━\n"
+        "◆ (1) Kiểm tra\n"
+        "Nội dung VI dài.\n"
+        "◆ (4) Cồn blot\n"
+    )
+    out = inject_clarity_into_answer(body, graph=g, level="L2", grade=2, lang="vi")
+    parts = split_zalo_messages(out)
+    assert len(parts) >= 2
+    detail = "\n".join(parts[1:])
+    assert "Chi tiết thao tác" in detail
+    assert "Thử góc" in detail or "Thời gian ngâm" in detail or "Tuyệt đối không" in detail
+    assert "Spot-test first" not in detail
+    assert "Do not: hot rinse" not in detail
+    assert "Before drying:" not in detail
+    assert "담금 시간" not in detail
+    assert "이제 시작합니다" not in detail
+    assert "장갑 끼고" not in detail
+    assert "왜 이 순서인가요" not in detail
+    assert not re.search(r"[가-힣]", detail)
+
+
 if __name__ == "__main__":
     test_hair_dye_no_spray_mix()
     test_two_message_split()
     test_chunk_long()
+    test_vi_clarity_no_ko_en_stubs()
     print("OK two-msg clarity")

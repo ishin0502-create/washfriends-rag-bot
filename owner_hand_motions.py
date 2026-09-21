@@ -805,9 +805,10 @@ assert _L2_PRIORITY.issubset(HAND_MOTIONS_KO.keys()), "L2 priority hand-motion c
 
 
 def build_hand_motions(stain_id: str, lang: str = "ko") -> str:
+    """KO-only scripts for now. VI/EN must not receive Korean Steps."""
     sid = str(stain_id or "").strip()
     if lang != "ko":
-        return HAND_MOTIONS_KO.get(sid, "")
+        return ""
     return HAND_MOTIONS_KO.get(sid, "")
 
 
