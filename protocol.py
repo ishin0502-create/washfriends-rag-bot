@@ -2050,6 +2050,22 @@ def apply_context_to_protocol(
 def render_fresh_path(proto: Protocol, lang: str = "ko") -> str:
     parts = []
     n = 0
+    _en_by_id = {
+        "rinse": "Cold rinse",
+        "blot": "Cold blot",
+        "scrape": "Scrape solids",
+        "dish": "Dish soap",
+        "enzyme": "Enzyme",
+        "vinegar": "Vinegar 1:4",
+        "alcohol": "Alcohol blot",
+        "oxygen": "Oxygen (whites)",
+        "wash": "Wash",
+        "light": "Bright-light check",
+        "baking": "Baking-soda paste",
+        "oil": "Cooking oil on sap",
+        "warm": "Lukewarm melt",
+        "dry": "Dry brush",
+    }
     for s in proto.steps:
         if s.blocked:
             continue
@@ -2063,6 +2079,15 @@ def render_fresh_path(proto: Protocol, lang: str = "ko") -> str:
                     text = f"{text} ({s.minutes_lo}분)"
             if s.optional:
                 text = f"{text} (선택)"
+        elif lang == "en":
+            text = s.action_en or _en_by_id.get(s.id) or s.id.replace("_", " ")
+            if s.minutes_lo is not None:
+                if s.minutes_hi and s.minutes_hi != s.minutes_lo:
+                    text = f"{text} ({s.minutes_lo}-{s.minutes_hi} min)"
+                else:
+                    text = f"{text} ({s.minutes_lo} min)"
+            if s.optional:
+                text = f"{text} (optional)"
         else:
             text = s.action_vi or s.action_ko
             if s.minutes_lo is not None:

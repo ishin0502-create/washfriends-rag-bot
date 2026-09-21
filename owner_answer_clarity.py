@@ -698,6 +698,28 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
     """Numbered do-this-next list from Protocol steps."""
     proto = _proto_dict(graph)
     steps = proto.get("steps") or []
+    # EN fallback when action_en empty — never use VI/KO labels (language purity)
+    _en_by_id = {
+        "id": "Identify stain · fabric",
+        "rinse": "Cold rinse",
+        "blot": "Cold blot (no rub)",
+        "scrape": "Scrape solids",
+        "dish": "Dish soap",
+        "enzyme": "Enzyme soak",
+        "vinegar": "Vinegar 1:4",
+        "alcohol": "Alcohol blot",
+        "oxygen": "Oxygen bleach (whites only)",
+        "wash": "Wash",
+        "light": "Check under bright light",
+        "baking": "Baking-soda paste",
+        "oil": "Cooking oil to dissolve sap",
+        "warm": "Melt with lukewarm water",
+        "dry": "Dry brush / tape",
+        "soda": "Baking-soda paste",
+        "acetone": "Acetone (test corner)",
+        "freeze": "Freeze / chill to harden",
+        "iron": "Low heat + absorbent paper",
+    }
     lines: list[str] = []
     n = 0
     for s in steps:
@@ -709,9 +731,10 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
         if lang == "vi":
             action = str(s.get("action_vi") or "").strip()
         elif lang == "en":
-            action = str(
-                s.get("action_en") or s.get("action") or s.get("action_vi") or ""
-            ).strip()
+            action = str(s.get("action_en") or "").strip()
+            if not action:
+                sid = str(s.get("id") or "").strip()
+                action = _en_by_id.get(sid) or sid.replace("_", " ").title()
         if not action or len(action) < 4:
             continue
         n += 1

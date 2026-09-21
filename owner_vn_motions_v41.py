@@ -201,7 +201,7 @@ def _mangosteen(lang: str) -> str:
         ])
     if lang == "en":
         return _pack("en", [
-            ("Very hard disclose", "Near natural dye — residual likely. Colors: consider specialist."),
+            ("Mangosteen — very hard", "Near natural dye — residual likely. Colors: consider specialist."),
             ("Cold rinse ASAP", "Faster is better."),
             ("Alcohol · oxygen", "Alcohol blot. Whites: oxygen 1–2h. Wash + sun."),
         ])
@@ -221,7 +221,7 @@ def _durian(lang: str) -> str:
         ])
     if lang == "en":
         return _pack("en", [
-            ("Fat first", "Dish soap 10 min → rinse."),
+            ("Durian fat first", "Dish soap 10 min → rinse."),
             ("Baking soda", "Paste 30 min for odor → rinse."),
             ("Vinegar · wash · sun", "Vinegar 1:4, 20 min. Wash. Sun 3–4h. May need 2–3 rounds."),
         ])
