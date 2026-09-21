@@ -4808,6 +4808,14 @@ def _generate_response_core(
         entities["stain_id"] = "S_HAIR_DYE"
         entities["stain_type"] = "thuoc nhuom toc"
         entities.pop("item_id", None)
+    elif _blood_stain_mentioned(user_message):
+        # Before fabric curriculum (면+핏자국 must not become I_COTTON)
+        entities["intent"] = "treatment"
+        entities["stain_id"] = "S_BLOOD_DRY" if any(
+            k in user_message for k in ("마른", "말라", "말랐", "굳은", "오래된", "고착", "갈색")
+        ) or "mau kho" in raw_n or "dried" in raw_n else "S_BLOOD_FRESH"
+        entities["stain_type"] = "mau"
+        entities.pop("item_id", None)
     elif _infer_fabric_curriculum_item(user_message, raw_n):
         entities["intent"] = "treatment"
         entities["item_id"] = _infer_fabric_curriculum_item(user_message, raw_n)
@@ -4902,12 +4910,6 @@ def _generate_response_core(
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_FECES"
         entities["stain_type"] = "phan"
-    elif _blood_stain_mentioned(user_message):
-        entities["intent"] = "treatment"
-        entities["stain_id"] = "S_BLOOD_DRY" if any(
-            k in user_message for k in ("마른", "굳은", "오래된", "고착", "말랐")
-        ) or "mau kho" in raw_n or "dried" in raw_n else "S_BLOOD_FRESH"
-        entities["stain_type"] = "mau"
     elif any(k in user_message for k in ("엔진오일", "기계유", "모터오일")) or "engine oil" in raw_n or "dau dong co" in raw_n:
         entities["intent"] = "treatment"
         entities["stain_id"] = "S_ENGINE_OIL"

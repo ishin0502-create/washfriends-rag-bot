@@ -215,6 +215,17 @@ def _stain_id(graph: dict) -> str:
     return str(graph.get("_owner_stain_id") or sc.get("id") or "")
 
 
+def _motion_stain_id(graph: dict) -> str:
+    """Stain id for hand-motions / status / donts (age-aware blood remap)."""
+    sid = _stain_id(graph)
+    if sid == "S_BLOOD_FRESH":
+        sc = graph.get("stain_context") if isinstance(graph.get("stain_context"), dict) else {}
+        age = str(sc.get("age_bucket") or graph.get("age_bucket") or "")
+        if age in {"dried", "hard"}:
+            return "S_BLOOD_DRY"
+    return sid
+
+
 def _chem_codes(graph: dict) -> set[str]:
     codes: set[str] = set()
     for c in graph.get("chemicals") or []:
@@ -445,7 +456,7 @@ def build_dry_check_block(lang: str = "ko") -> str:
 def build_status_check(graph: dict, lang: str = "ko") -> str:
     if lang != "ko":
         return ""
-    sid = _stain_id(graph)
+    sid = _motion_stain_id(graph)
     if sid in STAIN_STATUS_KO:
         return STAIN_STATUS_KO[sid]
     # Generic age hint from graph if present
@@ -599,7 +610,7 @@ def inject_clarity_into_answer(
     if base is not None and mx is not None and int(mx) >= int(base) + 15:
         detail_bits.append("◆ 【담금 시간】\n" + format_soak_time(int(base), int(mx), lang))
 
-    sid = _stain_id(g)
+    sid = _motion_stain_id(g)
     motions = ""
     try:
         from owner_hand_motions import build_hand_motions
