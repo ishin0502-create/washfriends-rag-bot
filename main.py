@@ -131,7 +131,7 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-09-21-clarity-friendly-v26b",
+            "build": "2026-09-21-two-msg-flow-v27",
             "checks": checks,
         },
         status_code=200,
@@ -207,6 +207,12 @@ async def ask(body: AskRequest):
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as pool:
             reply = await loop.run_in_executor(pool, generate_response, body.message)
+        try:
+            from owner_answer_clarity import for_ask_display
+
+            reply = for_ask_display(reply)
+        except Exception:
+            pass
         return AskResponse(response=reply, user_id=body.user_id)
     except Exception as e:
         # Surface error for debugging (franchise test endpoint only)

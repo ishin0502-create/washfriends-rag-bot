@@ -369,7 +369,7 @@ async def diagnose_zalo_brand(*, user_id: Optional[str] = None, reset: bool = Fa
 
 
 async def _send_zalo_reply(user_id: str, text: str, *, with_brand: bool = False) -> bool:
-    """Send optional brand image, then text. Text always attempted."""
+    """Send optional brand image, then text (supports multi-part / 2000-char split)."""
     if with_brand:
         try:
             ok = await _send_zalo_brand_image(user_id)
@@ -381,6 +381,29 @@ async def _send_zalo_reply(user_id: str, text: str, *, with_brand: bool = False)
         except Exception as e:
             clear_brand_header("zalo", user_id)
             print(f"[ZALO BRAND] skipped: {e}")
+
+    try:
+        from owner_answer_clarity import split_zalo_messages
+
+        parts = split_zalo_messages(text or "", max_len=1900)
+    except Exception:
+        parts = [(text or "")[:1900]] if text else []
+    if not parts:
+        return False
+
+    all_ok = True
+    for i, part in enumerate(parts):
+        ok = await _send_zalo_text_once(user_id, part)
+        if not ok:
+            all_ok = False
+            break
+        if i + 1 < len(parts):
+            await asyncio.sleep(0.45)
+    return all_ok
+
+
+async def _send_zalo_text_once(user_id: str, text: str) -> bool:
+    """Single OA text message (API hard cap ~2000)."""
     token = await get_access_token()
     if not token:
         print("[ZALO SEND ERROR] access token is empty — set ZALO_OA_ACCESS_TOKEN / REFRESH_TOKEN")
