@@ -1120,6 +1120,19 @@ def inject_clarity_into_answer(
     if level in {"L2", "L3"}:
         flow_bits.append(_SUPERVISOR[lang])
     sid = _motion_stain_id(g)
+
+    # Mid-tier assembly (v40): conditional blocks — no full dump, no % rates
+    _mid = None
+    try:
+        import owner_mid_blocks_v40 as _mid
+    except Exception as _e:
+        print(f"[CLARITY] mid_blocks import skip: {type(_e).__name__}: {_e}")
+
+    if _mid is not None:
+        intake = _mid.block_intake(level, lang)
+        if intake:
+            flow_bits.append(intake)
+
     outlook_override = (STAIN_SOFT_OUTLOOK.get(sid) or {}).get(lang) or ""
     if outlook_override:
         outlook = outlook_override
@@ -1130,6 +1143,10 @@ def inject_clarity_into_answer(
     status = build_status_check(g, lang)
     if status:
         flow_bits.append(status)
+    if _mid is not None:
+        fab = _mid.block_fabric(g, lang)
+        if fab:
+            flow_bits.append(fab)
     order = build_one_line_order(g, lang)
     if order:
         flow_bits.append(order)
@@ -1139,6 +1156,10 @@ def inject_clarity_into_answer(
     flow_bits.append(_NEXT_MSG[lang])
 
     detail_bits: list[str] = [_DETAIL_HEAD[lang]]
+    if _mid is not None:
+        compound = _mid.block_compound(sid, lang)
+        if compound:
+            detail_bits.append(compound)
     spot = build_spot_test_block(g, lang)
     if spot:
         detail_bits.append(spot)
@@ -1187,7 +1208,15 @@ def inject_clarity_into_answer(
             detail_bits.append(body_clean)
 
     detail_bits.append(build_donts_block(g, lang))
+    if _mid is not None:
+        chem_blk = _mid.block_chem(g, lang)
+        if chem_blk:
+            detail_bits.append(chem_blk)
     detail_bits.append(build_dry_check_block(lang))
+    if _mid is not None:
+        retry_blk = _mid.block_retry(sid, level, g, lang)
+        if retry_blk:
+            detail_bits.append(retry_blk)
     foot = (_GRADE_FOOTER.get(lang) or _GRADE_FOOTER["ko"]).get(grade, "")
     if foot:
         detail_bits.append(foot)
