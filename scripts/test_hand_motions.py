@@ -33,6 +33,34 @@ def test_l1_full_coverage():
         assert "◆ (1)" not in m
 
 
+def test_l2_priority_coverage():
+    from owner_hand_motions import l2_priority_coverage, HAND_MOTIONS_KO, _L2_PRIORITY
+
+    missing = l2_priority_coverage()
+    assert not missing, f"missing L2 priority motions: {missing}"
+    assert len(_L2_PRIORITY) == 15
+    for sid in _L2_PRIORITY:
+        m = HAND_MOTIONS_KO[sid]
+        assert "Step 1" in m
+        assert "◆ (1)" not in m
+
+
+def test_l2_milk_coffee_order():
+    from owner_hand_motions import build_hand_motions
+
+    m = build_hand_motions("S_MILK_COFFEE")
+    assert "효소" in m and "식초" in m
+    assert m.index("효소") < m.index("식초") or "단백질" in m
+
+
+def test_l2_lipstick_no_rub():
+    from owner_hand_motions import build_hand_motions
+
+    m = build_hand_motions("S_LIPSTICK")
+    assert "문지르" in m
+    assert "알코올" in m
+
+
 def test_kimchi_specific():
     from owner_hand_motions import build_hand_motions
 
@@ -83,7 +111,10 @@ def test_inject_drops_toc():
 if __name__ == "__main__":
     test_hair_motions_present()
     test_l1_full_coverage()
+    test_l2_priority_coverage()
+    test_l2_milk_coffee_order()
+    test_l2_lipstick_no_rub()
     test_kimchi_specific()
     test_oil_starch()
     test_inject_drops_toc()
-    print("OK hand motions L1 complete")
+    print("OK hand motions L1+L2 priority complete")
