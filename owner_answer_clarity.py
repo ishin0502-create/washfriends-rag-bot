@@ -140,6 +140,10 @@ STAIN_DONTS_KO: dict[str, list[str]] = {
         "옆으로 문지르지 마세요 → 번져요",
         "겉 왁스를 Cap2로 깊게 긁지 마세요",
     ],
+    "S_MASCARA": [
+        "옆으로 문지르지 마세요 → 번져요",
+        "실크·울에 알코올 함부로 쓰지 마세요 (구석 테스트)",
+    ],
     "S_FOUNDATION": [
         "세게 문지르지 마세요 → 실리콘·색소가 번져요",
     ],
@@ -205,7 +209,14 @@ STAIN_STATUS_KO: dict[str, str] = {
     "S_LIPSTICK": (
         "◆ 【먼저 확인】 립스틱 3층\n"
         "· 겉 왁스 → 알코올 찍기 → 세제 순서입니다. 문지르지 마세요\n"
-        "· 유색·실크는 매니저 확인 후 진행하세요"
+        "· 유색·실크는 매니저 확인 후 진행하세요\n"
+        "· 열고착·건조기 지남 → 잔색 가능 — 사전 고지"
+    ),
+    "S_MASCARA": (
+        "◆ 【먼저 확인】 마스카라\n"
+        "· 문지르면 번짐 — 찍어 흡수만\n"
+        "· 잔색은 알코올(70% IPA)·환기 · 실크는 매니저 확인\n"
+        "· 검은 잔색 남은 채 말리지 마세요"
     ),
     "S_DYE_TRANSFER": (
         "◆ 【먼저 확인】 이염\n"
@@ -343,6 +354,16 @@ STAIN_TOOL_EXTRAS: dict[str, dict[str, list[str]]] = {
         "vi": ["Cồn isopropyl 70%", "Nhiều khăn trắng", "Giấy thấm"],
         "en": ["IPA 70%", "White cloths", "Blotting paper"],
     },
+    "S_LIPSTICK": {
+        "ko": ["이소프로필 알코올 70%", "흡수지", "주방세제", "연질 솔"],
+        "vi": ["Cồn isopropyl 70%", "Giấy thấm", "Nước rửa chén", "Bàn chải mềm"],
+        "en": ["IPA 70%", "Blotting paper", "Dish soap", "Soft brush"],
+    },
+    "S_MASCARA": {
+        "ko": ["이소프로필 알코올 70%", "주방세제", "흰 천 여러 장"],
+        "vi": ["Cồn isopropyl 70%", "Nước rửa chén", "Khăn trắng"],
+        "en": ["IPA 70%", "Dish soap", "White cloths"],
+    },
     "S_KIMCHI": {
         "ko": ["주방세제", "흰 식초", "산소표백제(흰옷만)"],
         "vi": ["Nước rửa chén", "Giấm trắng", "Bột oxy (áo trắng)"],
@@ -473,6 +494,69 @@ STAIN_SOFT_OUTLOOK: dict[str, dict[str, str]] = {
             "· Still greasy: do not dry"
         ),
     },
+    "S_INK_PEN": {
+        "ko": (
+            "◆ 【예상 결과】\n"
+            "· 신선·면: 꽤 개선 가능 — 완전 제거는 보장하지 않아요\n"
+            "· 마름·번진 뒤: 잔색 흔함\n"
+            "· 실크·울·프린트: 손상 위험 — 전문·거절 우선\n"
+            "· 열고착: 어려움"
+        ),
+        "vi": (
+            "◆ 【Kết quả kỳ vọng】\n"
+            "· Mới + cotton: có thể cải thiện — không đảm bảo sạch hết\n"
+            "· Đã khô/loang: dễ còn\n"
+            "· Lụa/len/in: ưu tiên chuyên / từ chối\n"
+            "· Đã nhiệt: khó"
+        ),
+        "en": (
+            "◆ 【Expected result】\n"
+            "· Fresh cotton: often improves — full removal not guaranteed\n"
+            "· Dried/spread: residual common\n"
+            "· Silk/wool/print: refer or decline first\n"
+            "· Heat-set: hard"
+        ),
+    },
+    "S_LIPSTICK": {
+        "ko": (
+            "◆ 【예상 결과】\n"
+            "· 겉 왁스만: 잘 빠지는 편\n"
+            "· 색소까지 먹음: 잔색 가능 — 동의 받기\n"
+            "· 실크·유색: 매니저 확인 · 손상 주의"
+        ),
+        "vi": (
+            "◆ 【Kết quả kỳ vọng】\n"
+            "· Chỉ sáp ngoài: thường ra tốt\n"
+            "· Đã ngấm màu: dễ còn — cần đồng ý\n"
+            "· Lụa/áo màu: hỏi quản lý"
+        ),
+        "en": (
+            "◆ 【Expected result】\n"
+            "· Surface wax only: often good\n"
+            "· Pigment set in: residual possible — get consent\n"
+            "· Silk/color: supervisor check"
+        ),
+    },
+    "S_MASCARA": {
+        "ko": (
+            "◆ 【예상 결과】\n"
+            "· 묻은 직후: 찍어 빼면 개선\n"
+            "· 문질러 번진 뒤: 잔색 흔함\n"
+            "· 실크: 약하게 · 전문 검토"
+        ),
+        "vi": (
+            "◆ 【Kết quả kỳ vọng】\n"
+            "· Mới dính: thấm thường cải thiện\n"
+            "· Đã chà loang: dễ còn\n"
+            "· Lụa: nhẹ · xem chuyên"
+        ),
+        "en": (
+            "◆ 【Expected result】\n"
+            "· Fresh: blotting often helps\n"
+            "· After rubbing: residual common\n"
+            "· Silk: gentle only · consider refer"
+        ),
+    },
 }
 
 # VI stain-specific don'ts (common VI block is shared; extras only when present)
@@ -500,6 +584,19 @@ STAIN_DONTS_VI: dict[str, list[str]] = {
     "S_KIMCHI": [
         "Không dùng kem đánh răng",
         "Không sấy khi còn ớt/mùi",
+    ],
+    "S_INK_PEN": [
+        "Không dùng Javel để tẩy mực → có thể để lại vệt xám",
+        "Không chà ngang — sẽ loang",
+        "Không làm kín phòng với cồn — phải thông gió",
+    ],
+    "S_LIPSTICK": [
+        "Không chà ngang — loang màu",
+        "Không cạo sâu vào sợi",
+    ],
+    "S_MASCARA": [
+        "Không chà ngang",
+        "Không dùng cồn trên lụa khi chưa test góc",
     ],
 }
 

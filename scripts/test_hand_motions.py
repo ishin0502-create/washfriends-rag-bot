@@ -115,6 +115,23 @@ def test_l2_lipstick_no_rub():
     m = build_hand_motions("S_LIPSTICK")
     assert "문지르" in m
     assert "알코올" in m
+    assert "70%" in m or "이소프로필" in m
+    assert "환기" in m
+
+
+def test_phase4_ink_mascara_rich():
+    from owner_hand_motions import build_hand_motions
+
+    ink = build_hand_motions("S_INK_PEN", "ko")
+    assert "70%" in ink or "이소프로필" in ink
+    assert "환기" in ink
+    assert "⑧" in ink or "한 번 헹궈" in ink
+    mas = build_hand_motions("S_MASCARA", "ko")
+    assert "알코올" in mas or "IPA" in mas
+    assert "환기" in mas
+    vi_ink = build_hand_motions("S_INK_PEN", "vi")
+    assert "70%" in vi_ink or "isopropyl" in vi_ink.lower()
+    assert "thông gió" in vi_ink.lower() or "Thông gió" in vi_ink
 
 
 def test_kimchi_specific():
@@ -272,6 +289,7 @@ if __name__ == "__main__":
     test_l2_priority_coverage()
     test_l2_milk_coffee_order()
     test_l2_lipstick_no_rub()
+    test_phase4_ink_mascara_rich()
     test_kimchi_specific()
     test_oil_starch()
     test_inject_drops_toc()

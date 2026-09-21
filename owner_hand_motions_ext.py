@@ -166,18 +166,24 @@ HAND_MOTIONS_KO_L2_REST: dict[str, str] = {
         _START
         + _step(
             1,
-            "블롯만 · 문지름 금지",
-            "흰 천으로 위에서 꾹꾹. 옆으로 문지르면 번집니다.",
+            "먼저 찍어 흡수 · 문지름 금지",
+            "흰 천으로 위에서 꾹꾹. 옆으로 문지르면 번집니다.\n"
+            "※ 실크·울은 매니저 확인 후.",
         )
         + "\n"
         + _step(
             2,
-            "주방세제 → 알코올(테스트)",
-            "주방세제 → 헹굼.\n"
-            "잔색이면 구석 테스트 후 알코올로 꾹꾹. 흰옷만 산소(테스트).",
+            "주방세제 → 알코올(70% IPA)",
+            "주방세제 1~2방울을 흰 천에 묻혀 약하게 찍고 찬물로 헹구세요.\n"
+            "잔색이면:\n"
+            "⚠️ 환기. 이소프로필 알코올 70%(약국).\n"
+            "뒤집기 → 받침 천 → 찍어 빼기(꾹 3초) → 천 교체 5~8번\n"
+            "⑧ 찬물(15~20°C) 한 번 헹굼.\n"
+            "흰옷만 산소(테스트). 유색·실크·울 산소 금지.\n"
+            "🛑 색 빠짐 → 중단.",
         )
         + "\n"
-        + _step(3, "세탁 · 확인", "세탁 후 확인. 검은 잔색 남은 채 말리지 마세요.")
+        + _step(3, "세탁 · 확인", "세탁 후 밝게 확인. 검은 잔색 남은 채 말리지 마세요.")
     ),
     "S_IODINE": (
         _START
@@ -717,19 +723,27 @@ HAND_MOTIONS_VI_EXTRA: dict[str, str] = {
         _START_VI
         + _step_vi(
             1,
-            "Thử góc · lót khăn",
-            "Cồn 70% IPA (nhà thuốc). Thử góc 30 giây.\n"
-            "Lót khăn thấm dưới vết. Lộn trái.",
+            "Gạt nhẹ · thử góc",
+            "Khăn khô lấy mực bề mặt — không chà.\n"
+            "※ Lụa/len/in: hỏi quản lý · ưu tiên chuyên/từ chối.",
         )
         + "\n"
         + _step_vi(
             2,
-            "Chấm thẳng đứng",
-            "Thấm cồn khăn trắng, ấn 3 giây, không chà ngang.\n"
-            "Đổi khăn 5–10 lần.",
+            "Chấm cồn IPA 70%",
+            "⚠️ Thông gió. Cồn isopropyl 70% (cồn sát trùng). Cấm methanol.\n"
+            "① Lộn trái ② Lót khăn ③ Thấm cồn khăn khác ④ Ấn 3 giây thẳng đứng\n"
+            "⑤–⑦ Đổi khăn 5–10 lần ⑧ Xả lạnh 15–20°C một lần.\n"
+            "🛑 Phai màu → dừng.",
         )
         + "\n"
-        + _step_vi(3, "Giặt", "Hết mực trên khăn rồi mới giặt. Còn mực → không sấy.")
+        + _step_vi(
+            3,
+            "Nước rửa chén · giặt",
+            "1–2 giọt nước rửa chén nhẹ, xả lạnh.\n"
+            "Áo trắng còn mực: thử góc rồi oxy (cấm màu/lụa/len).\n"
+            "Không Javel. Giặt; còn mực → không sấy.",
+        )
     ),
     "S_MUD": (
         _START_VI
@@ -1158,9 +1172,21 @@ HAND_MOTIONS_VI_TAIL: dict[str, str] = {
     ),
     "S_MASCARA": (
         _START_VI
-        + _step_vi(1, "Thấm · không chà", "Thấm khăn. Không chà ngang.")
+        + _step_vi(
+            1,
+            "Thấm trước · không chà",
+            "Ấn khăn trắng từ trên. Không chà ngang.\n"
+            "※ Lụa/len: hỏi quản lý.",
+        )
         + "\n"
-        + _step_vi(2, "Nước rửa chén → cồn", "D2 → thử góc rồi cồn. Oxy chỉ trắng.")
+        + _step_vi(
+            2,
+            "Nước rửa chén → cồn IPA 70%",
+            "Chấm 1–2 giọt nước rửa chén, xả lạnh.\n"
+            "Còn màu: ⚠️ thông gió + cồn 70% — lộn trái, ấn 3 giây, đổi khăn 5–8 lần,\n"
+            "⑧ xả lạnh 15–20°C. Oxy chỉ áo trắng.\n"
+            "🛑 Phai màu → dừng.",
+        )
         + "\n"
         + _step_vi(3, "Giặt", "Giặt. Còn đen → không sấy.")
     ),
