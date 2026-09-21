@@ -138,7 +138,7 @@ STAIN_DONTS_KO: dict[str, list[str]] = {
     ],
     "S_LIPSTICK": [
         "옆으로 문지르지 마세요 → 번져요",
-        "겉 왁스를 Cap2로 깊게 긁지 마세요",
+        "겉 왁스를 안쪽으로 깊게 긁지 마세요",
     ],
     "S_MASCARA": [
         "옆으로 문지르지 마세요 → 번져요",
@@ -1251,3 +1251,24 @@ def for_ask_display(text: str) -> str:
     for i, p in enumerate(parts, 1):
         joined.append(f"—— {i}/{len(parts)} ——\n{p}")
     return "\n\n".join(joined)
+
+
+# Phase 6: fill remaining L1/L2 clarity fields (setdefault — never override richer entries)
+try:
+    from owner_clarity_pack_v38 import (
+        EXTRA_SOFT_OUTLOOK,
+        EXTRA_STATUS_KO,
+        EXTRA_STATUS_VI,
+        EXTRA_TOOL_EXTRAS,
+    )
+
+    for _k, _v in EXTRA_STATUS_KO.items():
+        STAIN_STATUS_KO.setdefault(_k, _v)
+    for _k, _v in EXTRA_STATUS_VI.items():
+        STAIN_STATUS_VI.setdefault(_k, _v)
+    for _k, _v in EXTRA_TOOL_EXTRAS.items():
+        STAIN_TOOL_EXTRAS.setdefault(_k, _v)
+    for _k, _v in EXTRA_SOFT_OUTLOOK.items():
+        STAIN_SOFT_OUTLOOK.setdefault(_k, _v)
+except Exception as _e:
+    print(f"[CLARITY] pack_v38 skip: {type(_e).__name__}: {_e}")

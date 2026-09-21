@@ -191,14 +191,17 @@ HAND_MOTIONS_KO_L2_REST: dict[str, str] = {
             1,
             "매니저 확인 · 구석 테스트",
             "요오드(포비돈 등)는 색소가 셉니다. 매니저 확인 후 진행.\n"
-            "알코올 구석 테스트 필수.",
+            "※ 실크·울 → 전문·거절을 먼저 검토하세요.",
         )
         + "\n"
         + _step(
             2,
-            "알코올 찍어 빼기 → (흰옷) 산소",
-            "옷을 뒤집고 흡수지 깔고 알코올로 꾹꾹. 천 교체.\n"
-            "흰옷만 산소(테스트). 실크·울은 약하게·짧게.",
+            "알코올(70% IPA)로 찍어 빼기",
+            "⚠️ 환기. 이소프로필 알코올 70%(약국).\n"
+            "구석 테스트 30초 → OK면 뒤집기·받침 천·꾹 3초·천 교체 5~10번\n"
+            "⑧ 찬물(15~20°C) 헹굼.\n"
+            "흰옷만 산소(테스트). 실크·울은 약하게·짧게 또는 중단.\n"
+            "🛑 색 빠짐 → 즉시 중단.",
         )
         + "\n"
         + _step(3, "세탁 · 확인", "세탁 후 확인. 갈색 남은 채 말리지 마세요.")
@@ -755,9 +758,17 @@ HAND_MOTIONS_VI_EXTRA: dict[str, str] = {
     ),
     "S_GRASS": (
         _START_VI
-        + _step_vi(1, "Phủi · thử góc cồn", "Phủi đất. Thử góc cồn trước.")
+        + _step_vi(
+            1,
+            "Phủi · thử góc IPA 70%",
+            "Phủi đất. Thử góc cồn isopropyl 70% 30 giây. Phai → dừng cồn.",
+        )
         + "\n"
-        + _step_vi(2, "Chấm cồn lấy xanh", "Lộn trái, chấm cồn thẳng đứng, đổi khăn.")
+        + _step_vi(
+            2,
+            "Chấm cồn lấy xanh",
+            "⚠️ Thông gió. Lộn trái, ấn 3 giây, đổi khăn 5–10 lần, ⑧ xả lạnh 15–20°C.",
+        )
         + "\n"
         + _step_vi(3, "Enzyme · giặt", "Enzyme 15–30 phút rồi giặt. Còn xanh → không sấy.")
     ),
@@ -787,11 +798,19 @@ HAND_MOTIONS_VI_EXTRA: dict[str, str] = {
     ),
     "S_FOUNDATION": (
         _START_VI
-        + _step_vi(1, "Thấm nhẹ · silicone trước", "Thấm. Nước rửa chén chờ 1 phút.")
+        + _step_vi(
+            1,
+            "Thấm nhẹ · silicone/dầu trước",
+            "Thấm khăn. 1–2 giọt nước rửa chén, chờ ~1 phút, xả lạnh.",
+        )
         + "\n"
-        + _step_vi(2, "Cồn nếu còn màu", "Thử góc rồi chấm cồn. Lụa/len: nhẹ/ngắn.")
+        + _step_vi(
+            2,
+            "Cồn IPA 70% nếu còn màu",
+            "⚠️ Thông gió. Thử góc → ấn 3 giây, đổi khăn, ⑧ xả lạnh. Lụa/len: nhẹ.",
+        )
         + "\n"
-        + _step_vi(3, "Giặt", "Xả lạnh rồi giặt. Còn → không sấy.")
+        + _step_vi(3, "Giặt", "Giặt. Còn → không sấy.")
     ),
     "S_BBQ_SAUCE": (
         _START_VI
@@ -1192,9 +1211,17 @@ HAND_MOTIONS_VI_TAIL: dict[str, str] = {
     ),
     "S_IODINE": (
         _START_VI
-        + _step_vi(1, "Quản lý · thử góc", "Iodine khó. Hỏi quản lý. Thử góc cồn.")
+        + _step_vi(
+            1,
+            "Quản lý · thử góc",
+            "Iodine mạnh. Hỏi quản lý. Lụa/len: ưu tiên chuyên/từ chối.",
+        )
         + "\n"
-        + _step_vi(2, "Chấm cồn · oxy trắng", "Lộn trái, chấm cồn, đổi khăn. Oxy chỉ trắng.")
+        + _step_vi(
+            2,
+            "Chấm IPA 70%",
+            "⚠️ Thông gió. Thử góc → lộn trái, ấn 3 giây, đổi khăn, ⑧ xả lạnh. Oxy chỉ trắng.",
+        )
         + "\n"
         + _step_vi(3, "Giặt", "Giặt. Còn nâu → không sấy.")
     ),
