@@ -415,6 +415,24 @@ def _split_glossary_and_body(answer: str) -> tuple[str, str]:
     return "", answer
 
 
+def _extract_why_one_liner(body: str) -> str:
+    """Keep a short [왜] tip if present — drop ◆(1)~(6) TOC."""
+    if not body:
+        return ""
+    m = re.search(
+        r"◆\s*\[왜[^\]]*\]\s*\n([\s\S]*?)(?=\n◆\s*\[|\n◆\s*\(|\Z)",
+        body,
+    )
+    if not m:
+        return ""
+    why = m.group(1).strip()
+    if len(why) > 280:
+        why = why[:277] + "…"
+    if not why:
+        return ""
+    return "◆ 【왜 이 순서인가요】 (한 줄)\n" + why
+
+
 def inject_clarity_into_answer(
     answer: str,
     *,
@@ -432,19 +450,12 @@ def inject_clarity_into_answer(
 
     front, body = _split_glossary_and_body(out)
     if not front:
-        # No SOP divider — soften only, keep single message
         foot = (_GRADE_FOOTER.get(lang) or _GRADE_FOOTER["ko"]).get(grade, "")
         if foot and "【다시 한번 고객 고지】" not in out and "【Nhắc khách】" not in out:
             out = out.rstrip() + "\n\n" + foot
         return out
 
-    # Strip previous clarity inserts from body if re-running
-    body = re.sub(
-        r"⚠️ 이 얼룩은[^\n]*\n+",
-        "",
-        body,
-        count=1,
-    )
+    body = re.sub(r"⚠️ 이 얼룩은[^\n]*\n+", "", body, count=1)
     body = re.sub(
         r"◆ 【한 줄 순서】[\s\S]*?(?=\n◆ |\n▼ |\Z)",
         "",
@@ -473,10 +484,28 @@ def inject_clarity_into_answer(
     base, mx = _soak_bounds(g)
     if base is not None and mx is not None and int(mx) >= int(base) + 15:
         detail_bits.append("◆ 【담금 시간】\n" + format_soak_time(int(base), int(mx), lang))
-    # LLM / education body (hand motions live here for now)
-    body_clean = body.strip()
-    if body_clean:
-        detail_bits.append(body_clean)
+
+    sid = _stain_id(g)
+    motions = ""
+    try:
+        from owner_hand_motions import build_hand_motions
+
+        motions = build_hand_motions(sid, lang)
+    except Exception:
+        motions = ""
+
+    if motions:
+        # Hand-motion Steps replace LLM ◆(1)~(6) — no duplicate TOC
+        detail_bits.append(motions)
+        why = _extract_why_one_liner(body)
+        if why:
+            detail_bits.append(why)
+    else:
+        # Fallback: keep body but strip emoji TOC steps to reduce clutter
+        body_clean = _strip_toc_steps(body.strip())
+        if body_clean:
+            detail_bits.append(body_clean)
+
     detail_bits.append(build_donts_block(g, lang))
     detail_bits.append(build_dry_check_block(lang))
     foot = (_GRADE_FOOTER.get(lang) or _GRADE_FOOTER["ko"]).get(grade, "")
@@ -486,6 +515,20 @@ def inject_clarity_into_answer(
     flow = front.rstrip() + "\n\n" + "\n\n".join(flow_bits)
     detail = "\n\n".join(detail_bits)
     return flow + ZALO_MSG_SPLIT + detail
+
+
+def _strip_toc_steps(body: str) -> str:
+    """Remove ◆ (1)~(6) emoji TOC blocks; keep education tails if any."""
+    if not body:
+        return ""
+    # Drop numbered TOC sections like ◆ (1) ... until next ◆ (n) or ◆ [
+    out = re.sub(
+        r"◆\s*\([1-6]\)[^\n]*\n[\s\S]*?(?=\n◆\s*\([1-6]\)|\n◆\s*\[|\Z)",
+        "",
+        body,
+    )
+    out = re.sub(r"\n{3,}", "\n\n", out).strip()
+    return out
 
 
 def split_zalo_messages(text: str, max_len: int = 1900) -> list[str]:
