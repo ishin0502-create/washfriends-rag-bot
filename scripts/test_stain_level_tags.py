@@ -34,13 +34,37 @@ def test_resolve_levels():
         entities={},
         lang="ko",
     )
-    assert ans.startswith("◆ [용어 안내]")
-    assert "L1 초보 단독" in ans
-    assert "L3 전문 의뢰" in ans
-    assert "【접수 고지" in ans
+    assert ans.startswith("┌─ 기본 안내")
+    assert "용어 안내" in ans
+    assert "이번 건 세탁 교육" in ans
     assert "본문입니다." in ans
     # idempotent
     assert prepend_level_to_answer(ans, stain_id="S_ENGINE_OIL", lang="ko") == ans
+
+
+def test_l1_twelve_instructional():
+    from ko_stain_education import KO_STAIN_EDU
+
+    ids = (
+        "S_MILK",
+        "S_SWEAT_FRESH",
+        "S_EGG",
+        "S_TEA",
+        "S_FRUIT_JUICE",
+        "S_SOFT_DRINK",
+        "S_KETCHUP",
+        "S_TOMATO_SAUCE",
+        "S_KIMCHI",
+        "S_CHOCOLATE",
+        "S_GRASS",
+        "S_SOY_SAUCE",
+    )
+    for sid in ids:
+        path = KO_STAIN_EDU[sid]["fresh_path_ko"]
+        assert "【확인】" in path, sid
+        assert "【도구】" in path, sid
+        assert "하세요" in path or "마세요" in path, sid
+        assert "Cap1" not in path and "Cap2" not in path, sid
 
 
 def test_skip_without_stain_id():
@@ -110,6 +134,7 @@ if __name__ == "__main__":
     test_resolve_levels()
     test_skip_without_stain_id()
     test_five_stain_instructional_tone()
+    test_l1_twelve_instructional()
     test_toc_emoji_only_on_headers()
     test_item_wash_toc_emoji()
     print("OK test_stain_level_tags")
