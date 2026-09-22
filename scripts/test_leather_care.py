@@ -61,6 +61,27 @@ def test_leather_mold_has_cream_ppe_no_soak():
     assert "통담금" in path or "식초" in path  # explicit ban
     assert "흔들며 치료" not in path
     assert (out.get("stain_context") or {}).get("contains_protein") is False
+    # P0: fabric mildew bleach steps must not remain on protocol
+    steps = ((out.get("protocol") or {}).get("steps") or [])
+    assert steps == [], steps
+    from owner_answer_clarity import build_one_line_order, inject_clarity_into_answer
+
+    order = build_one_line_order(out, "ko")
+    assert "락스" not in order and "Javel" not in order
+    assert "산소" not in order or "금지" in order
+    body = "▼ 교육\n━━━━━━━━━━━━━━━━━━━━\n◆ 【용어】\n곰팡이\n\n" + (
+        (out.get("stain_context") or {}).get("why_ko") or ""
+    )
+    clarity = inject_clarity_into_answer(
+        body,
+        graph={**out, "_owner_stain_id": "S_MILDEW", "_raw": "가죽옷에 곰팡이"},
+        level="L2",
+        grade=2,
+        lang="ko",
+    )
+    assert "흰 면만 희석 락스" not in clarity
+    assert "Javel" not in clarity
+    assert "가죽" in clarity or "크림" in clarity or "전문" in clarity
 
 
 def test_leather_routine_cream_no_mold_ppe_required():

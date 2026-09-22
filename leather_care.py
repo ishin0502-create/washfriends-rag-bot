@@ -534,6 +534,15 @@ def apply_leather_education(graph: dict, entities: Optional[dict] = None) -> dic
     out["tools"] = _narrate_leather_tools(tools, item_id=item_id, mold=mold)
     out["leather_care"] = True
     out["protocol_mode"] = "item_primary"
+    # Strip fabric stain protocol (e.g. S_MILDEW Javel/oxygen soak) so clarity
+    # one-line order and soak UI cannot recommend textile bleach on leather.
+    out["protocol"] = {
+        "stain_id": stain_id or "",
+        "mode": "item_primary",
+        "steps": [],
+        "why_ko": "",
+        "why_vi": "",
+    }
     try:
         from vi_text_canon import sanitize_education_vi_fields
 

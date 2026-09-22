@@ -1778,6 +1778,140 @@ def _tpl_vn_nuoc_cham() -> Protocol:
     )
 
 
+def _vn43_meta(sid: str) -> dict:
+    from education_vn_specialty_v43 import NEW_VN_STAINS_V43
+
+    return next(x for x in NEW_VN_STAINS_V43 if x["id"] == sid)
+
+
+def _tpl_vn_chain_oil() -> Protocol:
+    m = _vn43_meta("S_VN_CHAIN_OIL")
+    return Protocol(
+        stain_id="S_VN_CHAIN_OIL",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "체인 기름·원단", "Nhận dầu xích", force="Cap1"),
+            Step("dish", "주방세제로 기름 제거", "D2 lấy dầu", chem="D2", force="Cap2", minutes_lo=15, minutes_hi=20, spray=True),
+            Step("vinegar", "철분 잔색: 식초·레몬 15분", "Giấm/chanh 15'", chem="A3", minutes_lo=10, minutes_hi=20, spray=True),
+            Step("oxygen", "흰옷만 산소계 30분", "Oxy trắng 30'", chem="B1", when="white_only", soak=True, minutes_lo=20, minutes_hi=40),
+            Step("wash", "세탁(면·폴리)", "Giặt", force="Cap2"),
+            Step("light", "미끄럼·잔색 확인", "Kiểm nhờn/vết", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_vn_exhaust_soot() -> Protocol:
+    m = _vn43_meta("S_VN_EXHAUST_SOOT")
+    return Protocol(
+        stain_id="S_VN_EXHAUST_SOOT",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "매연·원단", "Nhận bồ hóng", force="Cap1"),
+            Step("dry", "마른 솔·테이프로 털기", "Phủi khô", force="Cap1", tool_ids=["T_BRUSH_SOFT", "T_CLOTH"]),
+            Step("dish", "주방세제 10분", "D2 10'", chem="D2", force="Cap2", minutes_lo=8, minutes_hi=15),
+            Step("oxygen", "흰옷만 산소계", "Oxy trắng", chem="B1", when="white_only", soak=True, minutes_lo=15, minutes_hi=30),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+        ],
+    )
+
+
+def _tpl_vn_brake_fluid() -> Protocol:
+    m = _vn43_meta("S_VN_BRAKE_FLUID")
+    return Protocol(
+        stain_id="S_VN_BRAKE_FLUID",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "브레이크액·원단", "Nhận dầu thắng", force="Cap1"),
+            Step("rinse", "즉시 찬물 헹굼(수용성)", "Xả lạnh ngay", force="Cap1"),
+            Step("wash", "중성세제 세탁", "Giặt trung tính", chem="S1", force="Cap2"),
+            Step("oxygen", "흰옷만 잔색 산소", "Oxy trắng", chem="B1", when="white_only", optional=True, minutes_lo=10, minutes_hi=20),
+            Step("light", "색빠짐·잔색 확인", "Kiểm phai/vết", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_vn_gasoline() -> Protocol:
+    m = _vn43_meta("S_VN_GASOLINE")
+    return Protocol(
+        stain_id="S_VN_GASOLINE",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "휘발유·실외·화기 금지", "Xăng — ngoài trời, cấm lửa", force="Cap1"),
+            Step("dry", "15–30분 자연 휘발", "Bay hơi 15–30'", minutes_lo=15, minutes_hi=30, force="Cap1"),
+            Step("dish", "주방세제 세탁", "D2 giặt", chem="D2", force="Cap2"),
+            Step("vinegar", "잔취: 식초 1:4 20분", "Giấm 1:4 20'", chem="A3", minutes_lo=15, minutes_hi=25, soak=True),
+            Step("light", "통풍 자연 건조만(건조기 금지)", "Chỉ phơi gió — CẤM sấy", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_vn_rubber_mark() -> Protocol:
+    m = _vn43_meta("S_VN_RUBBER_MARK")
+    return Protocol(
+        stain_id="S_VN_RUBBER_MARK",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "고무 자국·원단", "Nhận vết cao su", force="Cap1"),
+            Step("alcohol", "알코올 70% 찍어 녹이기", "Chấm cồn 70%", chem="A1", force="Cap1", tool_ids=["T_CLOTH"]),
+            Step("dish", "주방세제 10분", "D2 10'", chem="D2", force="Cap2", minutes_lo=8, minutes_hi=15),
+            Step("wash", "세탁", "Giặt", force="Cap2"),
+        ],
+    )
+
+
+def _tpl_vn_sweat_sunscreen() -> Protocol:
+    m = _vn43_meta("S_VN_SWEAT_SUNSCREEN")
+    return Protocol(
+        stain_id="S_VN_SWEAT_SUNSCREEN",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "땀+선크림 황변·원단", "Nhận mồ hôi+kem", force="Cap1"),
+            Step("dish", "주방세제(선크림 오일)", "D2 lấy dầu kem", chem="D2", force="Cap2", minutes_lo=10, minutes_hi=20, spray=True),
+            Step("enzyme", "효소계 세제(땀 단백질)", "E1", chem="E1", minutes_lo=20, minutes_hi=40, soak=True),
+            Step("oxygen", "흰옷만 산소계 1시간", "Oxy trắng 1h", chem="B1", when="white_only", soak=True, minutes_lo=45, minutes_hi=90),
+            Step("wash", "세탁+직사광선", "Giặt + nắng", force="Cap2"),
+        ],
+    )
+
+
+def _tpl_vn_acid_rain() -> Protocol:
+    m = _vn43_meta("S_VN_ACID_RAIN")
+    return Protocol(
+        stain_id="S_VN_ACID_RAIN",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "빗물 자국·원단", "Nhận vết mưa", force="Cap1"),
+            Step("rinse", "찬물 헹굼", "Xả lạnh", force="Cap1"),
+            Step("wash", "중성세제 세탁", "Giặt trung tính", chem="S1", force="Cap2"),
+            Step("oxygen", "흰옷만 노란 잔색 산소", "Oxy nếu vàng", chem="B1", when="white_only", optional=True, minutes_lo=10, minutes_hi=20),
+            Step("light", "잔색 확인", "Kiểm vết", force="Cap1"),
+        ],
+    )
+
+
+def _tpl_vn_cement() -> Protocol:
+    m = _vn43_meta("S_VN_CEMENT")
+    return Protocol(
+        stain_id="S_VN_CEMENT",
+        why_ko=m["why_ko"],
+        why_vi=m["why_vi"],
+        steps=[
+            Step("id", "시멘트·장갑", "Nhận xi măng + găng", force="Cap1", tool_ids=["T_GLOVE_NITRILE"]),
+            Step("scrape", "마른 뒤 긁기·솔(물 먼저 금지)", "Cạo khi khô", force="Cap2", tool_ids=["T_BRUSH_SOFT"]),
+            Step("vinegar", "식초 1:3 30분 중화", "Giấm 1:3 30'", chem="A3", minutes_lo=20, minutes_hi=40, soak=True),
+            Step("dish", "주방세제 세탁", "D2 giặt", chem="D2", force="Cap2"),
+            Step("light", "잔여 확인", "Kiểm còn", force="Cap1"),
+        ],
+    )
+
+
 PROTOCOL_BUILDERS = {
     "S_RED_WINE": _tpl_red_wine,
     "S_BLACK_COFFEE": lambda: _tpl_tannin_simple("S_BLACK_COFFEE", "커피(블랙)", "cà phê đen"),
@@ -1864,6 +1998,15 @@ PROTOCOL_BUILDERS = {
     "S_VN_INCENSE_ASH": _tpl_vn_incense,
     "S_VN_SA_TE": _tpl_vn_sa_te,
     "S_VN_NUOC_CHAM": _tpl_vn_nuoc_cham,
+    # VN specialty v43 — motorbike / climate
+    "S_VN_CHAIN_OIL": _tpl_vn_chain_oil,
+    "S_VN_EXHAUST_SOOT": _tpl_vn_exhaust_soot,
+    "S_VN_BRAKE_FLUID": _tpl_vn_brake_fluid,
+    "S_VN_GASOLINE": _tpl_vn_gasoline,
+    "S_VN_RUBBER_MARK": _tpl_vn_rubber_mark,
+    "S_VN_SWEAT_SUNSCREEN": _tpl_vn_sweat_sunscreen,
+    "S_VN_ACID_RAIN": _tpl_vn_acid_rain,
+    "S_VN_CEMENT": _tpl_vn_cement,
 }
 
 
@@ -3046,6 +3189,16 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
             out = apply_specialty_item_education(out, entities)
         except Exception:
             pass
+        # P0: leather/suede education wins — never leave fabric bleach/soak
+        # steps in graph.protocol (clarity one-line order used to show Javel).
+        if out.get("leather_care") or out.get("specialty_item_care"):
+            out["protocol"] = {
+                "stain_id": real_stain_id or proto.stain_id,
+                "mode": "item_primary",
+                "steps": [],
+                "why_ko": "",
+                "why_vi": "",
+            }
         return out
 
     sc = dict(out.get("stain_context") or {})

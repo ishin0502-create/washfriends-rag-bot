@@ -42,6 +42,9 @@ COMPOUND_STAINS = frozenset({
     "S_VN_DURIAN",
     "S_VN_JACKFRUIT",
     "S_SHRIMP_PASTE",
+    # VN specialty v43
+    "S_VN_CHAIN_OIL",
+    "S_VN_SWEAT_SUNSCREEN",
 })
 
 try:
@@ -50,6 +53,20 @@ except Exception:
     ODOR_HEAVY = frozenset({"S_FISH_SAUCE", "S_SHRIMP_PASTE", "S_MILDEW"})
     PIGMENT_HARD = frozenset({"S_BETEL", "S_CURRY", "S_CHILI"})
     OIL_FIRST = frozenset({"S_MOTORBIKE_OIL", "S_SUNSCREEN"})
+
+try:
+    from education_vn_specialty_v43 import OIL_FIRST_V43, FIRE_HAZARD_V43
+
+    OIL_FIRST = frozenset(OIL_FIRST) | OIL_FIRST_V43
+except Exception:
+    FIRE_HAZARD_V43 = frozenset({"S_VN_GASOLINE"})
+    OIL_FIRST = frozenset(OIL_FIRST) | frozenset({
+        "S_VN_CHAIN_OIL",
+        "S_VN_EXHAUST_SOOT",
+        "S_VN_GASOLINE",
+        "S_VN_RUBBER_MARK",
+        "S_VN_SWEAT_SUNSCREEN",
+    })
 
 PROTEIN_NO_HEAT_UP = frozenset({
     "S_BLOOD_FRESH",
@@ -556,8 +573,143 @@ def block_softener_warn(sid: str, lang: str) -> str:
 def block_vn_tips(sid: str, lang: str) -> list[str]:
     """Ordered short tips; empty list when not applicable."""
     out: list[str] = []
-    for fn in (block_oil_tip, block_pigment_tip, block_odor_tip, block_softener_warn):
+    for fn in (block_oil_tip, block_pigment_tip, block_odor_tip, block_softener_warn, block_fire_hazard):
         t = fn(sid, lang)
         if t:
             out.append(t)
     return out
+
+
+FIRE_TIP = {
+    "ko": (
+        "◆ 【화재·안전】 휘발유\n"
+        "· 실외·환기 · 화기·히터 근처 금지\n"
+        "· 건조기·다림질 절대 금지 — 자연 통풍 건조만"
+    ),
+    "vi": (
+        "◆ 【Cháy·an toàn】 Xăng\n"
+        "· Ngoài trời · tránh lửa/máy sưởi\n"
+        "· CẤM máy sấy / ủi — chỉ phơi gió"
+    ),
+    "en": (
+        "◆ 【Fire safety】 Gasoline\n"
+        "· Outdoors · keep away from flame/heaters\n"
+        "· NEVER tumble-dry or iron — air dry only"
+    ),
+}
+
+
+def block_fire_hazard(sid: str, lang: str) -> str:
+    try:
+        from education_vn_specialty_v43 import FIRE_HAZARD_V43 as _fh
+    except Exception:
+        _fh = frozenset({"S_VN_GASOLINE"})
+    if sid not in _fh:
+        return ""
+    return FIRE_TIP.get(lang) or FIRE_TIP["ko"]
+
+
+MOLD_RECURRENCE = {
+    "ko": (
+        "◆ 【곰팡이 재발 방지 — 고객 안내】\n"
+        "· 완전 건조 후 옷장에 넣기 · 제습제(실리카겔)\n"
+        "· 옷장 가끔 환기 · 우기(5–11월) 제습기\n"
+        "· 세탁기 안에 오래 두지 말고 바로 꺼내 말리기"
+    ),
+    "vi": (
+        "◆ 【Phòng mốc tái phát — hướng dẫn khách】\n"
+        "· Phơi khô hẳn rồi cất · túi hút ẩm (silica)\n"
+        "· Thỉnh thoảng mở tủ · mùa mưa (5–11) máy hút ẩm\n"
+        "· Không để đồ trong máy giặt lâu — lấy ra phơi ngay"
+    ),
+    "en": (
+        "◆ 【Prevent mold return — tell the guest】\n"
+        "· Fully dry before storing · silica gel in closet\n"
+        "· Air the closet · dehumidifier in rainy season\n"
+        "· Do not leave wet laundry in the washer"
+    ),
+}
+
+
+def block_mold_recurrence(sid: str, lang: str) -> str:
+    if sid != "S_MILDEW":
+        return ""
+    return MOLD_RECURRENCE.get(lang) or MOLD_RECURRENCE["ko"]
+
+
+def block_mold_fabric_gate(graph: Optional[dict], lang: str) -> str:
+    """Silk/wool/leather + mildew — escalate; never imply cotton bleach path."""
+    g = graph if isinstance(graph, dict) else {}
+    sc = g.get("stain_context") if isinstance(g.get("stain_context"), dict) else {}
+    sid = str(sc.get("id") or g.get("_owner_stain_id") or "")
+    if sid != "S_MILDEW" and not g.get("leather_care"):
+        # still allow when leather_care with mildew raw
+        ents = g.get("entities") if isinstance(g.get("entities"), dict) else {}
+        raw = str(g.get("_raw") or ents.get("_raw") or "")
+        if "곰팡" not in raw and "mốc" not in raw.lower() and "mold" not in raw.lower() and "mildew" not in raw.lower():
+            if sid != "S_MILDEW":
+                return ""
+    if sid != "S_MILDEW" and not g.get("leather_care"):
+        return ""
+
+    ic = g.get("item_context") if isinstance(g.get("item_context"), dict) else {}
+    iid = str(ic.get("id") or "")
+    fabric = g.get("fabric_context") if isinstance(g.get("fabric_context"), dict) else {}
+    fname = f"{fabric.get('name') or ''} {fabric.get('name_vi') or ''}".lower()
+    ents = g.get("entities") if isinstance(g.get("entities"), dict) else {}
+    ft = str(ents.get("fabric_type") or "").lower()
+
+    is_leather = g.get("leather_care") or iid.startswith(("I_LEATHER", "I_SUEDE")) or "leather" in fname or ft == "leather"
+    is_silk = "silk" in fname or "lụa" in fname or "lua" in fname or ft == "silk" or "실크" in str(ents.get("_raw") or "")
+    is_wool = "wool" in fname or ft == "wool" or "울" in str(ents.get("_raw") or g.get("_raw") or "")
+
+    if is_leather:
+        if lang == "vi":
+            return (
+                "◆ 【Da + mốc】\n"
+                "· CẤM ngâm / tẩy oxy / Javel / máy giặt\n"
+                "· Chỉ sơ cứu khô + cồn nhẹ (da bóng) hoặc chuyển chuyên\n"
+                "· Suede: chỉ chải khô — ưu tiên chuyên"
+            )
+        if lang == "en":
+            return (
+                "◆ 【Leather + mold】\n"
+                "· No soak / oxygen / chlorine / washer\n"
+                "· Dry wipe + light alcohol (smooth) or refer pro\n"
+                "· Suede: dry brush only — prefer pro"
+            )
+        return (
+            "◆ 【가죽 + 곰팡이】\n"
+            "· 식초 통담금·산소·락스·세탁기 금지\n"
+            "· 응급: 마른 털기 + (평활)알코올 약하게 — 또는 전문\n"
+            "· 스웨이드: 마른 솔만 · 전문 우선"
+        )
+    if is_silk:
+        if lang == "vi":
+            return (
+                "◆ 【Lụa + mốc】\n"
+                "· CẤM tẩy oxy / Javel / cồn mạnh\n"
+                "· Mốc đen + lụa → ưu tiên L3 chuyên (giặt khô lụa)\n"
+                "· Tại quán: chỉ xà phòng trung tính + giấm 1:4 rất nhẹ (≤15 phút)"
+            )
+        return (
+            "◆ 【실크 + 곰팡이】\n"
+            "· 산소·락스·강한 알코올 금지\n"
+            "· 검은 곰팡이+실크 → L3 전문(실크 드라이) 우선\n"
+            "· 매장: 중성세제·찬물 + 식초 1:4 약하게(≤15분)만"
+        )
+    if is_wool:
+        if lang == "vi":
+            return (
+                "◆ 【Len + mốc】\n"
+                "· CẤM tẩy oxy (co rút) / Javel\n"
+                "· Xà phòng trung tính + giấm 1:4 · trải phẳng phơi bóng râm\n"
+                "· Áo khoác len nặng → chuyên"
+            )
+        return (
+            "◆ 【울 + 곰팡이】\n"
+            "· 산소표백(축소)·락스 금지\n"
+            "· 중성세제·찬물 + 식초 1:4 · 평평하게 그늘 건조\n"
+            "· 울 코트 심함 → 전문"
+        )
+    return ""

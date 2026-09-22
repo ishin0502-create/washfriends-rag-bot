@@ -702,10 +702,28 @@ def format_soak_time(base: int, maximum: int, lang: str = "ko") -> str:
     )
 
 
+def _use_fresh_path_for_order(graph: dict) -> bool:
+    """Item-primary leather/suede (and specialty care) must not use fabric protocol steps."""
+    if not isinstance(graph, dict):
+        return False
+    if graph.get("leather_care") or graph.get("specialty_item_care"):
+        return True
+    if str(graph.get("protocol_mode") or "") != "item_primary":
+        return False
+    ic = graph.get("item_context") if isinstance(graph.get("item_context"), dict) else {}
+    iid = str(ic.get("id") or "")
+    return iid.startswith(("I_LEATHER", "I_SUEDE")) or iid in {
+        "I_GLOVE_LEATHER",
+        "I_GOLF_GLOVE_LEATHER",
+        "I_FAUX_LEATHER",
+    }
+
+
 def build_one_line_order(graph: dict, lang: str = "ko") -> str:
     """Numbered do-this-next list from Protocol steps."""
     proto = _proto_dict(graph)
-    steps = proto.get("steps") or []
+    # P0 defense: leather mold etc. — prefer stain_context fresh_path, not fabric bleach SOP
+    steps = [] if _use_fresh_path_for_order(graph) else (proto.get("steps") or [])
     # EN fallback when action_en empty — never use VI/KO labels (language purity)
     _en_by_id = {
         "id": "Identify stain · fabric",
@@ -1342,6 +1360,15 @@ def inject_clarity_into_answer(
 
     detail_bits.append(build_donts_block(g, lang))
     if _mid is not None:
+        try:
+            mold_gate = _mid.block_mold_fabric_gate(g, lang)
+            if mold_gate:
+                detail_bits.append(mold_gate)
+            mold_rec = _mid.block_mold_recurrence(sid, lang)
+            if mold_rec:
+                detail_bits.append(mold_rec)
+        except Exception:
+            pass
         for tip in _mid.block_vn_tips(sid, lang):
             try:
                 from owner_plain_lang import expand_owner_jargon

@@ -84,6 +84,55 @@ def bind_vn_specialty_stain(user_message: str, raw_n: Optional[str] = None) -> O
     ) or "nước chấm" in low:
         return "S_VN_NUOC_CHAM"
 
+    # --- v43 motorbike / climate (specific before generic oil) ---
+    if any(k in msg for k in ("체인 기름", "체인유", "체인 오일", "오토바이 체인")) or any(
+        k in raw_n for k in ("chain oil", "chain grease", "dau xich", "dầu xích")
+    ) or "dầu xích" in low:
+        return "S_VN_CHAIN_OIL"
+
+    if any(k in msg for k in ("매연", "그을음", "배기가스", "검댕")) or any(
+        k in raw_n for k in ("bo hong", "bồ hóng", "exhaust soot", "khoi xe", "khói xe")
+    ) or "bồ hóng" in low:
+        return "S_VN_EXHAUST_SOOT"
+
+    if any(k in msg for k in ("브레이크액", "브레이크 오일", "브레이크 기름", "유압유")) or any(
+        k in raw_n for k in ("brake fluid", "dau thang", "dầu thắng", "dau phanh", "dầu phanh")
+    ):
+        return "S_VN_BRAKE_FLUID"
+
+    if any(k in msg for k in ("휘발유", "가솔린", "주유소")) or any(
+        k in raw_n for k in ("gasoline", "petrol", "xang ", " xang")
+    ) or ("xăng" in low and any(k in low for k in ("vết", "mùi", "đổ", "dính", "stain", "묻", "얼룩", "냄새"))):
+        return "S_VN_GASOLINE"
+    if "xăng" in low and any(k in msg for k in ("묻", "얼룩", "냄새", "옷")):
+        return "S_VN_GASOLINE"
+
+    if any(k in msg for k in ("고무 자국", "타이어 자국", "고무줄 자국")) or any(
+        k in raw_n for k in ("rubber mark", "tire mark", "vet cao su", "vết cao su")
+    ):
+        return "S_VN_RUBBER_MARK"
+
+    if (
+        any(k in msg for k in ("선크림", "썬크림", "자외선차단"))
+        or "kem chong nang" in raw_n
+        or "kem chống nắng" in low
+        or "sunscreen" in raw_n
+    ) and (
+        any(k in msg for k in ("땀", "목둘레", "겨드랑", "노랗", "황변", "누렇"))
+        or any(k in raw_n for k in ("mo hoi", "mồ hôi", "co ao", "cổ áo", "vang", "yellow"))
+    ):
+        return "S_VN_SWEAT_SUNSCREEN"
+
+    if any(k in msg for k in ("빗물 자국", "빗물 때", "산성비", "비 얼룩")) or any(
+        k in raw_n for k in ("vet mua", "vết mưa", "acid rain", "dirty rain", "mua ban")
+    ):
+        return "S_VN_ACID_RAIN"
+
+    if any(k in msg for k in ("시멘트", "석회", "콘크리트 가루")) or any(
+        k in raw_n for k in ("xi mang", "xi măng", "cement", "vôi", "voi ")
+    ):
+        return "S_VN_CEMENT"
+
     return None
 
 
@@ -91,6 +140,15 @@ def bind_sweat_or_yellow_stain(user_message: str, raw_n: Optional[str] = None) -
     """Return S_SWEAT_YELLOW / S_SHIRT_YELLOW / S_SWEAT_FRESH or None."""
     msg = user_message or ""
     raw_n = raw_n if raw_n is not None else _norm_ascii(msg)
+
+    # Prefer compound sweat+sunscreen when both cues present
+    if (
+        any(k in msg for k in ("선크림", "썬크림", "자외선차단"))
+        or "sunscreen" in raw_n
+        or "kem chong nang" in raw_n
+        or "kem chống nắng" in (msg or "").lower()
+    ) and any(k in msg for k in ("땀", "목둘레", "겨드랑", "노랗", "황변", "누렇")):
+        return "S_VN_SWEAT_SUNSCREEN"
 
     if any(k in msg for k in ("겨드랑이", "암내", "누런 겨드랑이")) or "ve o nach" in raw_n or "armpit" in raw_n:
         return "S_SWEAT_YELLOW"
