@@ -121,15 +121,18 @@ HAND_MOTIONS_KO: dict[str, str] = {
         _START
         + _step(
             1,
-            "옷을 뒤집고 찬물로 흡수해 주세요",
-            "옷을 뒤집어 주세요.\n"
-            "찬물로 안쪽에서 흡수하세요. 옆으로 문지르지 마세요.\n"
-            "💡 우유 탄 차면 단백질이 있으니 효소를 먼저 쓰는 편이 좋아요.",
+            "종류 확인 · 찬물로 흡수해 주세요",
+            "【확인】홍/녹/우롱(순차)인가요, 우유·라떼 탄 차인가요?\n"
+            "· 우유·라떼 탄 차 → 밀크커피처럼 단백질 먼저: 효소(또는 중성) 담금 → 그다음 식초.\n"
+            "  식초를 효소보다 먼저 쓰지 마세요.\n"
+            "· 순차(우유 없음) → 아래 Step 2(식초)로.\n"
+            "옷을 뒤집어 찬물로 안쪽에서 흡수하세요. 옆으로 문지르지 마세요.",
         )
         + "\n"
         + _step(
             2,
-            "식초 1:4를 뿌려 주세요",
+            "식초 1:4를 뿌려 주세요 (순차만)",
+            "※ 우유 탄 차면: 효소 담금·헹굼 후에만 이 Step.\n"
             "식초 1 : 물 4로 만들어 분무하세요. 5~15분 두세요.\n"
             "찬물로 헹궈 주세요.",
         )
@@ -1287,6 +1290,9 @@ _DELICATE_REFUSE_STAINS = frozenset({
     "S_INK_PEN",
     "S_INK_PERMANENT",
     "S_MILDEW",
+    "S_LIPSTICK",
+    "S_FOUNDATION",
+    "S_MASCARA",
 })
 
 _DELICATE_REFUSE_KO: dict[str, str] = {
@@ -1372,6 +1378,53 @@ _DELICATE_REFUSE_KO: dict[str, str] = {
         + "\n"
         + _step(3, "통풍만", "잔여·냄새 있으면 통풍 건조만. 건조기·열 금지.")
     ),
+    "S_LIPSTICK": (
+        _START
+        + _step(
+            1,
+            "실크·울·립스틱 — 거절·전문 우선",
+            "알코올이 실크·울·프린트를 상하게 할 수 있어요.\n"
+            "전문 의뢰 또는 접수 반려를 먼저 검토하세요.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "(승인 시에만) 흡수·중성만",
+            "매니저 승인 후에만: 겉 왁스만 살살 → 찬물·중성세제 국소.\n"
+            "알코올·산소·문지름 금지. 이상하면 즉시 중단.",
+        )
+    ),
+    "S_FOUNDATION": (
+        _START
+        + _step(
+            1,
+            "실크·울·파운데이션 — 거절·전문 우선",
+            "실리콘·오일+용제 경로가 단백질 원단에 위험합니다.\n"
+            "전문 의뢰 또는 반려를 먼저 안내하세요.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "(승인 시에만) 중성·찬물만",
+            "승인 후: 겉만 흡수 → 중성세제 국소·찬물. 알코올·산소 금지.",
+        )
+    ),
+    "S_MASCARA": (
+        _START
+        + _step(
+            1,
+            "실크·울·마스카라 — 거절·전문 우선",
+            "알코올·용제가 실크·울을 상하게 할 수 있어요.\n"
+            "전문 의뢰 또는 반려를 먼저 검토하세요.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "(승인 시에만) 찍어 흡수만",
+            "승인 후: 흰 천으로만 찍기. 알코올은 구석 테스트+즉시 중단 기준.\n"
+            "문지름·산소 금지.",
+        )
+    ),
 }
 
 _DELICATE_REFUSE_VI: dict[str, str] = {
@@ -1448,6 +1501,48 @@ _DELICATE_REFUSE_VI: dict[str, str] = {
         )
         + "\n"
         + _step_vi(3, "Chỉ thoáng", "Còn mốc/mùi → phơi thoáng. CẤM sấy/nhiệt.")
+    ),
+    "S_LIPSTICK": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Lụa/len + son — từ chối / chuyên trước",
+            "Cồn có thể hỏng lụa/len/in. Ưu tiên chuyên hoặc từ chối.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "(Khi duyệt) Chỉ thấm + trung tính",
+            "Sau duyệt: gạt sáp bề mặt → lạnh + S1 cục bộ. Cấm cồn/oxy/chà.",
+        )
+    ),
+    "S_FOUNDATION": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Lụa/len + kem nền — từ chối / chuyên",
+            "Silicon/dầu + dung môi rủi ro trên protein. Ưu tiên chuyên/từ chối.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "(Khi duyệt) S1 + lạnh",
+            "Sau duyệt: thấm nhẹ → S1 cục bộ nước lạnh. Cấm cồn/oxy.",
+        )
+    ),
+    "S_MASCARA": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Lụa/len + mascara — từ chối / chuyên",
+            "Cồn/dung môi dễ hỏng lụa/len. Ưu tiên chuyên hoặc từ chối.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "(Khi duyệt) Chỉ chấm khăn",
+            "Sau duyệt: chấm khăn trắng. Cồn chỉ sau test góc + dừng ngay nếu lạ.",
+        )
     ),
 }
 

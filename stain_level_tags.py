@@ -24,9 +24,8 @@ L1: set[str] = {
     "S_KIMCHI",  # white only; colored → L2
     "S_CHOCOLATE",
     "S_MUD",
-    "S_GRASS",
-    "S_INK_PEN",
     "S_SOY_SAUCE",
+    # S_INK_PEN / S_GRASS: IPA solvent → L2 (supervisor), not unsupervised L1
 }
 
 try:

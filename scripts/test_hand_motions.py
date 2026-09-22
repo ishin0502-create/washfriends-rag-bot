@@ -35,8 +35,10 @@ def test_hair_dye_clarity_p0():
     """P0: soak inside Step3 only, IPA tools, state outlook, no %."""
     proto = PROTOCOL_BUILDERS["S_HAIR_DYE"]()
     g = {
-        "protocol": proto.to_dict(),
+        "protocol": {**proto.to_dict(), "garment_color": "white"},
         "stain_context": {"id": "S_HAIR_DYE"},
+        "fabric_context": {"id": "F1", "name": "cotton"},
+        "garment_color": "white",
         "chemicals": [{"code": "A1"}, {"code": "B1"}],
         "tools": [{"id": "T_CLOTH", "name_ko": "흰 면 천"}],
     }
@@ -158,8 +160,10 @@ def test_oil_starch():
 def test_inject_drops_toc():
     proto = PROTOCOL_BUILDERS["S_HAIR_DYE"]()
     g = {
-        "protocol": proto.to_dict(),
+        "protocol": {**proto.to_dict(), "garment_color": "white"},
         "stain_context": {"id": "S_HAIR_DYE"},
+        "fabric_context": {"id": "F1", "name": "cotton"},
+        "garment_color": "white",
         "chemicals": [{"code": "A1"}, {"code": "B1"}],
         "tools": [{"id": "T_CLOTH", "name_ko": "흰 면 천"}],
     }

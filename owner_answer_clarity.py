@@ -233,10 +233,48 @@ STAIN_STATUS_KO: dict[str, str] = {
         "· 락스는 흰 100% 면·폴리만, 매니저 확인 후"
     ),
     "S_BLACK_COFFEE": (
-        "◆ 【먼저 확인】 블랙커피\n"
-        "· 아직 젖어 있다 → 한 줄 순서 1번(흡수·찬물)부터\n"
+        "◆ 【먼저 확인】 커피 종류·상태\n"
+        "· 우유·라떼·크림 탄 커피인가요? → 밀크커피 SOP(효소·세제 먼저 → 식초 나중)\n"
+        "· 블랙(우유 없음)·젖어 있다 → 한 줄 순서 1번(흡수·찬물)부터\n"
         "· 이미 말랐다 → 잔색 가능 — 고객 동의 후 식초 중심으로\n"
         "· 건조기·다리미 지남 → 열고착. 부분 제거만 기대·사전 고지"
+    ),
+    "S_TEA": (
+        "◆ 【먼저 확인】 차 종류·상태\n"
+        "· 우유·라떼 탄 차인가요? → 밀크커피처럼 효소(또는 중성) 먼저 → 식초는 나중\n"
+        "· 순차(홍/녹/우롱, 우유 없음) → 찬물 흡수 후 식초 1:4\n"
+        "· 이미 말랐다 → 잔색·황변 가능 — 사전 고지\n"
+        "· 당분 남은 채 말리지 마세요"
+    ),
+    "S_MILK": (
+        "◆ 【먼저 확인】 우유·유제품\n"
+        "· 아직 젖어 있다 → 찬물·효소(단백질) 먼저. 온수 금지\n"
+        "· 이미 말랐다 → 효소 장침지 · 잔색 고지\n"
+        "· 실크·울 → 효소 금지 · 중성세제·찬물만"
+    ),
+    "S_EGG": (
+        "◆ 【먼저 확인】 계란\n"
+        "· 노른자(지방) vs 흰자(단백질) — 온수부터 금지(익힘 고착)\n"
+        "· 긁기 → 찬물 → 효소 → (노른자면) 주방세제\n"
+        "· 실크·울 → 중성 위주"
+    ),
+    "S_CHOCOLATE": (
+        "◆ 【먼저 확인】 초코\n"
+        "· 지방+당+색소 — 고형 제거 후 주방세제(지방) → 효소\n"
+        "· 이미 말랐거나 열 지남 → 잔색 가능 고지\n"
+        "· 문지르면 번짐 — 찍어 흡수"
+    ),
+    "S_FRUIT_JUICE": (
+        "◆ 【먼저 확인】 과일주스\n"
+        "· 아직 젖어 있다 → 찬물 흡수·식초 1:4\n"
+        "· 이미 말랐다 → 잔색 가능 — 동의 후\n"
+        "· 흰/유색·실크 확인 전 산소 꺼내지 마세요"
+    ),
+    "S_KETCHUP": (
+        "◆ 【먼저 확인】 케첩·토마토\n"
+        "· 고형·당분 먼저 제거 · 찬물\n"
+        "· 이미 말랐다 → 잔색·황변 고지\n"
+        "· 당분 남은 채 말리지 마세요"
     ),
     "S_COOKING_OIL": (
         "◆ 【먼저 확인】 어떤 기름인가요?\n"
@@ -302,10 +340,48 @@ STAIN_STATUS_VI: dict[str, str] = {
         "Chúng tôi sẽ cố gắng nhưng có thể còn vết. Anh/Chị muốn tiếp tục chứ ạ?"
     ),
     "S_BLACK_COFFEE": (
-        "◆ 【Kiểm tra trước】 Cà phê đen\n"
-        "· Còn ướt → thấm + xả lạnh trước\n"
+        "◆ 【Kiểm tra trước】 Loại cà phê · trạng thái\n"
+        "· Có sữa/latte/kem? → SOP sữa (enzyme/xà phòng trước → giấm sau)\n"
+        "· Đen (không sữa) còn ướt → thấm + xả lạnh trước\n"
         "· Đã khô → có thể còn vết — cần đồng ý\n"
         "· Đã sấy/ủi → cố định nhiệt, chỉ kỳ vọng một phần"
+    ),
+    "S_TEA": (
+        "◆ 【Kiểm tra trước】 Loại trà\n"
+        "· Trà sữa/latte? → enzyme (hoặc trung tính) trước → giấm sau\n"
+        "· Trà thuần (hồng/xanh/oolong) → thấm lạnh rồi giấm 1:4\n"
+        "· Đã khô → báo còn vết/ố\n"
+        "· Còn đường → không sấy"
+    ),
+    "S_MILK": (
+        "◆ 【Kiểm tra trước】 Sữa\n"
+        "· Còn ướt → lạnh + enzyme trước. Cấm nước nóng\n"
+        "· Đã khô → ngâm enzyme dài · báo còn vết\n"
+        "· Lụa/len → cấm enzyme · chỉ trung tính + lạnh"
+    ),
+    "S_EGG": (
+        "◆ 【Kiểm tra trước】 Trứng\n"
+        "· Lòng đỏ (mỡ) vs lòng trắng (protein) — cấm nước nóng trước\n"
+        "· Cạo → lạnh → enzyme → (lòng đỏ) nước rửa chén\n"
+        "· Lụa/len → ưu tiên trung tính"
+    ),
+    "S_CHOCOLATE": (
+        "◆ 【Kiểm tra trước】 Socola\n"
+        "· Mỡ + đường + màu — cạo → nước rửa chén → enzyme\n"
+        "· Đã khô/nhiệt → báo còn vết\n"
+        "· Không chà ngang"
+    ),
+    "S_FRUIT_JUICE": (
+        "◆ 【Kiểm tra trước】 Nước trái cây\n"
+        "· Còn ướt → thấm lạnh + giấm 1:4\n"
+        "· Đã khô → cần đồng ý\n"
+        "· Chưa rõ vải/màu → chưa lấy bột oxy"
+    ),
+    "S_KETCHUP": (
+        "◆ 【Kiểm tra trước】 Tương cà\n"
+        "· Cạo đặc/đường trước · lạnh\n"
+        "· Đã khô → báo còn vết/ố\n"
+        "· Còn đường → không sấy"
     ),
     "S_COOKING_OIL": (
         "◆ 【Kiểm tra trước】 Loại dầu nào?\n"
@@ -387,9 +463,9 @@ STAIN_TOOL_EXTRAS: dict[str, dict[str, list[str]]] = {
         "en": ["IPA 70%", "White cloths", "Blotting paper"],
     },
     "S_LIPSTICK": {
-        "ko": ["이소프로필 알코올 70%", "흡수지", "주방세제", "연질 솔"],
-        "vi": ["Cồn isopropyl 70%", "Giấy thấm", "Nước rửa chén", "Bàn chải mềm"],
-        "en": ["IPA 70%", "Blotting paper", "Dish soap", "Soft brush"],
+        "ko": ["이소프로필 알코올 70%", "흡수지", "주방세제", "흰 천(찍어 흡수)"],
+        "vi": ["Cồn isopropyl 70%", "Giấy thấm", "Nước rửa chén", "Khăn trắng (chấm)"],
+        "en": ["IPA 70%", "Blotting paper", "Dish soap", "White cloth (blot only)"],
     },
     "S_MASCARA": {
         "ko": ["이소프로필 알코올 70%", "주방세제", "흰 천 여러 장"],
@@ -423,7 +499,7 @@ STAIN_SOFT_OUTLOOK: dict[str, dict[str, str]] = {
     "S_HAIR_DYE": {
         "ko": (
             "◆ 【예상 결과】\n"
-            "· 묻은 직후·흰옷: 꽤 잘 빠질 수 있어요. 그래도 완전 제거는 보장하지 않아요\n"
+            "· 묻은 직후·흰옷: 나아질 수 있어요. 완전 제거는 보장하지 않아요\n"
             "· 시간이 지남: 잔색 가능성 높음 — 접수 때 동의를 받으세요\n"
             "· 이미 마름: 부분 제거만 기대하세요\n"
             "· 건조기·다리미 지남: 거의 어려움 — 전문 의뢰·거절을 먼저 검토하세요"
@@ -786,6 +862,94 @@ def _bleach_unsafe_fabric(graph: dict) -> bool:
 
 
 _BLEACH_TOOL_MARKERS = ("산소", "락스", "표백", "oxy", "javel", "bleach")
+_SOLVENT_TOOL_MARKERS = (
+    "알코올",
+    "이소프로필",
+    "ipa",
+    "cồn",
+    "isopropyl",
+    "아세톤",
+    "acetone",
+    "용제",
+)
+
+
+def _fabric_known(graph: dict) -> bool:
+    """True when we have a usable fabric signal (not blank/unknown)."""
+    if not isinstance(graph, dict):
+        return False
+    fc = graph.get("fabric_context") if isinstance(graph.get("fabric_context"), dict) else {}
+    for key in ("id", "name", "name_ko", "name_vi"):
+        v = str(fc.get(key) or "").strip().lower()
+        if v and v not in {"unknown", "unk", "?", "미확인", "불명"}:
+            return True
+    md = graph.get("match_diagnosis") if isinstance(graph.get("match_diagnosis"), dict) else {}
+    ft = str(md.get("fabric_type") or "").strip().lower()
+    if ft and ft not in {"unknown", "unk", "?", "미확인", "불명"}:
+        return True
+    try:
+        from protocol import _fabric_flags
+
+        ents: dict = {}
+        if ft:
+            ents["fabric_type"] = ft
+        ic = graph.get("item_context") if isinstance(graph.get("item_context"), dict) else {}
+        if ic.get("id"):
+            ents["item_id"] = ic["id"]
+        flags = _fabric_flags(graph, ents)
+        if any(
+            flags.get(k)
+            for k in (
+                "delicate_protein",
+                "is_silk",
+                "is_wool",
+                "is_leather",
+                "is_suede",
+                "is_fur",
+                "is_acetate",
+                "is_nylon",
+                "is_blend",
+                "is_rayon",
+            )
+        ):
+            return True
+        fid = str(flags.get("fid") or "").strip().upper()
+        fname = str(flags.get("fname") or "").strip().lower()
+        if fid and fid not in {"", "UNKNOWN"}:
+            return True
+        if fname and fname not in {"unknown", "unk", "?", ""}:
+            return True
+    except Exception:
+        return False
+    return False
+
+
+def _color_known_white_safe(graph: dict) -> bool:
+    """True only when garment is explicitly white (bleach extras OK by color)."""
+    if not isinstance(graph, dict):
+        return False
+    proto = graph.get("protocol") if isinstance(graph.get("protocol"), dict) else {}
+    color = str(proto.get("garment_color") or graph.get("garment_color") or "").strip().lower()
+    if color == "white":
+        return True
+    md = graph.get("match_diagnosis") if isinstance(graph.get("match_diagnosis"), dict) else {}
+    return str(md.get("garment_color") or "").strip().lower() == "white"
+
+
+def _hide_aggressive_tool_extras(graph: dict, extra: str) -> bool:
+    """Hide bleach/solvent prep items until fabric (and for bleach: white) is known."""
+    ex = (extra or "").lower()
+    is_bleach = any(m in ex for m in _BLEACH_TOOL_MARKERS)
+    is_solvent = any(m in ex for m in _SOLVENT_TOOL_MARKERS)
+    if not is_bleach and not is_solvent:
+        return False
+    if not _fabric_known(graph):
+        return True
+    if is_bleach and (_bleach_unsafe_fabric(graph) or not _color_known_white_safe(graph)):
+        return True
+    if is_solvent and _bleach_unsafe_fabric(graph):
+        return True
+    return False
 
 
 def build_one_line_order(graph: dict, lang: str = "ko") -> str:
@@ -1060,7 +1224,7 @@ def build_tools_names_only(graph: dict, lang: str = "ko") -> str:
         lines.append(line)
         seen_lower.add(line.lower())
     sid = _motion_stain_id(graph)
-    # Leather/suede + delicate protein/fur: never append textile bleach extras
+    # Leather/suede + delicate: never append textile bleach extras
     if graph.get("leather_care") or _bleach_unsafe_fabric(graph):
         extras = []
     else:
@@ -1069,10 +1233,9 @@ def build_tools_names_only(graph: dict, lang: str = "ko") -> str:
         ex = str(ex).strip()
         if not ex:
             continue
-        if any(m in ex.lower() for m in _BLEACH_TOOL_MARKERS):
-            # Defense in depth if extras slipped past fabric gate
-            if _bleach_unsafe_fabric(graph):
-                continue
+        # P0: fabric/color unknown → hide bleach & solvent prep (confirm first)
+        if _hide_aggressive_tool_extras(graph, ex):
+            continue
         line = f"{extra_head}{tool_line_with_purpose(ex, lang)}"
         if line.lower() in seen_lower:
             continue

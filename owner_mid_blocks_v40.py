@@ -195,6 +195,21 @@ INTAKE_SHORT = {
     ),
 }
 
+INTAKE_SHORT_L1 = {
+    "ko": (
+        "◆ 【접수 체크 · L1】 시작 전\n"
+        "① 원단·색(흰/유색)·라벨 확인 ② 「잔색 가능」 짧게 고지 ③ 동의 후 진행"
+    ),
+    "vi": (
+        "◆ 【Checklist · L1】 Trước khi làm\n"
+        "① Vải·màu·nhãn ② Báo có thể còn vết ③ Đồng ý rồi làm"
+    ),
+    "en": (
+        "◆ 【Intake · L1】 Before starting\n"
+        "① Fabric·color·label ② Residual-mark disclosure ③ Consent then proceed"
+    ),
+}
+
 FABRIC_SHORT = {
     "silk": {
         "ko": "◆ 【원단】 실크 → 중성·찬물만. 알코올·산소·염소 금지. 강처리 전 전문·거절 검토.",
@@ -401,6 +416,8 @@ def retry_full(sid: str, lang: str = "ko") -> str:
 
 
 def block_intake(level: str, lang: str) -> str:
+    if level == "L1":
+        return INTAKE_SHORT_L1.get(lang) or INTAKE_SHORT_L1["ko"]
     if level not in {"L2", "L3"}:
         return ""
     return INTAKE_SHORT.get(lang) or INTAKE_SHORT["ko"]

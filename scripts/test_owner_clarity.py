@@ -36,8 +36,10 @@ def test_hair_dye_no_spray_mix():
 def test_two_message_split():
     proto = _proto("S_HAIR_DYE")
     g = {
-        "protocol": proto.to_dict(),
+        "protocol": {**proto.to_dict(), "garment_color": "white"},
         "stain_context": {"id": "S_HAIR_DYE"},
+        "fabric_context": {"id": "F1", "name": "cotton"},
+        "garment_color": "white",
         "chemicals": [{"code": "A1"}, {"code": "B1"}],
         "tools": [
             {"id": "T_CLOTH", "name_ko": "흰 면 천"},
@@ -127,9 +129,87 @@ def test_vi_clarity_no_ko_en_stubs():
     assert not re.search(r"[가-힣]", detail)
 
 
+def test_hide_aggressive_tools_when_fabric_unknown():
+    from owner_answer_clarity import build_tools_names_only
+
+    proto = _proto("S_BLACK_COFFEE")
+    g_unknown = {
+        "protocol": proto.to_dict(),
+        "stain_context": {"id": "S_BLACK_COFFEE"},
+        "tools": [],
+    }
+    tools_u = build_tools_names_only(g_unknown, "ko")
+    assert "산소" not in tools_u
+
+    g_white_cotton = {
+        "protocol": {**proto.to_dict(), "garment_color": "white"},
+        "stain_context": {"id": "S_BLACK_COFFEE"},
+        "fabric_context": {"id": "F1", "name": "cotton"},
+        "garment_color": "white",
+        "tools": [],
+    }
+    tools_ok = build_tools_names_only(g_white_cotton, "ko")
+    assert "산소" in tools_ok or "식초" in tools_ok
+
+
+def test_silk_blocks_a1_in_one_line():
+    from protocol import apply_context_to_protocol, _fabric_flags
+
+    proto = apply_context_to_protocol(
+        _proto("S_INK_PEN"),
+        fabric="silk",
+        garment_color="colored",
+        flags=_fabric_flags({}, {"fabric_type": "silk"}),
+    )
+    g = {
+        "protocol": proto.to_dict(),
+        "stain_context": {"id": "S_INK_PEN"},
+        "fabric_context": {"id": "F4", "name": "silk"},
+    }
+    order = build_one_line_order(g, "ko")
+    # A1 should be substituted to S1 / neutral — no alcohol action left active
+    assert "알코올" not in order or "중성" in order
+    for s in proto.steps:
+        if s.chem == "A1":
+            assert s.blocked or s.chem == "S1"
+    assert any(s.chem == "S1" for s in proto.steps)
+
+
+def test_l1_status_and_tea_milk_order():
+    from owner_answer_clarity import STAIN_STATUS_KO
+    from owner_hand_motions import build_hand_motions
+    from ko_stain_education import KO_STAIN_EDU
+
+    for sid in ("S_TEA", "S_MILK", "S_EGG", "S_CHOCOLATE", "S_FRUIT_JUICE", "S_KETCHUP"):
+        assert sid in STAIN_STATUS_KO
+        assert "먼저 확인" in STAIN_STATUS_KO[sid]
+    tea_m = build_hand_motions("S_TEA", "ko")
+    assert "우유" in tea_m and "효소" in tea_m
+    assert "식초를 효소보다 먼저" in tea_m or "효소" in tea_m
+    edu = KO_STAIN_EDU["S_TEA"]["fresh_path_ko"]
+    assert "효소" in edu and "식초를 효소보다 먼저" in edu
+    assert "라떼" in STAIN_STATUS_KO["S_BLACK_COFFEE"] or "우유" in STAIN_STATUS_KO["S_BLACK_COFFEE"]
+
+
+def test_delicate_makeup_refuse():
+    from owner_hand_motions import build_hand_motions
+
+    g = {"fabric_context": {"id": "F4", "name": "silk"}}
+    for sid in ("S_LIPSTICK", "S_FOUNDATION", "S_MASCARA"):
+        ko = build_hand_motions(sid, "ko", graph=g)
+        assert "거절" in ko or "전문" in ko
+        assert "알코올" in ko  # warn / ban wording
+        vi = build_hand_motions(sid, "vi", graph=g)
+        assert "từ chối" in vi.lower() or "chuyên" in vi.lower()
+
+
 if __name__ == "__main__":
     test_hair_dye_no_spray_mix()
     test_two_message_split()
     test_chunk_long()
     test_vi_clarity_no_ko_en_stubs()
+    test_hide_aggressive_tools_when_fabric_unknown()
+    test_silk_blocks_a1_in_one_line()
+    test_l1_status_and_tea_milk_order()
+    test_delicate_makeup_refuse()
     print("OK two-msg clarity")

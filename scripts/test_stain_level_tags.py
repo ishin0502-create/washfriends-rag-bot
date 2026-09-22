@@ -16,6 +16,9 @@ def test_resolve_levels():
     assert resolve_level("S_BLOOD_FRESH") == ("L1", 1)
     assert resolve_level("S_ENGINE_OIL") == ("L3", 3)
     assert resolve_level("S_BLOOD_DRY") == ("L2", 2)
+    # IPA solvent stains are L2 (supervisor), not unsupervised L1
+    assert resolve_level("S_INK_PEN") == ("L2", 2)
+    assert resolve_level("S_GRASS") == ("L2", 2)
 
     lvl, grade = resolve_level(
         "S_BLOOD_FRESH",
@@ -56,7 +59,6 @@ def test_l1_twelve_instructional():
         "S_TOMATO_SAUCE",
         "S_KIMCHI",
         "S_CHOCOLATE",
-        "S_GRASS",
         "S_SOY_SAUCE",
     )
     for sid in ids:

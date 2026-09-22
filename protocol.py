@@ -2155,8 +2155,16 @@ def _chem_blocked(code: str, flags: dict, garment_color: str) -> tuple[bool, str
         return True, "색 미확인: 표백(산소·염소·환원) 생략 — 흰옷 확인 후", "Chưa rõ màu: bỏ tẩy — chỉ sau khi xác nhận trắng"
     if flags.get("no_acetone") and c == "A2":
         return True, "아세테이트·레이온: 아세톤 금지", "Acetate/rayon: cấm acetone"
+    # Alcohol (IPA) on protein/acetate — same risk class as acetone for silk/wool
+    if (
+        flags.get("delicate_protein")
+        or flags.get("is_silk")
+        or flags.get("is_wool")
+        or flags.get("is_acetate")
+    ) and c == "A1":
+        return True, "실크·울·아세테이트: 알코올(용제) 금지 — 중성·찬물 또는 전문", "Lụa/len/acetate: cấm cồn — S1/lạnh hoặc chuyên"
     if (flags.get("is_leather") or flags.get("is_suede") or flags.get("is_fur")) and c in {
-        "B1", "B2", "A3", "A4", "E1", "E2", "D3", "X1", "X2",
+        "B1", "B2", "A3", "A4", "E1", "E2", "D3", "X1", "X2", "A1",
     }:
         return True, "가죽·스웨이드·모피: 해당 약품 금지", "Da/suede/fur: cấm hoá chất này"
     return False, "", ""
@@ -2197,7 +2205,7 @@ def apply_context_to_protocol(
 
         # Safe substitute so silk/wool/acetate never end with empty chem education.
         # X2→A3 only when acid is allowed; if no_acid (silk/wool/acetate), fall through to S1.
-        aggressive = {"E1", "E2", "E3", "B1", "B2", "A3", "A4", "A5", "X1", "X2", "A2"}
+        aggressive = {"E1", "E2", "E3", "B1", "B2", "A3", "A4", "A5", "X1", "X2", "A2", "A1"}
         wants_safe = (
             flags.get("delicate_protein")
             or flags.get("is_acetate")
