@@ -1219,8 +1219,8 @@ def _tpl_hair_dye() -> Protocol:
             Step("rinse", "바로 찬물로 헹구세요", "Xả lạnh ngay", force="Cap1"),
             Step(
                 "alcohol",
-                "알코올은 흰 천에 묻혀 찍어 흡수하세요(구석 테스트 먼저)",
-                "A1 thấm khăn (test góc)",
+                "알코올은 흰 천에 묻혀 찍어 흡수하세요(구석 테스트 먼저 · 본색 빠지면 알코올 중단→주방세제 소량+찬물)",
+                "A1 thấm khăn (test góc · phai màu vải → dừng A1, D2+lạnh)",
                 chem="A1",
                 force="Cap1",
                 spray=False,

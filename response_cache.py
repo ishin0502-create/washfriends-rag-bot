@@ -69,7 +69,7 @@ def max_entries() -> int:
 
 def cache_version() -> str:
     # v3: shop names + WF supply products in answers
-    return os.getenv("ANSWER_CACHE_VERSION", "v144")
+    return os.getenv("ANSWER_CACHE_VERSION", "v144b")
 
 
 def _normalize_key(text: str) -> str:

@@ -25,6 +25,10 @@ def test_hair_motions_present():
     assert "15~20" in m or "15–20" in m
     assert "【담금 시간】" in m
     assert "건너뛰" in m
+    # Alcohol spot-test fail → mild dish-soap branch (not primary path)
+    assert "주방세제" in m
+    assert "본색" in m or "중단" in m
+    assert "거절·전문" in m or "실크·울" in m
 
 
 def test_hair_dye_clarity_p0():

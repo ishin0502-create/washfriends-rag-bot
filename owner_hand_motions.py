@@ -41,7 +41,10 @@ HAND_MOTIONS_KO: dict[str, str] = {
             "⑥ 천이 물들면 바로 새 천으로 바꿔 주세요\n"
             "⑦ 5~10번 반복. 더 안 묻으면 다음으로\n"
             "⑧ 찬물(15~20°C)로 한 번 헹궈 주세요 — 다음 약(산소) 쓰기 전에 알코올을 씻어내는 거예요.\n"
-            "🛑 중단: 옷 색이 빠지거나 원단이 이상해지면 즉시 멈추세요.",
+            "🛑 중단: 옷 본색이 천에 묻거나 원단이 이상해지면 알코올을 즉시 멈추세요.\n"
+            "※ 그때만: 알코올 대신 주방세제 소량 + 찬물로 가볍게 찍어 주세요 "
+            "(효과는 약하지만 원단 손상 위험이 낮아요). "
+            "실크·울은 거절·전문 우선 — 이 대안으로 강처리하지 마세요.",
         )
         + "\n"
         + _step(
@@ -943,7 +946,9 @@ HAND_MOTIONS_VI: dict[str, str] = {
             "⑥ Khăn dính màu → đổi khăn mới ngay\n"
             "⑦ Lặp 5–10 lần. Hết dính màu → bước tiếp\n"
             "⑧ Xả lạnh (15–20°C) một lần — rửa cồn trước khi dùng oxy.\n"
-            "🛑 Dừng ngay nếu màu vải phai hoặc vải bất thường.",
+            "🛑 Dừng cồn ngay nếu màu vải sang khăn hoặc vải bất thường.\n"
+            "※ Chỉ khi đó: thay bằng nước rửa chén ít + nước lạnh chấm nhẹ "
+            "(yếu hơn nhưng ít hại vải). Lụa/len: ưu tiên từ chối/chuyên — không xử lý mạnh bằng bước này.",
         )
         + "\n"
         + _step_vi(
