@@ -2098,6 +2098,39 @@ def _fabric_flags(graph: dict, entities: Optional[dict] = None) -> dict[str, Any
             flags["care_max_temp_c"] = int(entities["care_max_temp_c"])
         except (TypeError, ValueError):
             pass
+
+    # Specialty items often arrive without fabric_type — default to safe bans
+    # so item_primary + mildew never keeps cotton bleach SOP.
+    item_id = str(
+        entities.get("item_id")
+        or ((graph.get("item_context") or {}).get("id") if isinstance(graph, dict) else "")
+        or ""
+    )
+    sturdy = ft in ("cotton", "polyester", "linen", "denim")
+    if not sturdy and item_id:
+        if item_id in {"I_FUR_REAL", "I_FUR_FAUX"}:
+            flags["is_fur"] = True
+            flags["no_oxygen"] = True
+            flags["no_acid"] = True
+            flags["no_enzyme"] = True
+            flags["no_chlorine"] = True
+            flags["no_acetone"] = True
+        elif item_id in {"I_SUIT", "I_KNIT"}:
+            flags["is_wool"] = True
+            flags["delicate_protein"] = True
+            flags["no_oxygen"] = True
+            flags["no_acid"] = True
+            flags["no_enzyme"] = True
+            flags["no_acetone"] = True
+            flags["no_chlorine"] = True
+        elif item_id in {"I_NECKTIE", "I_AO_DAI", "I_HANBOK", "I_SCARF"}:
+            flags["is_silk"] = True
+            flags["delicate_protein"] = True
+            flags["no_oxygen"] = True
+            flags["no_acid"] = True
+            flags["no_enzyme"] = True
+            flags["no_acetone"] = True
+            flags["no_chlorine"] = True
     return flags
 
 
@@ -3065,9 +3098,8 @@ def build_protocol(graph: dict, entities: Optional[dict] = None) -> Optional[Pro
     mode = overlay_mode_for_item(item_id)
     proto = PROTOCOL_BUILDERS[stain_id]()
     proto.mode = mode
-    if mode == "item_primary":
-        return proto
-
+    # P0: item_primary used to skip fabric chem rewrite → necktie/suit/ao_dai
+    # kept cotton bleach SOP (same class as leather mildew). Always filter.
     fabric = str(
         entities.get("fabric_type")
         or (graph.get("fabric_context") or {}).get("name")
@@ -3089,6 +3121,47 @@ def build_protocol(graph: dict, entities: Optional[dict] = None) -> Optional[Pro
         garment_color=color,
         flags=flags,
     )
+
+
+def _delicate_edu_locked(flags: Optional[dict]) -> bool:
+    """True when generic KO_STAIN_EDU must not overwrite fabric-safe paths."""
+    f = flags or {}
+    return bool(
+        f.get("delicate_protein")
+        or f.get("is_silk")
+        or f.get("is_wool")
+        or f.get("is_leather")
+        or f.get("is_suede")
+        or f.get("is_fur")
+        or f.get("is_acetate")
+        or f.get("is_rayon")
+        or f.get("no_oxygen")
+    )
+
+
+def _merge_ko_stain_edu(sc: dict, stain_id: str, flags: Optional[dict]) -> None:
+    """Merge KO education onto stain_context; skip entirely on delicate fabrics."""
+    if _delicate_edu_locked(flags):
+        # Keep protocol-rendered paths/why — generic edu promotes cotton bleach SOP.
+        return
+    try:
+        from ko_stain_education import KO_STAIN_EDU
+
+        edu = KO_STAIN_EDU.get(stain_id) or {}
+    except Exception:
+        return
+    if not edu:
+        return
+    for k in (
+        "why_ko",
+        "fresh_path_ko",
+        "dried_path_ko",
+        "why_vi",
+        "fresh_path_vi",
+        "dried_path_vi",
+    ):
+        if edu.get(k):
+            sc[k] = edu[k]
 
 
 def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dict:
@@ -3199,6 +3272,28 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
                 "why_ko": "",
                 "why_vi": "",
             }
+            return out
+        # Real stain + specialty item (necktie/suit/ao_dai+mildew): keep
+        # fabric-filtered protocol and sync owner paths — do not leave raw
+        # cotton bleach steps or skip chem rewrite.
+        if real_stain_id:
+            sc = dict(out.get("stain_context") or {})
+            path_ko = render_fresh_path(proto, "ko")
+            path_vi = render_fresh_path(proto, "vi")
+            if path_ko:
+                sc["fresh_path_ko"] = path_ko
+            if path_vi:
+                sc["fresh_path_vi"] = path_vi
+            if proto.why_ko:
+                sc["why_ko"] = proto.why_ko
+            if proto.why_vi:
+                sc["why_vi"] = proto.why_vi
+            _merge_ko_stain_edu(sc, proto.stain_id, flags)
+            out["stain_context"] = sc
+            out["chemicals"] = render_chemicals(proto, out.get("chemicals") or [])
+            out["tools"] = bind_tools_from_protocol(
+                proto, list(out.get("tools") or []), item_id=item_id
+            )
         return out
 
     sc = dict(out.get("stain_context") or {})
@@ -3212,22 +3307,15 @@ def apply_protocol_to_graph(graph: dict, entities: Optional[dict] = None) -> dic
         sc["why_ko"] = proto.why_ko
     if proto.why_vi:
         sc["why_vi"] = proto.why_vi
+    flags = _fabric_flags(out, entities)
     # Prefer owner-facing instructional copy from KO_STAIN_EDU when present
     # (protocol render is telegram-short; education is the shop-floor wording).
-    try:
-        from ko_stain_education import KO_STAIN_EDU
-
-        edu = KO_STAIN_EDU.get(proto.stain_id) or {}
-        for k in ("why_ko", "fresh_path_ko", "dried_path_ko", "why_vi", "fresh_path_vi", "dried_path_vi"):
-            if edu.get(k):
-                sc[k] = edu[k]
-    except Exception:
-        pass
+    # P0: on delicate fabrics never overwrite fabric-safe paths with cotton bleach edu.
+    _merge_ko_stain_edu(sc, proto.stain_id, flags)
     if proto.water_temp_ko:
         sc["water_temp_ko"] = proto.water_temp_ko
     if proto.water_temp_vi:
         sc["water_temp_vi"] = proto.water_temp_vi
-    flags = _fabric_flags(out, entities)
     tmax = flags.get("care_max_temp_c")
     if tmax:
         sc["water_temp_ko"] = (

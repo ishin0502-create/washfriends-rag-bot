@@ -719,6 +719,43 @@ def _use_fresh_path_for_order(graph: dict) -> bool:
     }
 
 
+def _bleach_unsafe_fabric(graph: dict) -> bool:
+    """True when textile bleach SOP (oxygen/Javel extras·motions) must not show."""
+    if not isinstance(graph, dict):
+        return False
+    if graph.get("leather_care"):
+        return True
+    try:
+        from protocol import _fabric_flags
+
+        ents = {}
+        ic = graph.get("item_context") if isinstance(graph.get("item_context"), dict) else {}
+        if ic.get("id"):
+            ents["item_id"] = ic["id"]
+        md = graph.get("match_diagnosis") if isinstance(graph.get("match_diagnosis"), dict) else {}
+        if md.get("fabric_type"):
+            ents["fabric_type"] = md["fabric_type"]
+        fc = graph.get("fabric_context") if isinstance(graph.get("fabric_context"), dict) else {}
+        if fc.get("name") and not ents.get("fabric_type"):
+            ents["fabric_type"] = str(fc.get("name") or "").lower()
+        flags = _fabric_flags(graph, ents)
+        return bool(
+            flags.get("delicate_protein")
+            or flags.get("is_silk")
+            or flags.get("is_wool")
+            or flags.get("is_leather")
+            or flags.get("is_suede")
+            or flags.get("is_fur")
+            or flags.get("is_acetate")
+            or flags.get("no_oxygen")
+        )
+    except Exception:
+        return False
+
+
+_BLEACH_TOOL_MARKERS = ("산소", "락스", "표백", "oxy", "javel", "bleach")
+
+
 def build_one_line_order(graph: dict, lang: str = "ko") -> str:
     """Numbered do-this-next list from Protocol steps."""
     proto = _proto_dict(graph)
@@ -791,7 +828,12 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
         if lang == "ko":
             sid_step = str(s.get("id") or "").strip()
             action = _soften_step_label(action)
-            action = _ensure_ko_step_verb(sid_step, action)
+            action = _ensure_ko_step_verb(
+                sid_step,
+                action,
+                chem=str(s.get("chem") or ""),
+                blocked=bool(s.get("blocked")),
+            )
         lines.append(f"{n}) {action}{time_bit}")
         if n >= 8:
             break
@@ -831,9 +873,51 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
     return head + "\n" + "\n".join(lines)
 
 
-def _ensure_ko_step_verb(step_id: str, action: str) -> str:
+def _ensure_ko_step_verb(
+    step_id: str,
+    action: str,
+    *,
+    chem: str = "",
+    blocked: bool = False,
+) -> str:
     """One-line order must say what to DO, not only product names."""
     t = (action or "").strip()
+    if blocked:
+        return t
+    chem_u = str(chem or "").upper().strip()
+    # Protocol already substituted S1 / delicate wording — never re-inject
+    # bleach/acid verbs from step id (oxygen/chlorine/vinegar/acetone).
+    if chem_u == "S1" or any(
+        x in t
+        for x in (
+            "중성세제",
+            "섬세 원단",
+            "아세테이트:",
+            "실크·울",
+            "금지 —",
+            "거절·전문",
+        )
+    ):
+        if any(
+            x in t
+            for x in (
+                "하세요",
+                "주세요",
+                "마세요",
+                "두세요",
+                "바르",
+                "담가",
+                "헹구",
+                "확인",
+                "깨",
+                "녹이",
+                "처리",
+                "전문",
+                "금지",
+            )
+        ):
+            return t
+        return f"{t}로 처리해 주세요" if t else t
     if any(x in t for x in ("하세요", "주세요", "마세요", "두세요", "바르", "담가", "헹구", "확인", "깨", "녹이")):
         return t
     by_id = {
@@ -845,6 +929,7 @@ def _ensure_ko_step_verb(step_id: str, action: str) -> str:
         "vinegar": "식초 1:4로 담가 냄새를 줄이세요(완전 제거 보장 아님 · 앞 단계와 섞지 마세요)",
         "alcohol": "알코올을 흰 천에 묻혀 꾹꾹 눌러 흡수하세요",
         "oxygen": "흰옷만 산소계 표백제(과탄산·옥시클린 계열)로 담가 주세요",
+        "chlorine": "흰 면만 희석 락스(매니저 확인·식초와 혼합 금지)",
         "wash": "세탁해 주세요",
         "light": "말리기 전 밝은 조명에서 잔색을 확인해 주세요",
         "freeze": "비닐에 넣어 냉동실에서 단단해질 때까지 두세요",
@@ -859,7 +944,7 @@ def _ensure_ko_step_verb(step_id: str, action: str) -> str:
     if step_id in by_id:
         return by_id[step_id]
     if t:
-        return f"{t}로 처리해 주세요(앞 단계와 한꺼번에 섞지 마세요)"
+        return f"{t}로 처리해 주세요"
     return t
 
 
@@ -943,8 +1028,8 @@ def build_tools_names_only(graph: dict, lang: str = "ko") -> str:
         lines.append(line)
         seen_lower.add(line.lower())
     sid = _motion_stain_id(graph)
-    # Leather/suede care: never append textile mildew extras (vinegar soak / oxygen)
-    if graph.get("leather_care"):
+    # Leather/suede + delicate protein/fur: never append textile bleach extras
+    if graph.get("leather_care") or _bleach_unsafe_fabric(graph):
         extras = []
     else:
         extras = (STAIN_TOOL_EXTRAS.get(sid) or {}).get(lang) or []
@@ -952,6 +1037,10 @@ def build_tools_names_only(graph: dict, lang: str = "ko") -> str:
         ex = str(ex).strip()
         if not ex:
             continue
+        if any(m in ex.lower() for m in _BLEACH_TOOL_MARKERS):
+            # Defense in depth if extras slipped past fabric gate
+            if _bleach_unsafe_fabric(graph):
+                continue
         line = f"{extra_head}{tool_line_with_purpose(ex, lang)}"
         if line.lower() in seen_lower:
             continue
@@ -1346,10 +1435,10 @@ def inject_clarity_into_answer(
     try:
         from owner_hand_motions import build_hand_motions
 
-        # Leather/suede: never attach textile mildew Steps (vinegar→oxygen→Javel)
-        if not g.get("leather_care"):
-            motions = build_hand_motions(sid, lang, graph=g)
-        else:
+        # Leather/suede + delicate: never attach textile mildew bleach Steps
+        if g.get("leather_care") or (
+            sid == "S_MILDEW" and _bleach_unsafe_fabric(g)
+        ):
             sc_m = g.get("stain_context") if isinstance(g.get("stain_context"), dict) else {}
             path = ""
             if lang == "vi":
@@ -1359,12 +1448,24 @@ def inject_clarity_into_answer(
             else:
                 path = str(sc_m.get("fresh_path_ko") or "")
             if path:
-                if lang == "vi":
-                    motions = "◆ 【Tay nghề da】\n" + path
-                elif lang == "en":
-                    motions = "◆ 【Leather hand steps】\n" + path
+                if g.get("leather_care"):
+                    if lang == "vi":
+                        motions = "◆ 【Tay nghề da】\n" + path
+                    elif lang == "en":
+                        motions = "◆ 【Leather hand steps】\n" + path
+                    else:
+                        motions = "◆ 【가죽 손동작】\n" + path
                 else:
-                    motions = "◆ 【가죽 손동작】\n" + path
+                    if lang == "vi":
+                        motions = "◆ 【Tay nghề (vải nhạy)】\n" + path
+                    elif lang == "en":
+                        motions = "◆ 【Delicate fabric steps】\n" + path
+                    else:
+                        motions = "◆ 【섬세 원단 손동작】\n" + path
+            elif not g.get("leather_care"):
+                motions = build_hand_motions(sid, lang, graph=g)
+        else:
+            motions = build_hand_motions(sid, lang, graph=g)
     except Exception:
         motions = ""
     if motions:

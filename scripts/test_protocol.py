@@ -128,14 +128,81 @@ def test_silk_wine_replaces_acid_with_s1_explicitly():
     assert "5" in timer["use_for_ko"]
 
 
-def test_necktie_item_primary_skips_chem_rewrite():
-    g = _wine_graph()
+def test_necktie_item_primary_applies_chem_rewrite():
+    """P0: item_primary must still filter bleach SOP (necktie ≠ cotton)."""
+    g = _wine_graph(fabric_name="Silk", fabric_id="F4")
     g["item_context"] = {"id": "I_NECKTIE", "name_ko": "넥타이"}
-    g["chemicals"] = [{"code": "S1", "name_ko": "중성세제"}]
-    out = apply_protocol_to_graph(g, entities={"item_id": "I_NECKTIE"})
+    g["chemicals"] = [{"code": "A3"}, {"code": "B1"}]
+    out = apply_protocol_to_graph(
+        g, entities={"item_id": "I_NECKTIE", "fabric_type": "silk"}
+    )
     assert out.get("protocol_mode") == "item_primary"
-    # chemicals left as-is (item path owns them later)
-    assert out["chemicals"][0]["code"] == "S1"
+    codes = [c["code"] for c in (out.get("chemicals") or [])]
+    assert "B1" not in codes
+    assert "A3" not in codes
+    assert "S1" in codes
+
+
+def test_necktie_mildew_no_bleach_in_order():
+    g = {
+        "item_context": {"id": "I_NECKTIE", "name_ko": "넥타이"},
+        "stain_context": {"id": "S_MILDEW"},
+        "fabric_context": {"id": "F4", "name": "Silk"},
+        "tools": [{"id": "T_CLOTH"}],
+        "chemicals": [{"code": "A3"}, {"code": "B1"}, {"code": "B2"}],
+    }
+    out = apply_protocol_to_graph(
+        g,
+        entities={
+            "item_id": "I_NECKTIE",
+            "stain_id": "S_MILDEW",
+            "fabric_type": "silk",
+            "_raw": "실크 넥타이에 곰팡이",
+        },
+    )
+    from owner_answer_clarity import build_one_line_order
+
+    order = build_one_line_order(out, "ko")
+    assert "락스" not in order
+    assert "산소계 표백제로 담가" not in order
+    assert "흰옷만 산소" not in order
+    path = (out.get("stain_context") or {}).get("fresh_path_ko") or ""
+    assert "락스" not in path
+    assert "중성" in path or "섬세" in path or "S1" in str(out.get("chemicals") or [])
+
+
+def test_silk_mildew_edu_does_not_overwrite_safe_path():
+    g = {
+        "stain_context": {"id": "S_MILDEW"},
+        "fabric_context": {
+            "id": "F4",
+            "name": "Silk",
+            "can_oxygen": False,
+            "acid_safe": False,
+            "enzyme_safe": False,
+        },
+        "tools": [],
+        "chemicals": [],
+    }
+    out = apply_protocol_to_graph(g, entities={"fabric_type": "silk", "stain_id": "S_MILDEW"})
+    path = (out.get("stain_context") or {}).get("fresh_path_ko") or ""
+    assert "락스" not in path
+    assert "희석 락스" not in path
+    codes = [c["code"] for c in (out.get("chemicals") or [])]
+    assert "B2" not in codes
+    assert "B1" not in codes
+
+
+def test_ensure_ko_step_verb_respects_s1():
+    from owner_answer_clarity import _ensure_ko_step_verb
+
+    out = _ensure_ko_step_verb(
+        "oxygen",
+        "섬세 원단: 중성세제 국소·찬물만 — 효소·산소·강한 산·아세톤 대신. 심하면 거절·전문.",
+        chem="S1",
+    )
+    assert "산소계 표백제" not in out
+    assert "중성세제" in out
 
 
 def test_bind_spray_from_protocol_direct():

@@ -63,6 +63,34 @@ def test_leather_mildew_no_bleach_in_order():
     assert "락스" not in joined
 
 
+def test_necktie_mildew_no_bleach_clarity():
+    g = {
+        "item_context": {"id": "I_NECKTIE"},
+        "stain_context": {"id": "S_MILDEW"},
+        "fabric_context": {"id": "F4", "name": "Silk"},
+        "tools": [{"id": "T_CLOTH"}],
+        "chemicals": [{"code": "B1"}, {"code": "B2"}],
+    }
+    out = apply_protocol_to_graph(
+        g,
+        entities={
+            "item_id": "I_NECKTIE",
+            "stain_id": "S_MILDEW",
+            "fabric_type": "silk",
+            "_raw": "넥타이 곰팡이",
+        },
+    )
+    order = build_one_line_order(out, "ko")
+    assert "락스" not in order
+    assert "산소계 표백제로 담가" not in order
+    assert "흰옷만 산소" not in order
+    from owner_hand_motions import build_hand_motions
+
+    motions = build_hand_motions("S_MILDEW", "ko", graph=out)
+    assert "희석 락스" not in motions
+    assert "전문" in motions or "중성" in motions
+
+
 def test_chain_oil_clarity_two_stage():
     sid = "S_VN_CHAIN_OIL"
     proto = PROTOCOL_BUILDERS[sid]()
@@ -92,5 +120,6 @@ if __name__ == "__main__":
     test_gasoline_fire_tip()
     test_mold_recurrence_block()
     test_leather_mildew_no_bleach_in_order()
+    test_necktie_mildew_no_bleach_clarity()
     test_chain_oil_clarity_two_stage()
     print("vn_specialty_v43 ok")

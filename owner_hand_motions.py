@@ -1245,6 +1245,9 @@ def _entities_for_fabric(graph: Optional[dict]) -> dict:
     """Best-effort fabric entities from graph for motion gating."""
     g = graph if isinstance(graph, dict) else {}
     ents = dict(g.get("entities") or {}) if isinstance(g.get("entities"), dict) else {}
+    ic = g.get("item_context") if isinstance(g.get("item_context"), dict) else {}
+    if ic.get("id") and not ents.get("item_id"):
+        ents["item_id"] = ic["id"]
     if not ents.get("fabric_type"):
         md = g.get("match_diagnosis") if isinstance(g.get("match_diagnosis"), dict) else {}
         ft = md.get("fabric_type") or (g.get("fabric_context") or {}).get("name") or ""
@@ -1272,6 +1275,7 @@ _DELICATE_REFUSE_STAINS = frozenset({
     "S_HAIR_DYE",
     "S_INK_PEN",
     "S_INK_PERMANENT",
+    "S_MILDEW",
 })
 
 _DELICATE_REFUSE_KO: dict[str, str] = {
@@ -1335,6 +1339,25 @@ _DELICATE_REFUSE_KO: dict[str, str] = {
             "아세톤·강한 용제는 실크·울에 위험합니다. 전문 의뢰·반려를 안내하세요.",
         )
     ),
+    "S_MILDEW": (
+        _START
+        + _step(
+            1,
+            "실크·울·모피·섬세품 + 곰팡이 — 전문·거절 우선",
+            "면용 식초→산소→락스 SOP를 쓰지 마세요.\n"
+            "넥타이·정장·아오자이·모피·실크·울은 손상·고착 위험이 큽니다.\n"
+            "고객께 전문 의뢰 또는 접수 제한을 먼저 안내하세요.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "(매니저 승인 시에만) 국소·중성만",
+            "승인 후에만: 실외 PPE → 마른 포자 약하게 털기 → 중성세제 국소·찬물.\n"
+            "통담금·산소·락스·강한 산·세탁기 금지. 이상하면 즉시 중단.",
+        )
+        + "\n"
+        + _step(3, "통풍만", "잔여·냄새 있으면 통풍 건조만. 건조기·열 금지.")
+    ),
 }
 
 _DELICATE_REFUSE_VI: dict[str, str] = {
@@ -1393,6 +1416,25 @@ _DELICATE_REFUSE_VI: dict[str, str] = {
             "Acetone/dung môi mạnh nguy hiểm với lụa/len. Gửi chuyên hoặc từ chối.",
         )
     ),
+    "S_MILDEW": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Lụa/len/lông + mốc — chuyên / từ chối trước",
+            "Không dùng SOP cotton: giấm→oxy→Javel.\n"
+            "Cà vạt / vest / áo dài / lông / lụa / len: rủi ro hỏng cao.\n"
+            "Ưu tiên gửi chuyên hoặc hạn chế nhận.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "(Khi duyệt) Cục bộ + trung tính thôi",
+            "Sau duyệt: PPE ngoài trời → chải khô nhẹ → S1 cục bộ nước lạnh.\n"
+            "CẤM ngâm / oxy / Javel / acid mạnh / máy. Dừng nếu lạ.",
+        )
+        + "\n"
+        + _step_vi(3, "Chỉ thoáng", "Còn mốc/mùi → phơi thoáng. CẤM sấy/nhiệt.")
+    ),
 }
 
 
@@ -1413,7 +1455,14 @@ def build_hand_motions(
             from protocol import _fabric_flags
 
             flags = _fabric_flags(graph, _entities_for_fabric(graph))
-            if flags.get("delicate_protein") or flags.get("is_silk") or flags.get("is_wool"):
+            if (
+                flags.get("delicate_protein")
+                or flags.get("is_silk")
+                or flags.get("is_wool")
+                or flags.get("is_fur")
+                or flags.get("is_acetate")
+                or flags.get("no_oxygen")
+            ):
                 if lang == "vi":
                     return _DELICATE_REFUSE_VI.get(sid, "")
                 if lang == "ko":
