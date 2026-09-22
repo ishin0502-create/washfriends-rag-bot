@@ -81,8 +81,9 @@ HAND_MOTIONS_KO: dict[str, str] = {
         + _step(
             2,
             "효소(또는 중성)로 담가 주세요",
-            "찬물에 효소세제를 타서 담가 주세요. (시간은 【담금 시간】 안내)\n"
-            "실크·울이면 중성만·짧게, 매니저 확인.",
+            "찬물 1L에 액체 효소세제 큰술 1을 타서 얼룩만 담가 주세요.\n"
+            "타이머 15–30분(신선 피). 문지르지 마세요.\n"
+            "실크·울이면 효소 금지 → 중성만·짧게, 매니저 확인.",
         )
         + "\n"
         + _step(
@@ -994,8 +995,9 @@ HAND_MOTIONS_VI: dict[str, str] = {
         + _step_vi(
             2,
             "Ngâm enzyme (hoặc trung tính)",
-            "Pha enzyme với nước lạnh rồi ngâm. (Theo 【Thời gian ngâm】)\n"
-            "Lụa/len: chỉ trung tính, ngắn, hỏi quản lý.",
+            "Pha 1 muỗng enzyme / 1L nước lạnh, ngâm vết.\n"
+            "Hẹn giờ 15–30 phút (máu tươi). Không chà.\n"
+            "Lụa/len: cấm enzyme → chỉ trung tính, ngắn, hỏi quản lý.",
         )
         + "\n"
         + _step_vi(
@@ -1230,6 +1232,201 @@ try:
 except Exception:
     pass
 
+# P2: EN L1 core — juniors otherwise only saw SOP body
+_START_EN = "Now start (gloves on).\n"
+def _step_en(n: int, title: str, body: str) -> str:
+    return f"Step {n} — {title}\n{body}"
+
+HAND_MOTIONS_EN.update({
+    "S_BLOOD_FRESH": (
+        _START_EN
+        + _step_en(
+            1,
+            "Cold rinse only",
+            "Cold water only — hot sets blood.\n"
+            "Rinse from the back 2–3 min. Do not scrub hard.",
+        )
+        + "\n"
+        + _step_en(
+            2,
+            "Enzyme (or neutral) soak",
+            "1 Tbsp liquid enzyme / 1L cold water on the stain.\n"
+            "Timer 15–30 min (fresh blood). No rubbing.\n"
+            "Silk/wool: no enzyme → neutral + short, ask a senior.",
+        )
+        + "\n"
+        + _step_en(
+            3,
+            "Rinse and wash",
+            "Rinse cold thoroughly, then wash.\n"
+            "White residual only: ask a senior before oxygen.",
+        )
+    ),
+    "S_BLACK_COFFEE": (
+        _START_EN
+        + _step_en(
+            1,
+            "Flip + cold blot",
+            "Turn garment inside out.\n"
+            "Blot cold from the back. Do not scrub sideways.",
+        )
+        + "\n"
+        + _step_en(
+            2,
+            "Vinegar 1:4 spray",
+            "White vinegar 1 : water 4. Label the bottle.\n"
+            "1–2 light sprays, wait 5–15 min, rinse cold.\n"
+            "Milk/latte coffee → enzyme/dish soap first, then vinegar.",
+        )
+        + "\n"
+        + _step_en(
+            3,
+            "Wash",
+            "Normal wash.\n"
+            "White residual: oxygen after corner test (skip silk/wool/colored).",
+        )
+    ),
+    "S_TEA": (
+        _START_EN
+        + _step_en(
+            1,
+            "Identify · cold blot",
+            "Plain tea (no milk) vs milk/latte tea?\n"
+            "· Milk/latte tea → enzyme (or neutral) first, then vinegar.\n"
+            "· Plain tea → Step 2 vinegar.\n"
+            "Flip + cold blot from inside. No sideways scrub.",
+        )
+        + "\n"
+        + _step_en(
+            2,
+            "Vinegar 1:4 (plain tea only)",
+            "If milk tea: enzyme soak + rinse before this step.\n"
+            "Vinegar 1:4 spray 5–15 min, rinse cold.",
+        )
+        + "\n"
+        + _step_en(
+            3,
+            "Wash",
+            "Warm wash if allowed.\n"
+            "Do not dry with sugar left — yellowing risk.",
+        )
+    ),
+    "S_MILK": (
+        _START_EN
+        + _step_en(1, "Cold first", "Cold rinse. No hot water (protein sets).")
+        + "\n"
+        + _step_en(
+            2,
+            "Enzyme soak",
+            "Enzyme 15–30 min cold (silk/wool → neutral only).",
+        )
+        + "\n"
+        + _step_en(3, "Wash", "Wash; check before drying.")
+    ),
+    "S_EGG": (
+        _START_EN
+        + _step_en(
+            1,
+            "Scrape · no hot",
+            "Scrape solids. Never start with hot water.",
+        )
+        + "\n"
+        + _step_en(
+            2,
+            "Enzyme then dish soap",
+            "Enzyme for white; dish soap if yolk fat remains.",
+        )
+        + "\n"
+        + _step_en(3, "Wash", "Rinse and wash. Silk/wool → neutral focus.")
+    ),
+    "S_CHOCOLATE": (
+        _START_EN
+        + _step_en(1, "Scrape solids", "Remove solids. Blot — do not rub.")
+        + "\n"
+        + _step_en(
+            2,
+            "Dish soap → enzyme",
+            "Fat first (dish soap), then enzyme. Rinse between.",
+        )
+        + "\n"
+        + _step_en(3, "Wash", "Wash; residual marks possible if dried/heated.")
+    ),
+    "S_COOKING_OIL": (
+        _START_EN
+        + _step_en(
+            1,
+            "Absorb first",
+            "Starch/powder absorb — do not pour water first.\n"
+            "Black heavy grease/smell → engine/motorbike oil (L3).",
+        )
+        + "\n"
+        + _step_en(2, "Dish soap", "Work in dish soap, wait, rinse.")
+        + "\n"
+        + _step_en(3, "Wash · no dry if slippery", "Wash. If still greasy, do not dry.")
+    ),
+    "S_KETCHUP": (
+        _START_EN
+        + _step_en(1, "Scrape · cold", "Scrape solids/sugar. Cold blot.")
+        + "\n"
+        + _step_en(2, "Dish soap + vinegar if needed", "Dish soap; tannin/color → vinegar 1:4.")
+        + "\n"
+        + _step_en(3, "Wash", "Do not dry with sugar left.")
+    ),
+    "S_FRUIT_JUICE": (
+        _START_EN
+        + _step_en(1, "Cold blot", "Cold blot immediately. No rub.")
+        + "\n"
+        + _step_en(2, "Vinegar 1:4", "Spray vinegar 1:4, 5–15 min, rinse.")
+        + "\n"
+        + _step_en(3, "Wash", "Oxygen only on confirmed white cotton — after fabric check.")
+    ),
+    "S_SOFT_DRINK": (
+        _START_EN
+        + _step_en(1, "Cold blot", "Cold blot. Sugar stains yellow if dried.")
+        + "\n"
+        + _step_en(2, "Vinegar 1:4", "Vinegar 1:4 then rinse.")
+        + "\n"
+        + _step_en(3, "Wash", "Do not dry with sugar left.")
+    ),
+    "S_MUD": (
+        _START_EN
+        + _step_en(1, "Dry first", "Let mud dry, brush off — do not rub wet mud.")
+        + "\n"
+        + _step_en(2, "Cold + detergent", "Cold rinse + detergent. Red laterite ≠ normal mud.")
+        + "\n"
+        + _step_en(3, "Wash", "No chlorine on iron soils.")
+    ),
+    "S_SOY_SAUCE": (
+        _START_EN
+        + _step_en(1, "Cold absorb", "Immediate cold blot. No early heat.")
+        + "\n"
+        + _step_en(2, "Enzyme → vinegar", "Enzyme then vinegar 1:4.")
+        + "\n"
+        + _step_en(3, "Wash", "Dried/dryer → residual dark mark disclosure.")
+    ),
+    "S_SWEAT_FRESH": (
+        _START_EN
+        + _step_en(
+            1,
+            "Fresh sweat vs yellow vs deodorant",
+            "Fresh wet → this path. Old yellow pit → yellow SOP (no chlorine). "
+            "White deodorant powder → deodorant SOP.",
+        )
+        + "\n"
+        + _step_en(2, "Enzyme cold", "Enzyme 15–30 min (silk/wool → neutral).")
+        + "\n"
+        + _step_en(3, "Wash", "Wash; no chlorine on protein yellowing.")
+    ),
+    "S_KIMCHI": (
+        _START_EN
+        + _step_en(1, "Remove solids", "Remove chili flakes/solids first.")
+        + "\n"
+        + _step_en(2, "Dish soap → vinegar", "Oil then acid/color path. No toothpaste myths.")
+        + "\n"
+        + _step_en(3, "Wash", "Do not dry with chili color/odor left.")
+    ),
+})
+
 _VI_CORE = {
     "S_HAIR_DYE",
     "S_BLOOD_FRESH",
@@ -1294,6 +1491,47 @@ _DELICATE_REFUSE_STAINS = frozenset({
     "S_FOUNDATION",
     "S_MASCARA",
 })
+
+_MILDEW_UNKNOWN_FABRIC_KO = (
+    _START
+    + _step(
+        1,
+        "원단부터 확인 · 표백 보류",
+        "곰팡이는 면 SOP(식초→산소→락스)와 실크·울·가죽 SOP가 다릅니다.\n"
+        "원단·라벨을 확인하기 전에는 산소·락스를 꺼내지 마세요.\n"
+        "① 면·린넨 흰옷 확인 후 → 일반 곰팡이 SOP\n"
+        "② 실크·울·넥타이·정장·모피 → 거절·전문 카드\n"
+        "③ 가죽·스웨이드 → 가죽 전용·전문\n"
+        "④ 모르면 → 중성·찬물·통풍만 · 고객 고지 후 전문 검토",
+    )
+    + "\n"
+    + _step(
+        2,
+        "(원단 확인 전) 최소만",
+        "PPE·환기 → 마른 포자만 약하게 털기 → 중성 국소·찬물.\n"
+        "통담금·산소·락스·세탁기 금지.",
+    )
+)
+
+_MILDEW_UNKNOWN_FABRIC_VI = (
+    _START_VI
+    + _step_vi(
+        1,
+        "Xác nhận vải trước · tạm dừng tẩy",
+        "Mốc cotton ≠ lụa/len/da. Chưa rõ vải → chưa lấy oxy/Javel.\n"
+        "① Cotton trắng → SOP mốc thường\n"
+        "② Lụa/len/vest → từ chối/chuyên\n"
+        "③ Da → chuyên da\n"
+        "④ Không rõ → chỉ trung tính + lạnh + thoáng",
+    )
+    + "\n"
+    + _step_vi(
+        2,
+        "(Trước khi rõ vải) Tối thiểu",
+        "PPE + thông gió → chải khô nhẹ → S1 cục bộ.\n"
+        "Cấm ngâm/oxy/Javel/máy.",
+    )
+)
 
 _DELICATE_REFUSE_KO: dict[str, str] = {
     "S_RED_WINE": (
@@ -1553,12 +1791,53 @@ def build_hand_motions(
     *,
     graph: Optional[dict] = None,
 ) -> str:
-    """KO scripts (L1/L2/L3); VI covered set; EN empty (SOP body fallback).
+    """KO scripts (L1/L2/L3); VI covered set; EN L1 core + VN.
 
     When graph shows silk/wool (protein delicate), high-risk stains use refuse-first cards
     so message-2 matches L3 intake instead of generic L2 Steps.
+    Mildew + unknown fabric uses a hold-bleach card (not cotton Javel path).
     """
     sid = str(stain_id or "").strip()
+    if graph is not None and sid == "S_MILDEW":
+        try:
+            from protocol import _fabric_flags
+
+            flags = _fabric_flags(graph, _entities_for_fabric(graph))
+            fname = str(flags.get("fname") or "").strip().lower()
+            known = bool(flags.get("fid")) or (
+                fname and fname not in {"unknown", "unk", "?", ""}
+            ) or any(
+                flags.get(k)
+                for k in (
+                    "delicate_protein",
+                    "is_silk",
+                    "is_wool",
+                    "is_leather",
+                    "is_suede",
+                    "is_fur",
+                    "is_acetate",
+                    "is_nylon",
+                    "is_blend",
+                    "is_rayon",
+                )
+            )
+            if not known:
+                if lang == "vi":
+                    return _MILDEW_UNKNOWN_FABRIC_VI
+                if lang == "ko":
+                    return _MILDEW_UNKNOWN_FABRIC_KO
+                if lang == "en":
+                    return (
+                        "Now start (gloves on).\n"
+                        "Step 1 — Identify fabric before bleach\n"
+                        "Cotton mildew SOP ≠ silk/wool/leather. "
+                        "Do not open oxygen/chlorine until fabric is known. "
+                        "Unknown → neutral + cold + air only; refer if unsure.\n"
+                        "Step 2 — Minimum until confirmed\n"
+                        "PPE + vent → dry brush spores lightly → neutral spot only."
+                    )
+        except Exception:
+            pass
     if graph is not None and sid in _DELICATE_REFUSE_STAINS:
         try:
             from protocol import _fabric_flags

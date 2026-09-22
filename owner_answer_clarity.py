@@ -327,6 +327,54 @@ STAIN_STATUS_KO: dict[str, str] = {
         "· 실크·울 → 매장 강처리는 위험. 전문 의뢰·거절을 먼저 검토하세요\n"
         "· 건조기·다리미 지남 → 열고착. 거의 어려움"
     ),
+    "S_PAINT_LATEX": (
+        "◆ 【먼저 확인】 페인트 종류\n"
+        "· 수성(라텍스·아크릴)인가요? 유성·에나멜이면 → 유성 페인트(L3)·전문\n"
+        "· 아직 젖어 있다 → 찬물·주방세제(굳기 전)\n"
+        "· 이미 굳음 → 긁기 후 매니저 · 아세톤은 면·폴리만(실크·아세테이트 금지)\n"
+        "· 원단·색 확인 전 용제·표백 꺼내지 마세요"
+    ),
+    "S_PAINT_OIL": (
+        "◆ 【먼저 확인】 유성 페인트\n"
+        "· L3 — 전문 의뢰·거절을 먼저 검토하세요\n"
+        "· 매장 아세톤·시너는 원단 손상·화재·환기 위험\n"
+        "· 실크·울·아세테이트·가죽 → 즉시 전문/반려"
+    ),
+    "S_SWEAT_FRESH": (
+        "◆ 【먼저 확인】 신선 땀 vs 황변 vs 데오\n"
+        "· 방금·젖은 땀 → 이 SOP(효소·찬물)\n"
+        "· 겨드랑이·깃이 누렇게 오래됨 → 겨드랑이 황변 SOP(락스 금지)\n"
+        "· 흰 데오 가루·알루미늄 자국 → 데오 SOP\n"
+        "· 실크·울 → 효소 금지 · 중성·찬물"
+    ),
+    "S_DEODORANT": (
+        "◆ 【먼저 확인】 데오·땀 구분\n"
+        "· 흰 가루·끈적 데오 잔여인가요? → 이 SOP\n"
+        "· 누런 오래 황변만 → 겨드랑이 황변\n"
+        "· 신선 땀만 → 신선 땀 SOP\n"
+        "· 락스 금지(더 누래질 수 있음)"
+    ),
+    "S_URINE": (
+        "◆ 【먼저 확인】 소변·바이오\n"
+        "· 장갑 필수 · 청결물과 도구·통 분리\n"
+        "· 아직 젖어 있다 → 흡수·찬물·효소\n"
+        "· 이미 말랐다(암모니아 냄새) → 효소 장침지 + 식초 중화\n"
+        "· 암모니아제·염소 혼합 절대 금지(독성 가스)"
+    ),
+    "S_VOMIT": (
+        "◆ 【먼저 확인】 구토·유기물\n"
+        "· 장갑(+마스크)·환기 · 고객 앞에서는 「유기물 얼룩」로만\n"
+        "· 고형 먼저 제거 · 온수 금지(단백질 고착)\n"
+        "· 찬물 → 효소 → 식초(냄새) → 흰옷만 산소\n"
+        "· 청결물과 혼합 금지"
+    ),
+    "S_CHILI": (
+        "◆ 【먼저 확인】 고추·칠리 vs 김치\n"
+        "· 김치국·고춧가루 건더기면 → 김치 SOP\n"
+        "· 고추기름·사테·순수 고추 색소 → 이 SOP(기름+색소)\n"
+        "· 기름 먼저(주방세제) → 색소(알코올·식초) 순서\n"
+        "· 유색·실크는 매니저 확인"
+    ),
 }
 
 STAIN_STATUS_VI: dict[str, str] = {
@@ -422,6 +470,54 @@ STAIN_STATUS_VI: dict[str, str] = {
         "· Đã khô → dễ còn tím — báo trước\n"
         "· Lụa/len → ưu tiên từ chối / gửi chuyên\n"
         "· Đã sấy/ủi → rất khó"
+    ),
+    "S_PAINT_LATEX": (
+        "◆ 【Kiểm tra trước】 Loại sơn\n"
+        "· Sơn nước (latex/acrylic)? Sơn dầu/enamel → L3 chuyên\n"
+        "· Còn ướt → lạnh + nước rửa chén\n"
+        "· Đã khô → cạo rồi hỏi quản lý · acetone chỉ cotton/poly\n"
+        "· Chưa rõ vải → chưa lấy dung môi/tẩy"
+    ),
+    "S_PAINT_OIL": (
+        "◆ 【Kiểm tra trước】 Sơn dầu\n"
+        "· L3 — ưu tiên chuyên / từ chối\n"
+        "· Acetone/thinner tại tiệm: rủi ro vải + cháy + thông gió\n"
+        "· Lụa/len/acetate/da → chuyên ngay"
+    ),
+    "S_SWEAT_FRESH": (
+        "◆ 【Kiểm tra trước】 Mồ hôi mới vs ố vàng vs khử mùi\n"
+        "· Mới ướt → SOP này (enzyme + lạnh)\n"
+        "· Nách/cổ áo vàng lâu → SOP ố vàng (cấm Javel)\n"
+        "· Bột khử mùi trắng → SOP deodorant\n"
+        "· Lụa/len → cấm enzyme · trung tính"
+    ),
+    "S_DEODORANT": (
+        "◆ 【Kiểm tra trước】 Khử mùi vs mồ hôi\n"
+        "· Bột/dính deodorant? → SOP này\n"
+        "· Chỉ ố vàng lâu → SOP ố nách\n"
+        "· Chỉ mồ hôi mới → SOP mồ hôi tươi\n"
+        "· Cấm Javel"
+    ),
+    "S_URINE": (
+        "◆ 【Kiểm tra trước】 Nước tiểu\n"
+        "· Bắt buộc găng · tách đồ sạch\n"
+        "· Còn ướt → thấm + lạnh + enzyme\n"
+        "· Đã khô (mùi amoniac) → enzyme dài + giấm\n"
+        "· Cấm trộn amoniac + clo (khí độc)"
+    ),
+    "S_VOMIT": (
+        "◆ 【Kiểm tra trước】 Nôn / hữu cơ\n"
+        "· Găng (+khẩu trang) · thông gió · nói khách: “vết hữu cơ”\n"
+        "· Cạo đặc trước · cấm nước nóng\n"
+        "· Lạnh → enzyme → giấm (mùi) → oxy chỉ trắng\n"
+        "· Không trộn với đồ sạch"
+    ),
+    "S_CHILI": (
+        "◆ 【Kiểm tra trước】 Ớt vs kimchi\n"
+        "· Nước kimchi / ớt bột → SOP kimchi\n"
+        "· Dầu ớt / sa tế / màu ớt thuần → SOP này\n"
+        "· Dầu trước (rửa chén) → màu sau (cồn/giấm)\n"
+        "· Áo màu / lụa: hỏi quản lý"
     ),
 }
 
@@ -1630,9 +1726,10 @@ def inject_clarity_into_answer(
     try:
         from owner_hand_motions import build_hand_motions
 
-        # Leather/suede + delicate: never attach textile mildew bleach Steps
+        # Leather/suede + delicate + unknown fabric: never attach textile mildew bleach Steps
         if g.get("leather_care") or (
-            sid == "S_MILDEW" and _bleach_unsafe_fabric(g)
+            sid == "S_MILDEW"
+            and (_bleach_unsafe_fabric(g) or not _fabric_known(g))
         ):
             sc_m = g.get("stain_context") if isinstance(g.get("stain_context"), dict) else {}
             path = ""

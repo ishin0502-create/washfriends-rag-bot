@@ -203,6 +203,46 @@ def test_delicate_makeup_refuse():
         assert "từ chối" in vi.lower() or "chuyên" in vi.lower()
 
 
+def test_p2_glossary_blood_compound_intake_mildew():
+    from stain_level_tags import GLOSSARY
+    from owner_hand_motions import build_hand_motions, HAND_MOTIONS_EN
+    from owner_mid_blocks_v40 import COMPOUND_STAINS, block_compound
+    from owner_answer_clarity import STAIN_STATUS_KO
+    from protocol import PROTOCOL_BUILDERS, apply_context_to_protocol
+
+    assert "알코올" in GLOSSARY["ko"] and "L1 아님" in GLOSSARY["ko"]
+    blood = build_hand_motions("S_BLOOD_FRESH", "ko")
+    assert "15–30분" in blood or "15-30" in blood
+    assert "【담금 시간】" not in blood.split("Step 2")[1].split("Step 3")[0]
+    for sid in ("S_EGG", "S_TEA", "S_CHOCOLATE", "S_KETCHUP"):
+        assert sid in COMPOUND_STAINS
+    assert "신입용" in block_compound("S_EGG", "ko")
+    for sid in (
+        "S_PAINT_LATEX",
+        "S_PAINT_OIL",
+        "S_SWEAT_FRESH",
+        "S_DEODORANT",
+        "S_URINE",
+        "S_VOMIT",
+        "S_CHILI",
+    ):
+        assert sid in STAIN_STATUS_KO
+        assert "먼저 확인" in STAIN_STATUS_KO[sid]
+    assert "Step 1" in HAND_MOTIONS_EN["S_BLOOD_FRESH"]
+    assert "enzyme" in HAND_MOTIONS_EN["S_TEA"].lower()
+    mildew_u = apply_context_to_protocol(
+        PROTOCOL_BUILDERS["S_MILDEW"](),
+        fabric="",
+        garment_color="white",
+        flags={},
+    )
+    bleach_chems = {s.chem for s in mildew_u.steps if s.chem in {"B1", "B2"}}
+    assert not bleach_chems, bleach_chems
+    assert any(s.chem == "S1" for s in mildew_u.steps)
+    hold = build_hand_motions("S_MILDEW", "ko", graph={})
+    assert "원단" in hold and ("표백" in hold or "산소" in hold)
+
+
 if __name__ == "__main__":
     test_hair_dye_no_spray_mix()
     test_two_message_split()
@@ -212,4 +252,5 @@ if __name__ == "__main__":
     test_silk_blocks_a1_in_one_line()
     test_l1_status_and_tea_milk_order()
     test_delicate_makeup_refuse()
+    test_p2_glossary_blood_compound_intake_mildew()
     print("OK two-msg clarity")

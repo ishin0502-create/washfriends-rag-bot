@@ -30,9 +30,12 @@ COMPOUND_STAINS = frozenset({
     "S_MAYO",
     "S_MILK_COFFEE",
     "S_CHOCOLATE",
+    "S_EGG",
+    "S_TEA",  # milk tea path is compound
+    "S_KETCHUP",
+    "S_TOMATO_SAUCE",
     "S_KIMCHI",
     "S_GOCHUJANG",
-    "S_BBQ_SAUCE",
     "S_CURRY",
     "S_FISH_SAUCE",
     # VN L2 v41 compound
@@ -289,22 +292,28 @@ CHEM_INTERACTION_FULL = {
 
 COMPOUND_PRINCIPLE = {
     "ko": (
-        "◆ 【복합 얼룩】 성분을 나눠 순서대로\n"
-        "① 기름·왁스 → 주방세제 또는 알코올\n"
-        "② 단백질 → 효소(찬물~미온) ③ 색소·탄닌 → 식초 또는 산소(흰옷)\n"
-        "기름 남은 채 표백·단백질에 온수 → 고착돼요. 단계마다 헹굼."
+        "◆ 【복합 얼룩】 성분을 나눠 순서대로 (신입용)\n"
+        "① 고형·기름·왁스 먼저 제거 → 주방세제(또는 흡착)\n"
+        "② 단백질(우유·계란·피) → 효소·찬물 (온수 금지)\n"
+        "③ 색소·탄닌(차·커피·주스) → 식초 1:4 → 흰옷만 산소(확인 후)\n"
+        "한 번에 섞지 마세요. 단계마다 헹구세요.\n"
+        "기름 남은 채 표백 / 단백질에 온수 → 고착돼요."
     ),
     "vi": (
-        "◆ 【Vết phức hợp】 Tách thành phần · đúng thứ tự\n"
-        "① Dầu/sáp → rửa chén hoặc cồn\n"
-        "② Protein → enzyme ③ Màu/tannin → giấm hoặc oxy (áo trắng)\n"
-        "Còn dầu mà tẩy / protein + nóng → cố định. Xả giữa bước."
+        "◆ 【Vết phức hợp】 Tách thành phần · đúng thứ tự (cho người mới)\n"
+        "① Cạo dầu/sáp trước → nước rửa chén\n"
+        "② Protein (sữa/trứng/máu) → enzyme + lạnh (cấm nóng)\n"
+        "③ Màu/tannin → giấm 1:4 → oxy chỉ áo trắng (sau khi rõ vải)\n"
+        "Không trộn một lần. Xả giữa bước.\n"
+        "Còn dầu mà tẩy / protein + nóng → cố định."
     ),
     "en": (
-        "◆ 【Compound stain】 Split components · keep order\n"
-        "① Grease/wax → dish soap or alcohol\n"
-        "② Protein → enzyme ③ Color/tannin → vinegar or oxygen (whites)\n"
-        "Bleach on grease / hot on protein sets the stain. Rinse between."
+        "◆ 【Compound stain】 Split layers · keep order (junior)\n"
+        "① Solids/grease/wax first → dish soap\n"
+        "② Protein (milk/egg/blood) → enzyme + cold (no hot)\n"
+        "③ Color/tannin → vinegar 1:4 → oxygen on whites only (after fabric check)\n"
+        "Do not cocktail. Rinse between steps.\n"
+        "Bleach on grease / hot on protein sets the stain."
     ),
 }
 

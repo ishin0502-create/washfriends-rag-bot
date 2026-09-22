@@ -2184,6 +2184,28 @@ def apply_context_to_protocol(
     out.garment_color = garment_color or out.garment_color
     flags = flags or {}
     color = (out.garment_color or "").lower().strip()
+    fabric_s = (fabric or out.fabric or "").strip().lower()
+    fabric_known = bool(
+        fabric_s
+        and fabric_s not in {"unknown", "unk", "?", "미확인", "불명"}
+    ) or bool(flags.get("fid")) or any(
+        flags.get(k)
+        for k in (
+            "is_silk",
+            "is_wool",
+            "is_leather",
+            "is_suede",
+            "is_fur",
+            "is_acetate",
+            "is_nylon",
+            "is_blend",
+            "is_rayon",
+            "delicate_protein",
+        )
+    )
+    fname = str(flags.get("fname") or "").strip().lower()
+    if fname and fname not in {"unknown", "unk", "?", ""}:
+        fabric_known = True
 
     for s in out.steps:
         # Require explicit white — unknown/empty/colored all skip white_only steps
@@ -2199,6 +2221,32 @@ def apply_context_to_protocol(
 
         if not s.chem:
             continue
+
+        # P2: mildew + unknown fabric — never offer textile bleach (oxygen/Javel)
+        if (
+            out.stain_id == "S_MILDEW"
+            and not fabric_known
+            and (s.chem or "").upper() in {"B1", "B2", "A4", "X1"}
+        ):
+            s.chem = "S1"
+            s.action_ko = (
+                "원단 미확인: 산소·락스 보류 — 원단(면/실크·울/가죽) 확인 후에만. "
+                "지금은 중성·찬물·통풍만. 모르면 전문·거절."
+            )
+            s.action_vi = (
+                "Chưa rõ vải: tạm dừng oxy/Javel — chỉ S1 + lạnh + thoáng. "
+                "Xác nhận vải rồi mới tẩy. Không rõ → chuyên/từ chối."
+            )
+            s.spray = False
+            s.soak = False
+            s.minutes_lo = None
+            s.minutes_hi = None
+            s.blocked = False
+            s.block_reason_ko = ""
+            s.block_reason_vi = ""
+            s.when = ""
+            continue
+
         blocked, rk, rv = _chem_blocked(s.chem, flags, color)
         if not blocked:
             continue

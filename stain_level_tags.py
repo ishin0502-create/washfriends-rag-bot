@@ -151,8 +151,8 @@ GLOSSARY = {
     "ko": (
         "┌─ 기본 안내 (용어·등급) ─┐\n"
         "◆ [용어 안내]\n"
-        "· L1 초보 단독 — 신입도 상급 확인 없이 시도 가능\n"
-        "· L2 감독 필요 — 매니저·경력자 확인 후 진행\n"
+        "· L1 초보 단독 — 찬물·세제·식초 수준. 알코올·아세톤·표백은 L1 아님\n"
+        "· L2 감독 필요 — 매니저·경력자 확인 후(용제·강한 표백 포함)\n"
         "· L3 전문 의뢰·거절 우선 — 접수 시 전문 의뢰 또는 반려 우선\n"
         "· 등급 1 시도 / 등급 2 부분 제거 / 등급 3 복원 불가 — 고객에게 먼저 고지\n"
         "· 실크·울·가죽·아세테이트·모피, 또는 건조기·다림질 지났으면 한 단계 상향"
@@ -160,8 +160,8 @@ GLOSSARY = {
     "vi": (
         "┌─ Hướng dẫn cơ bản (thuật ngữ·cấp) ─┐\n"
         "◆ [Thuật ngữ]\n"
-        "· L1 Tự xử lý — nhân viên mới có thể thử\n"
-        "· L2 Cần giám sát — hỏi quản lý trước\n"
+        "· L1 Tự xử lý — lạnh/xà phòng/giấm. Cồn/acetone/tẩy không thuộc L1\n"
+        "· L2 Cần giám sát — hỏi quản lý (gồm dung môi/tẩy mạnh)\n"
         "· L3 Ưu tiên từ chối / chuyên nghiệp\n"
         "· Cấp 1 thử / Cấp 2 một phần / Cấp 3 không khôi phục — báo khách trước\n"
         "· Lụa/Len/Da/Acetate/Lông hoặc đã sấy/ủi → nâng 1 cấp"
@@ -169,8 +169,8 @@ GLOSSARY = {
     "en": (
         "┌─ Basics (terms · grade) ─┐\n"
         "◆ [Terms]\n"
-        "· L1 beginner OK — juniors may attempt\n"
-        "· L2 supervisor needed — check with a senior first\n"
+        "· L1 beginner OK — cold water / detergent / vinegar. Alcohol·acetone·bleach are not L1\n"
+        "· L2 supervisor needed — check with a senior (includes solvents/strong bleach)\n"
         "· L3 refuse / refer first\n"
         "· Grade 1 attempt / Grade 2 partial / Grade 3 cannot restore — tell the guest first\n"
         "· Silk/wool/leather/acetate/fur, or after dryer/iron → bump one level"
