@@ -691,7 +691,7 @@ def _tpl_ink_pen() -> Protocol:
         why_ko="[왜 이 순서] 볼펜 잉크=염료. 알코올 안쪽 블롯만 — 문지르면 번짐. 흰옷 잔색 산소.",
         why_vi="[Tại sao] Mực bút = dye. A1 blot mặt trái — CAM chà. B1 trắng nếu cần.",
         steps=[
-            Step("id", "볼펜·잉크·원단", "Nhận mực bút", force="Cap1"),
+            Step("id", "잉크 종류·원단(수성/볼펜/토너)", "Nhận loại mực + vải", force="Cap1"),
             Step(
                 "alcohol",
                 "알코올 안쪽 Cap1 블롯·흡수지(환기)",

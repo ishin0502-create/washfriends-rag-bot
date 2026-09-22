@@ -213,10 +213,18 @@ STAIN_STATUS_KO: dict[str, str] = {
         "· 열고착·건조기 지남 → 잔색 가능 — 사전 고지"
     ),
     "S_MASCARA": (
-        "◆ 【먼저 확인】 마스카라\n"
+        "◆ 【먼저 확인】 마스카라 종류\n"
+        "· 일반 vs 워터프루프를 먼저 확인하세요\n"
         "· 문지르면 번짐 — 찍어 흡수만\n"
-        "· 잔색은 알코올(70% IPA)·환기 · 실크는 매니저 확인\n"
+        "· 워터프루프·실크는 매니저 확인 · 성공률 낮음 고지\n"
         "· 검은 잔색 남은 채 말리지 마세요"
+    ),
+    "S_GLUE": (
+        "◆ 【먼저 확인】 접착제 종류\n"
+        "· 502/순간접착이 굳었으면 → 복원 불가·전문/반려 우선\n"
+        "· 아크릴·목공풀 → 전분/오일 후 세제\n"
+        "· 테이프 자국 → 알코올 테스트 후\n"
+        "· 종류 불명·실크/아세테이트 → 용제 바로 쓰지 마세요"
     ),
     "S_DYE_TRANSFER": (
         "◆ 【먼저 확인】 이염\n"
@@ -231,16 +239,18 @@ STAIN_STATUS_KO: dict[str, str] = {
         "· 건조기·다리미 지남 → 열고착. 부분 제거만 기대·사전 고지"
     ),
     "S_COOKING_OIL": (
-        "◆ 【먼저 확인】 식용유·기름때\n"
-        "· 물부터 붓지 마세요 → 전분·흡착 후 세제\n"
+        "◆ 【먼저 확인】 어떤 기름인가요?\n"
+        "· 식용유·튀유 → 전분·흡착 후 세제(물부터 붓지 마세요)\n"
+        "· 검고 냄새 세고 미끄러움 심함 → 엔진/오토바이 오일(L3)·매니저\n"
         "· 이미 건조기를 돌렸다 → 열고착. 완전 제거 어려움 — 먼저 고지\n"
         "· 미끄러움이 남으면 말리지 마세요"
     ),
     "S_INK_PEN": (
-        "◆ 【먼저 확인】 볼펜·잉크\n"
-        "· 안쪽에서만 찍어 빼기 · 문지르면 번짐\n"
-        "· 실크·울·프린트 → 구석 테스트·매니저 확인\n"
-        "· 열고착이면 성공 낮음 — 사전 고지"
+        "◆ 【먼저 확인】 잉크 종류부터\n"
+        "· 수성·만년필 → 찬물 흡수/헹굼 먼저(알코올 바로 X)\n"
+        "· 볼펜·유성 펜 → 안쪽 찍어 빼기 · 문지르면 번짐\n"
+        "· 유성매직·영구마커 / 프린터·토너 → 전문·반려 우선\n"
+        "· 실크·울·프린트 → 거절·전문·구석 테스트 없이 알코올 금지"
     ),
     "S_MUD": (
         "◆ 【먼저 확인】 진흙\n"
@@ -272,7 +282,8 @@ STAIN_STATUS_KO: dict[str, str] = {
         "· 효소 → 산소 순서 · 완전 하얗게는 보장하지 마세요"
     ),
     "S_RED_WINE": (
-        "◆ 【먼저 확인】 레드와인\n"
+        "◆ 【먼저 확인】 와인 종류·상태\n"
+        "· 레드와인인가요? 화이트·맥주·투명하면 → 화이트/맥주 SOP\n"
         "· 아직 젖어 있다 → 즉시 흡수(소금 금지)·찬물\n"
         "· 이미 말랐다 → 잔색(자줏빛) 가능성 높음 — 사전 고지\n"
         "· 실크·울 → 매장 강처리는 위험. 전문 의뢰·거절을 먼저 검토하세요\n"
@@ -297,10 +308,30 @@ STAIN_STATUS_VI: dict[str, str] = {
         "· Đã sấy/ủi → cố định nhiệt, chỉ kỳ vọng một phần"
     ),
     "S_COOKING_OIL": (
-        "◆ 【Kiểm tra trước】 Dầu ăn\n"
-        "· Đừng đổ nước trước → bột/thấm rồi xà phòng\n"
+        "◆ 【Kiểm tra trước】 Loại dầu nào?\n"
+        "· Dầu ăn/chiên → bột/thấm rồi xà phòng (đừng đổ nước trước)\n"
+        "· Đen, mùi mạnh, nhờn nặng → dầu động cơ/xe máy (L3) · hỏi quản lý\n"
         "· Đã sấy → cố định nhiệt, báo khách trước\n"
         "· Còn nhờn → không sấy"
+    ),
+    "S_INK_PEN": (
+        "◆ 【Kiểm tra trước】 Loại mực\n"
+        "· Mực nước/bút máy → xả lạnh trước (chưa dùng cồn)\n"
+        "· Bút bi/dầu → chấm mặt trái · không chà\n"
+        "· Bút lông vĩnh cửu / mực in / toner → chuyên/từ chối trước\n"
+        "· Lụa/len/in → cấm cồn mạnh không test"
+    ),
+    "S_MASCARA": (
+        "◆ 【Kiểm tra trước】 Mascara thường hay waterproof?\n"
+        "· Thường → IPA 70% chấm. Waterproof → hỏi quản lý, báo khó sạch\n"
+        "· Không chà ngang · lụa cần test góc"
+    ),
+    "S_GLUE": (
+        "◆ 【Kiểm tra trước】 Loại keo\n"
+        "· 502 đã cứng → khó phục hồi · chuyên/từ chối\n"
+        "· Keo acrylic/gỗ → bột/dầu rồi xà phòng\n"
+        "· Keo băng → cồn sau test\n"
+        "· Không rõ loại → đừng đổ dung môi ngay"
     ),
     "S_SWEAT_YELLOW": (
         "◆ 【Kiểm tra trước】 Ố vàng mồ hôi / nách\n"
@@ -309,7 +340,8 @@ STAIN_STATUS_VI: dict[str, str] = {
         "· Khó trắng lại hoàn toàn — cần đồng ý"
     ),
     "S_RED_WINE": (
-        "◆ 【Kiểm tra trước】 Rượu vang đỏ\n"
+        "◆ 【Kiểm tra trước】 Loại rượu · trạng thái\n"
+        "· Đỏ? Trắng/bia/trong → SOP trắng/bia\n"
         "· Còn ướt → thấm ngay (không muối) + lạnh\n"
         "· Đã khô → dễ còn tím — báo trước\n"
         "· Lụa/len → ưu tiên từ chối / gửi chuyên\n"

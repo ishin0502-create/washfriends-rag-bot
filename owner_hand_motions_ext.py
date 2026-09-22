@@ -166,7 +166,9 @@ HAND_MOTIONS_KO_L2_REST: dict[str, str] = {
         _START
         + _step(
             1,
-            "먼저 찍어 흡수 · 문지름 금지",
+            "종류 확인 · 찍어 흡수 · 문지름 금지",
+            "【확인】일반 마스카라인가요, 워터프루프인가요?\n"
+            "워터프루프면 매니저 확인 · 성공률 낮음 고지 후 진행.\n"
             "흰 천으로 위에서 꾹꾹. 옆으로 문지르면 번집니다.\n"
             "※ 실크·울은 매니저 확인 후.",
         )
@@ -536,9 +538,11 @@ HAND_MOTIONS_KO_L3: dict[str, str] = {
         _START
         + _step(
             1,
-            "502 등 굳은 접착제 · 거절 우선",
+            "접착제 종류 확인 · 502면 거절 우선",
+            "【확인】502·순간접착 / 아크릴·목공 / 테이프 / 불명?\n"
             "시아노아크릴레이트(502)가 굳으면 원단 손상 없이 제거가 거의 불가합니다.\n"
-            "접수 시 등급 3·전문·반려를 먼저 검토하세요.",
+            "접수 시 등급 3·전문·반려를 먼저 검토하세요.\n"
+            "아크릴·테이프는 종류에 맞는 경로만(용제 오판 금지).",
         )
         + "\n"
         + _step(
@@ -727,9 +731,13 @@ HAND_MOTIONS_VI_EXTRA: dict[str, str] = {
         _START_VI
         + _step_vi(
             1,
-            "Gạt nhẹ · thử góc",
+            "Xác nhận loại mực · gạt nhẹ",
+            "【Xác nhận】Mực nước/bút máy / bút bi / bút lông·toner?\n"
+            "· Mực nước → xả lạnh trước (chưa dùng cồn)\n"
+            "· Bút lông/toner → chuyên/từ chối trước\n"
+            "· Bút bi → Step 2\n"
             "Khăn khô lấy mực bề mặt — không chà.\n"
-            "※ Lụa/len/in: hỏi quản lý · ưu tiên chuyên/từ chối.",
+            "※ Lụa/len/in: ưu tiên chuyên/từ chối.",
         )
         + "\n"
         + _step_vi(
