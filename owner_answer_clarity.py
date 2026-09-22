@@ -657,14 +657,12 @@ def _chem_codes(graph: dict) -> set[str]:
 
 
 def _soak_bounds(graph: dict) -> tuple[Optional[int], Optional[int]]:
+    """Only steps with soak=True — freeze/wait minutes must not become soak UI."""
     proto = _proto_dict(graph)
     for s in proto.get("steps") or []:
         if not isinstance(s, dict) or s.get("blocked"):
             continue
         if s.get("soak") and s.get("minutes_lo") is not None:
-            return s.get("minutes_lo"), s.get("minutes_hi") or s.get("minutes_lo")
-    for s in proto.get("steps") or []:
-        if isinstance(s, dict) and s.get("minutes_lo") is not None:
             return s.get("minutes_lo"), s.get("minutes_hi") or s.get("minutes_lo")
     return None, None
 
@@ -806,27 +804,45 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
 def _soften_step_label(text: str) -> str:
     t = text.strip()
     if "하세요" in t or "마세요" in t or "해 주세요" in t:
-        return t
+        try:
+            from owner_plain_lang import expand_owner_jargon
+
+            return expand_owner_jargon(t, "ko")
+        except Exception:
+            return t
     reps = (
         ("즉시 찬물", "바로 찬물로 헹궈 주세요"),
         ("찬물 헹굼", "찬물로 헹궈 주세요"),
         ("알코올 블롯(테스트)", "알코올은 흰 천에 묻혀 꾹꾹 눌러 흡수하세요(구석 테스트 먼저)"),
         ("알코올 블롯", "알코올은 흰 천에 묻혀 꾹꾹 눌러 흡수하세요"),
-        ("흰옷 산소 장침지", "흰옷만 산소표백제로 담가 주세요"),
-        ("흰옷 산소", "흰옷만 산소표백제를 쓰세요"),
+        ("흰옷 산소 장침지", "흰옷만 산소계 표백제(과탄산·옥시클린 계열)로 담가 주세요"),
+        ("흰옷 산소", "흰옷만 산소계 표백제(과탄산·옥시클린 계열)를 쓰세요"),
         ("건조 전 강광", "말리기 전 밝은 조명에서 잔색을 확인해 주세요"),
         ("세탁; 잔색 고지", "세탁해 주세요. 잔색이 남을 수 있다고 고객에게 말씀하세요"),
         ("세탁", "세탁해 주세요"),
     )
     for a, b in reps:
         if t == a:
-            return b
+            t = b
+            break
         if t.startswith(a):
-            return b + t[len(a) :]
-    return t
+            t = b + t[len(a) :]
+            break
+    try:
+        from owner_plain_lang import expand_owner_jargon
+
+        return expand_owner_jargon(t, "ko")
+    except Exception:
+        return t
 
 
 def build_tools_names_only(graph: dict, lang: str = "ko") -> str:
+    try:
+        from owner_plain_lang import tool_line_with_purpose
+    except Exception:
+        def tool_line_with_purpose(name: str, lang: str = "ko") -> str:  # type: ignore
+            return name
+
     tools = graph.get("tools") or []
     names: list[str] = []
     for t in tools:
@@ -842,45 +858,41 @@ def build_tools_names_only(graph: dict, lang: str = "ko") -> str:
             names.append(name)
         if len(names) >= 8:
             break
-    # Always suggest basics when we have a stain protocol
     if lang == "ko":
         basics = ["니트릴 장갑", "흰 면 천 여러 장", "타이머(핸드폰 OK)"]
-        head = "◆ 【준비물】 이름만 — 사용법은 다음 메시지에 있어요"
+        head = "◆ 【준비물】 이름 + 용도(초보용)"
         extra_head = "· "
     elif lang == "vi":
         basics = ["Găng nitrile", "Khăn trắng", "Hẹn giờ"]
-        head = "◆ 【Chuẩn bị】 Chỉ tên — cách dùng ở tin sau"
+        head = "◆ 【Chuẩn bị】 Tên + công dụng (cho người mới)"
         extra_head = "· "
     else:
         basics = ["Nitrile gloves", "White cloths", "Timer"]
-        head = "◆ 【Tools】 Names only — how-to in next message"
+        head = "◆ 【Tools】 Name + what it's for (beginner)"
         extra_head = "· "
-    lines = [f"{extra_head}{b}" for b in basics]
+    lines = [f"{extra_head}{tool_line_with_purpose(b, lang)}" for b in basics]
     seen_lower = {ln.lower() for ln in lines}
     for n in names:
-        # skip if already covered by basics keywords
         if any(x in n.lower() for x in ("장갑", "găng", "glove", "흰 천", "khan", "cloth", "타이머", "timer", "hẹn")):
             continue
-        key = f"{extra_head}{n}".lower()
-        if key in seen_lower:
+        line = f"{extra_head}{tool_line_with_purpose(n, lang)}"
+        if line.lower() in seen_lower:
             continue
-        lines.append(f"{extra_head}{n}")
-        seen_lower.add(key)
-    # Stain-specific extras (e.g. IPA 70% for hair dye) — names only, no new chemistry
+        lines.append(line)
+        seen_lower.add(line.lower())
     sid = _motion_stain_id(graph)
     extras = (STAIN_TOOL_EXTRAS.get(sid) or {}).get(lang) or []
     for ex in extras:
         ex = str(ex).strip()
         if not ex:
             continue
-        key = f"{extra_head}{ex}".lower()
-        if key in seen_lower:
+        line = f"{extra_head}{tool_line_with_purpose(ex, lang)}"
+        if line.lower() in seen_lower:
             continue
-        # soft de-dupe against already-listed tool names
-        if any(ex.lower() in ln.lower() or ln.lower() in key for ln in lines):
+        if any(ex.lower() in ln.lower() or ln.lower() in line.lower() for ln in lines):
             continue
-        lines.append(f"{extra_head}{ex}")
-        seen_lower.add(key)
+        lines.append(line)
+        seen_lower.add(line.lower())
     return head + "\n" + "\n".join(lines[:12])
 
 
@@ -1146,6 +1158,15 @@ def inject_clarity_into_answer(
                 out = out.rstrip() + "\n\n" + "\n\n".join(extras)
         except Exception as _e:
             print(f"[CLARITY] mid early-attach skip: {type(_e).__name__}: {_e}")
+        try:
+            from owner_plain_lang import expand_owner_jargon, block_enzyme_emergency_tip
+
+            out = expand_owner_jargon(out, lang)
+            enz = block_enzyme_emergency_tip(_motion_stain_id(g), lang, g)
+            if enz and enz not in out:
+                out = out.rstrip() + "\n\n" + enz
+        except Exception as _e:
+            print(f"[CLARITY] plain early skip: {type(_e).__name__}: {_e}")
         foot = (_GRADE_FOOTER.get(lang) or _GRADE_FOOTER["ko"]).get(grade, "")
         if foot and "【다시 한번 고객 고지】" not in out and "【Nhắc khách】" not in out:
             out = out.rstrip() + "\n\n" + foot
@@ -1202,6 +1223,12 @@ def inject_clarity_into_answer(
     if _mid is not None:
         compound = _mid.block_compound(sid, lang)
         if compound:
+            try:
+                from owner_plain_lang import expand_owner_jargon
+
+                compound = expand_owner_jargon(compound, lang)
+            except Exception:
+                pass
             detail_bits.append(compound)
     spot = build_spot_test_block(g, lang)
     if spot:
@@ -1214,6 +1241,13 @@ def inject_clarity_into_answer(
         motions = build_hand_motions(sid, lang, graph=g)
     except Exception:
         motions = ""
+    if motions:
+        try:
+            from owner_plain_lang import expand_owner_jargon
+
+            motions = expand_owner_jargon(motions, lang)
+        except Exception:
+            pass
 
     # If hand-motions already embed a soak *heading* (◆ 【담금 시간】 inside a Step),
     # skip the shared top soak block. Mere references like "(시간은 【담금 시간】 안내)"
@@ -1243,20 +1277,52 @@ def inject_clarity_into_answer(
         detail_bits.append(motions)
         why = _extract_why_one_liner(body, lang)
         if why:
+            try:
+                from owner_plain_lang import expand_owner_jargon
+
+                why = expand_owner_jargon(why, lang)
+            except Exception:
+                pass
             detail_bits.append(why)
     else:
         # Fallback: keep body but strip emoji TOC steps to reduce clutter
         body_clean = _strip_toc_steps(body.strip())
         if body_clean:
+            try:
+                from owner_plain_lang import expand_owner_jargon
+
+                body_clean = expand_owner_jargon(body_clean, lang)
+            except Exception:
+                pass
             detail_bits.append(body_clean)
 
     detail_bits.append(build_donts_block(g, lang))
     if _mid is not None:
         for tip in _mid.block_vn_tips(sid, lang):
+            try:
+                from owner_plain_lang import expand_owner_jargon
+
+                tip = expand_owner_jargon(tip, lang)
+            except Exception:
+                pass
             detail_bits.append(tip)
         chem_blk = _mid.block_chem(g, lang)
         if chem_blk:
+            try:
+                from owner_plain_lang import expand_owner_jargon
+
+                chem_blk = expand_owner_jargon(chem_blk, lang)
+            except Exception:
+                pass
             detail_bits.append(chem_blk)
+    try:
+        from owner_plain_lang import block_enzyme_emergency_tip
+
+        enz = block_enzyme_emergency_tip(sid, lang, g)
+        if enz:
+            detail_bits.append(enz)
+    except Exception as _e:
+        print(f"[CLARITY] enzyme tip skip: {type(_e).__name__}: {_e}")
     detail_bits.append(build_dry_check_block(lang))
     if _mid is not None:
         retry_blk = _mid.block_retry(sid, level, g, lang)
