@@ -620,7 +620,17 @@ def _proto_dict(graph: dict) -> dict:
 
 def _stain_id(graph: dict) -> str:
     sc = graph.get("stain_context") if isinstance(graph.get("stain_context"), dict) else {}
-    return str(graph.get("_owner_stain_id") or sc.get("id") or "")
+    stain = graph.get("stain") if isinstance(graph.get("stain"), dict) else {}
+    ents = graph.get("entities") if isinstance(graph.get("entities"), dict) else {}
+    proto = graph.get("protocol") if isinstance(graph.get("protocol"), dict) else {}
+    return str(
+        graph.get("_owner_stain_id")
+        or sc.get("id")
+        or stain.get("id")
+        or ents.get("stain_id")
+        or proto.get("stain_id")
+        or ""
+    )
 
 
 def _motion_stain_id(graph: dict) -> str:
@@ -761,7 +771,9 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
                 else:
                     time_bit = f" ({lo} min)"
         if lang == "ko":
+            sid_step = str(s.get("id") or "").strip()
             action = _soften_step_label(action)
+            action = _ensure_ko_step_verb(sid_step, action)
         lines.append(f"{n}) {action}{time_bit}")
         if n >= 8:
             break
@@ -799,6 +811,38 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
     else:
         head = "◆ 【One-line order】 Do each number in order — do not mix steps"
     return head + "\n" + "\n".join(lines)
+
+
+def _ensure_ko_step_verb(step_id: str, action: str) -> str:
+    """One-line order must say what to DO, not only product names."""
+    t = (action or "").strip()
+    if any(x in t for x in ("하세요", "주세요", "마세요", "두세요", "바르", "담가", "헹구", "확인", "깨", "녹이")):
+        return t
+    by_id = {
+        "rinse": "찬물로 헹궈 주세요",
+        "blot": "찬물로 꾹꾹 눌러 흡수하세요(문지르지 마세요)",
+        "scrape": "고형물을 살살 긁어 주세요",
+        "dish": "주방세제(식기용·중성)를 얼룩에 바르고 잠시 두세요(섞지 마세요)",
+        "enzyme": "효소계 세제(프로테아제)로 담가 주세요",
+        "vinegar": "식초 1:4로 담가 냄새를 줄이세요(완전 제거 보장 아님 · 앞 단계와 섞지 마세요)",
+        "alcohol": "알코올을 흰 천에 묻혀 꾹꾹 눌러 흡수하세요",
+        "oxygen": "흰옷만 산소계 표백제(과탄산·옥시클린 계열)로 담가 주세요",
+        "wash": "세탁해 주세요",
+        "light": "말리기 전 밝은 조명에서 잔색을 확인해 주세요",
+        "freeze": "비닐에 넣어 냉동실에서 단단해질 때까지 두세요",
+        "break": "바삭할 때 깨서 제거하세요",
+        "acetone": "잔여만 아세톤 극소(매니저·구석 테스트)",
+        "baking": "베이킹소다 페이스트를 바르고 두세요",
+        "soda": "베이킹소다 페이스트를 바르고 두세요",
+        "dry": "마른 채로 털거나 테이프로 제거하세요",
+        "warm": "미지근한 물로 먼저 녹이세요",
+        "oil": "식용유 소량으로 수액을 녹인 뒤 주방세제로 빼세요",
+    }
+    if step_id in by_id:
+        return by_id[step_id]
+    if t:
+        return f"{t}로 처리해 주세요(앞 단계와 한꺼번에 섞지 마세요)"
+    return t
 
 
 def _soften_step_label(text: str) -> str:
@@ -1170,7 +1214,7 @@ def inject_clarity_into_answer(
         foot = (_GRADE_FOOTER.get(lang) or _GRADE_FOOTER["ko"]).get(grade, "")
         if foot and "【다시 한번 고객 고지】" not in out and "【Nhắc khách】" not in out:
             out = out.rstrip() + "\n\n" + foot
-        return out
+        return _normalize_fresh_wording(out)
 
     body = re.sub(r"⚠️ 이 얼룩은[^\n]*\n+", "", body, count=1)
     body = re.sub(
@@ -1334,7 +1378,8 @@ def inject_clarity_into_answer(
 
     flow = front.rstrip() + "\n\n" + "\n\n".join(flow_bits)
     detail = "\n\n".join(detail_bits)
-    return flow + ZALO_MSG_SPLIT + detail
+    assembled = flow + ZALO_MSG_SPLIT + detail
+    return _normalize_fresh_wording(assembled)
 
 
 def _strip_toc_steps(body: str) -> str:
@@ -1416,3 +1461,75 @@ def _merge_clarity_pack(mod_name: str) -> None:
 _merge_clarity_pack("owner_clarity_pack_v38")
 _merge_clarity_pack("owner_clarity_pack_v39")
 _merge_clarity_pack("owner_vn_motions_v41")
+
+
+def _normalize_fresh_wording(text: str) -> str:
+    """Replace laundry-jargon 「신선」 with clear 「방금 묻은 직후」."""
+    if not text:
+        return text
+    reps = (
+        ("· 신선: 개선", "· 방금 묻은 직후: 색·냄새가 나아질 수 있음"),
+        ("· 흰·신선: 개선", "· 흰옷·방금 묻은 직후: 나아질 수 있음"),
+        ("· 면·신선: 개선", "· 면·방금 묻은 직후: 나아질 수 있음"),
+        ("· 수용성·신선: 개선", "· 수용성·방금 묻은 직후: 나아질 수 있음"),
+        ("· 신선:", "· 방금 묻은 직후:"),
+        ("신선+직사광선", "방금 묻은 뒤+직사광선"),
+        ("신선·면", "방금 묻은 직후·면"),
+        ("신선·흡수", "방금 묻은 직후·흡수"),
+        ("Fresh:", "Just stained:"),
+        ("· Fresh:", "· Just stained:"),
+    )
+    out = text
+    for a, b in reps:
+        out = out.replace(a, b)
+    return out
+
+
+for _sid, _blk in list(STAIN_SOFT_OUTLOOK.items()):
+    if isinstance(_blk, dict):
+        STAIN_SOFT_OUTLOOK[_sid] = {
+            lk: _normalize_fresh_wording(lv) if isinstance(lv, str) else lv
+            for lk, lv in _blk.items()
+        }
+
+# Force-refresh fish-sauce clarity (override cryptic v38 leftovers if any)
+STAIN_STATUS_KO["S_FISH_SAUCE"] = (
+    "◆ 【먼저 확인】 느억맘·액젓·피시소스\n"
+    "· 방금 묻었나요, 이미 말랐나요?\n"
+    "· 방금 묻음 → 냄새가 덜 밸 수 있음 · 마름·열 거침 → 냄새 반복·잔취 가능\n"
+    "· 온수·건조기를 먼저 쓰지 마세요 · 락스 금지 · 냄새 완전 제거는 보장하지 마세요"
+)
+STAIN_SOFT_OUTLOOK["S_FISH_SAUCE"] = {
+    "ko": (
+        "◆ 【예상 결과】\n"
+        "· 방금 묻은 직후: 색·냄새가 나아질 수 있음\n"
+        "· 마름·열: 냄새가 남을 수 있음 — 접수 때 동의"
+    ),
+    "vi": (
+        "◆ 【Kết quả kỳ vọng】\n"
+        "· Mới dính: màu/mùi có thể đỡ\n"
+        "· Khô/nhiệt: dễ còn mùi — đồng ý khi nhận"
+    ),
+    "en": (
+        "◆ 【Expected result】\n"
+        "· Just stained: color/odor may improve\n"
+        "· Dried/heat: odor may remain — get consent"
+    ),
+}
+STAIN_TOOL_EXTRAS["S_FISH_SAUCE"] = {
+    "ko": [
+        "찬물",
+        "효소계 세제(프로테아제·라벨에 효소/enzyme)",
+        "흰 식초(냄새 중화·줄이기용)",
+        "산소계 표백제(흰옷만·과탄산)",
+        "담금통(옷을 담그는 대야)",
+    ],
+    "vi": ["Nước lạnh", "Nước giặt enzyme (protease)", "Giấm (giảm mùi)", "Oxy trắng", "Chậu ngâm"],
+    "en": ["Cold water", "Enzyme detergent (protease)", "Vinegar (reduce odor)", "Oxygen bleach (whites)", "Soak basin"],
+}
+STAIN_DONTS_KO["S_FISH_SAUCE"] = [
+    "온수·건조기를 먼저 쓰지 마세요 → 냄새가 더 고착될 수 있어요",
+    "냄새 완전 제거를 보장하지 마세요 — 남을 수 있다고 먼저 말씀하세요",
+    "락스로 느억맘 냄새를 지우지 마세요",
+    "향수·섬유유연제로 냄새만 덮지 마세요",
+]

@@ -1412,17 +1412,51 @@ def _tpl_annatto() -> Protocol:
 def _tpl_fish_sauce() -> Protocol:
     return Protocol(
         stain_id="S_FISH_SAUCE",
-        why_ko="[왜 이 순서] 느억맘=단백질+유분+냄새. 찬물→효소→주방세제→식초→흰/면 산소. 락스 남용 금지.",
+        why_ko=(
+            "[왜 이 순서] 느억맘=단백질+유분+냄새. "
+            "찬물 → 효소계 세제 → 주방세제(유분) → 식초(냄새 중화) → 흰/면만 산소계 표백제. "
+            "한꺼번에 섞지 마세요. 락스 금지."
+        ),
         why_vi="[Tại sao] Nước mắm = protein+dầu+mùi. Lạnh → E1 → D2 → A3 → oxy. CẤM Javel lạm.",
         steps=[
             Step("id", "느억맘·원단", "Nhận nước mắm", force="Cap1"),
-            Step("rinse", "찬물", "Xả lạnh", force="Cap1"),
-            Step("enzyme", "효소", "E1", chem="E1", minutes_lo=15, minutes_hi=45, soak=True),
-            Step("dish", "주방세제", "D2", chem="D2", force="Cap2", spray=True),
-            Step("vinegar", "식초 1:4", "Giấm 1:4", chem="A3", minutes_lo=10, minutes_hi=20, soak=True),
-            Step("oxygen", "흰/면 산소(테스트)", "Oxy trắng", chem="B1", when="white_only", soak=True),
+            Step("rinse", "찬물로 헹구기", "Xả lạnh", force="Cap1"),
+            Step(
+                "enzyme",
+                "효소계 세제로 담그기",
+                "E1",
+                chem="E1",
+                minutes_lo=15,
+                minutes_hi=45,
+                soak=True,
+            ),
+            Step(
+                "dish",
+                "주방세제(식기용·중성) 바르기",
+                "D2",
+                chem="D2",
+                force="Cap2",
+                spray=True,
+            ),
+            Step(
+                "vinegar",
+                "식초 1:4로 냄새 줄이기",
+                "Giấm 1:4",
+                chem="A3",
+                minutes_lo=10,
+                minutes_hi=20,
+                soak=True,
+            ),
+            Step(
+                "oxygen",
+                "흰/면만 산소계 표백제(테스트)",
+                "Oxy trắng",
+                chem="B1",
+                when="white_only",
+                soak=True,
+            ),
             Step("wash", "세탁", "Giặt", force="Cap2"),
-            Step("light", "건조 전 강광", "Ánh sáng trước sấy", force="Cap1"),
+            Step("light", "말리기 전 밝은 조명에서 잔색 확인", "Ánh sáng trước sấy", force="Cap1"),
         ],
     )
 

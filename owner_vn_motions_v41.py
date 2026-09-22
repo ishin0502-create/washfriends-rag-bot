@@ -447,7 +447,12 @@ def all_motion_maps() -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
 
 # Clarity extras (setdefault merge) — language-keyed outlook
 EXTRA_STATUS_KO = {
-    "S_FISH_SAUCE": "◆ 【먼저 확인】 느억맘·액젓\n· 신선→냄새 덜 배임 · 마름→반복 가능 · 열 지남→냄새 고착\n· 락스 금지",
+    "S_FISH_SAUCE": (
+        "◆ 【먼저 확인】 느억맘·액젓·피시소스\n"
+        "· 방금 묻었나요, 이미 말랐나요?\n"
+        "· 방금 묻음 → 냄새가 덜 밸 수 있음 · 마름·열 거침 → 냄새 반복·잔취 가능\n"
+        "· 온수·건조기를 먼저 쓰지 마세요 · 락스 금지 · 냄새 완전 제거는 보장하지 마세요"
+    ),
     "S_VN_MANGOSTEEN": "◆ 【먼저 확인】 망고스틴\n· 매우 강한 보라 색소 — 잔색 고지 필수\n· 유색·실크는 전문 검토",
     "S_VN_DURIAN": "◆ 【먼저 확인】 두리안\n· 색보다 냄새 · 1회에 안 빠질 수 있음 — 고지",
     "S_VN_BANH_XEO": "◆ 【먼저 확인】 반쎄오\n· 전분→오일→강황 순서 · 복합 얼룩",
@@ -460,9 +465,21 @@ EXTRA_STATUS_VI = {
 }
 EXTRA_SOFT_OUTLOOK = {
     "S_FISH_SAUCE": {
-        "ko": "◆ 【예상 결과】\n· 묻은 직후: 색·냄새 개선 기대\n· 마름·열: 냄새 잔류 가능 — 동의",
-        "vi": "◆ 【Kết quả kỳ vọng】\n· Mới: cải thiện màu/mùi\n· Khô/nhiệt: dễ còn mùi — đồng ý",
-        "en": "◆ 【Expected result】\n· Fresh: color/odor improve\n· Dried/heat: odor may remain — consent",
+        "ko": (
+            "◆ 【예상 결과】\n"
+            "· 방금 묻은 직후: 색·냄새가 나아질 수 있음\n"
+            "· 마름·열: 냄새가 남을 수 있음 — 접수 때 동의"
+        ),
+        "vi": (
+            "◆ 【Kết quả kỳ vọng】\n"
+            "· Mới dính: màu/mùi có thể đỡ\n"
+            "· Khô/nhiệt: dễ còn mùi — đồng ý khi nhận"
+        ),
+        "en": (
+            "◆ 【Expected result】\n"
+            "· Just stained: color/odor may improve\n"
+            "· Dried/heat: odor may remain — get consent"
+        ),
     },
     "S_VN_MANGOSTEEN": {
         "ko": "◆ 【예상 결과】\n· 부분 개선 · 완전 제거 어렵다고 고지",
@@ -487,9 +504,14 @@ EXTRA_DONTS_VI = {
 }
 EXTRA_TOOL_EXTRAS = {
     "S_FISH_SAUCE": {
-        "ko": ["효소세제", "흰 식초", "산소(흰옷)", "담금통"],
-        "vi": ["Enzyme", "Giấm trắng", "Oxy (áo trắng)", "Thau"],
-        "en": ["Enzyme detergent", "White vinegar", "Oxygen (whites)", "Basin"],
+        "ko": [
+            "효소계 세제(프로테아제·라벨에 효소/enzyme)",
+            "흰 식초(냄새 중화·줄이기용)",
+            "산소계 표백제(흰옷만·과탄산)",
+            "담금통(옷을 담그는 대야)",
+        ],
+        "vi": ["Nước giặt enzyme (protease)", "Giấm (giảm mùi)", "Oxy trắng", "Chậu ngâm"],
+        "en": ["Enzyme detergent (protease)", "Vinegar (reduce odor)", "Oxygen bleach (whites)", "Soak basin"],
     },
     "S_VN_DURIAN": {
         "ko": ["주방세제", "베이킹소다", "식초"],

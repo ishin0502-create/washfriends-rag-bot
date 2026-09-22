@@ -12,24 +12,6 @@ from owner_hand_motions import build_hand_motions
 from protocol import PROTOCOL_BUILDERS
 
 
-def test_expand_enzyme_oxygen_all_stains():
-    samples = [
-        "효소를 바르고 30분. 흰옷 산소(테스트).",
-        "Step 2. 효소로 단백질\n효소 30분",
-        "식초로 냄새",
-        "주방세제로 기름",
-    ]
-    for s in samples:
-        out = expand_owner_jargon(s, "ko")
-        assert "효소세제" in out or "식초로 냄새 빼기" in out or "주방세제(식기용" in out
-        assert "효소로 단백질" not in out
-        # must not leave bare confusing titles
-        if "효소를 바르" in s:
-            assert "라벨" in out or "프로테아제" in out
-        if "산소" in s:
-            assert "산소계 표백" in out or "과탄산" in out
-
-
 def test_tool_purpose():
     line = tool_line_with_purpose("연질 스포팅 솔", "ko")
     assert "—" in line and "살살" in line
@@ -41,12 +23,13 @@ def test_enzyme_emergency_reference_not_sop():
     tip = block_enzyme_emergency_tip("S_FISH_SAUCE", "ko")
     assert tip
     assert "참고" in tip and "응급" in tip
-    assert "표준 아님" in tip or "권장 아님" in tip
+    assert "표준 아님" in tip or "권장 아님" in tip or "SOP" in tip
     assert "소화제" in tip
-    assert "정식 효소세제" in tip or "효소세제" in tip
-    # blood also gets tip
+    assert "내부" in tip
+    assert "손님에게" in tip and ("고지하지" in tip or "설명" in tip)
+    # must NOT tell staff to disclose the workaround to guests as a tip to share
+    assert "「응급 변통」이라고 고지" not in tip
     assert block_enzyme_emergency_tip("S_BLOOD_FRESH", "ko")
-    # gum should not (no enzyme)
     assert not block_enzyme_emergency_tip("S_GUM", "ko")
 
 
@@ -71,29 +54,65 @@ def test_fish_sauce_clarity_plain():
     )
     g = {
         "stain": {"id": sid},
+        "_owner_stain_id": sid,
         "entities": {"stain_id": sid, "lang": "ko"},
         "protocol": proto.to_dict(),
-        "chemicals": [{"code": "E1"}, {"code": "A3"}, {"code": "B1"}],
+        "chemicals": [{"code": "E1"}, {"code": "A3"}, {"code": "B1"}, {"code": "D2"}],
         "tools": [
             {"id": "T_BRUSH_SOFT", "name_ko": "연질 스포팅 솔"},
             {"id": "T_SOAK_BIN", "name_ko": "담금통·침지 용기"},
         ],
-        "_raw": "느억맘 얼룩",
+        "_raw": "느억맘 얼룩 흰옷",
     }
     out = inject_clarity_into_answer(body, graph=g, level="L2", grade=2, lang="ko")
-    assert "효소세제" in out
+    assert "신선: 개선" not in out
+    assert "방금 묻은 직후" in out
+    assert "느억맘" in out or "액젓" in out
+    assert "온수·건조기" in out
+    assert "냄새·염" not in out
+    assert "효소·세제" not in out
+    assert "효소계 세제" in out
     assert "산소계 표백" in out or "과탄산" in out
     assert "연질 스포팅 솔 —" in out
     assert "소화제" in out
-    assert "표준 아님" in out or "권장 아님" in out
-    assert "식초로 냄새 빼기" in out or "냄새 빼기" in out
+    assert "손님에게" in out and "고지하지" in out
+    assert "바르고" in out or "담가" in out or "바르" in out  # one-line has verbs
+    order_i = out.find("【한 줄 순서】")
+    assert order_i >= 0
+    order = out[order_i : order_i + 450]
+    assert "주방세제" in order
+    assert "바르" in order or "담가" in order
+    assert "섞지" in order or "하나씩" in out
+    assert "(과탄산·옥시클린 계열)(과탄산" not in out
+    # 1→2→3 are sequential actions, not mix-all
+    assert "식초" in order and ("냄새" in order or "줄이" in order)
+
+
+def test_expand_enzyme_oxygen_all_stains():
+    samples = [
+        "효소를 바르고 30분. 흰옷 산소(테스트).",
+        "Step 2. 효소로 단백질\n효소 30분",
+        "식초로 냄새",
+        "주방세제로 기름",
+        "효소·세제",
+    ]
+    for s in samples:
+        out = expand_owner_jargon(s, "ko")
+        assert "효소계 세제" in out or "식초로 냄새 중화" in out or "주방세제(식기용" in out
+        assert "효소로 단백질" not in out
+        assert "효소·세제" not in out
+        if "효소를 바르" in s:
+            assert "라벨" in out or "프로테아제" in out
+        if "산소" in s:
+            assert "산소계 표백" in out or "과탄산" in out
 
 
 def test_blood_also_gets_plain_enzyme():
     sid = "S_BLOOD_FRESH"
-    m = expand_owner_jargon(build_hand_motions(sid, "ko"), "ko")
-    if "효소" in build_hand_motions(sid, "ko"):
-        assert "효소세제" in m
+    raw = build_hand_motions(sid, "ko")
+    m = expand_owner_jargon(raw, "ko")
+    if "효소" in raw:
+        assert "효소계 세제" in m
 
 
 if __name__ == "__main__":

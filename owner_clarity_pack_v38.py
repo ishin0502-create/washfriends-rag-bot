@@ -99,9 +99,10 @@ EXTRA_STATUS_KO: dict[str, str] = {
         "· 전분·흡착 → 세제 · 미끄러움 남으면 말리지 마세요"
     ),
     "S_FISH_SAUCE": (
-        "◆ 【먼저 확인】 액젓·피시소스\n"
-        "· 냄새·염 · 온수·건조기 먼저 금지\n"
-        "· 냄새 남을 수 있음 — 보장 금지"
+        "◆ 【먼저 확인】 느억맘·액젓·피시소스\n"
+        "· 방금 묻었나요, 이미 말랐나요?\n"
+        "· 방금 묻음 → 냄새가 덜 밸 수 있음 · 마름·열 거침 → 냄새 반복·잔취 가능\n"
+        "· 온수·건조기를 먼저 쓰지 마세요 · 락스 금지 · 냄새 완전 제거는 보장하지 마세요"
     ),
     "S_BABY_FORMULA": (
         "◆ 【먼저 확인】 분유\n"
@@ -262,9 +263,15 @@ EXTRA_TOOL_EXTRAS: dict[str, dict[str, list[str]]] = {
         "en": ["Starch/baby powder", "Dish soap"],
     },
     "S_FISH_SAUCE": {
-        "ko": ["찬물", "효소·세제", "식초(냄새)"],
-        "vi": ["Nước lạnh", "Enzyme/xà phòng", "Giấm (mùi)"],
-        "en": ["Cold water", "Enzyme/detergent", "Vinegar (odor)"],
+        "ko": [
+            "찬물",
+            "효소계 세제(프로테아제·라벨에 효소/enzyme)",
+            "흰 식초(냄새 중화·줄이기용)",
+            "산소계 표백제(흰옷만·과탄산)",
+            "담금통(옷을 담그는 대야)",
+        ],
+        "vi": ["Nước lạnh", "Nước giặt enzyme (protease)", "Giấm (giảm mùi)", "Oxy trắng", "Chậu ngâm"],
+        "en": ["Cold water", "Enzyme detergent (protease)", "Vinegar (reduce odor)", "Oxygen bleach (whites)", "Soak basin"],
     },
     "S_BABY_FORMULA": {
         "ko": ["효소세제", "찬물", "담금통"],
