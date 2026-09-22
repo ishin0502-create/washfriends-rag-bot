@@ -943,7 +943,11 @@ def build_tools_names_only(graph: dict, lang: str = "ko") -> str:
         lines.append(line)
         seen_lower.add(line.lower())
     sid = _motion_stain_id(graph)
-    extras = (STAIN_TOOL_EXTRAS.get(sid) or {}).get(lang) or []
+    # Leather/suede care: never append textile mildew extras (vinegar soak / oxygen)
+    if graph.get("leather_care"):
+        extras = []
+    else:
+        extras = (STAIN_TOOL_EXTRAS.get(sid) or {}).get(lang) or []
     for ex in extras:
         ex = str(ex).strip()
         if not ex:
@@ -1260,13 +1264,55 @@ def inject_clarity_into_answer(
             flow_bits.append(intake)
 
     outlook_override = (STAIN_SOFT_OUTLOOK.get(sid) or {}).get(lang) or ""
+    if g.get("leather_care"):
+        if lang == "vi":
+            outlook_override = (
+                "◆ 【Kết quả kỳ vọng】\n"
+                "· Da + mốc: chỉ bề mặt sớm có thể đỡ — không cam kết sạch hết\n"
+                "· Ngấm sâu / nứt → chuyên"
+            )
+        elif lang == "en":
+            outlook_override = (
+                "◆ 【Expected result】\n"
+                "· Leather mold: surface/early may improve — full removal not promised\n"
+                "· Deep / cracked → refer pro"
+            )
+        else:
+            outlook_override = (
+                "◆ 【예상 결과】\n"
+                "· 가죽 곰팡이: 표면·조기만 개선 가능 — 완전 제거 비보장\n"
+                "· 침투·갈라짐 → 전문"
+            )
     if outlook_override:
         outlook = outlook_override
     else:
         outlook = (_SOFT_OUTLOOK.get(lang) or _SOFT_OUTLOOK["ko"]).get(int(grade) or 2, "")
     if outlook:
         flow_bits.append(outlook)
-    status = build_status_check(g, lang)
+    if g.get("leather_care"):
+        if lang == "vi":
+            status = (
+                "◆ 【Kiểm tra trước】 Da + mốc\n"
+                "· Phân biệt da bóng vs suede\n"
+                "· CẤM ngâm giấm / tẩy oxy / Javel / máy giặt\n"
+                "· PPE + ngoài trời · đồng ý trước khi làm"
+            )
+        elif lang == "en":
+            status = (
+                "◆ 【Check first】 Leather + mold\n"
+                "· Smooth leather vs suede\n"
+                "· No vinegar soak / oxygen / chlorine / washer\n"
+                "· PPE outdoors · get consent first"
+            )
+        else:
+            status = (
+                "◆ 【먼저 확인】 가죽 + 곰팡이\n"
+                "· 평활 가죽인지 스웨이드인지 확인\n"
+                "· 식초 통담금·산소·락스·세탁기 금지\n"
+                "· PPE·야외 · 진행 전 동의"
+            )
+    else:
+        status = build_status_check(g, lang)
     if status:
         flow_bits.append(status)
     if _mid is not None:
@@ -1300,7 +1346,25 @@ def inject_clarity_into_answer(
     try:
         from owner_hand_motions import build_hand_motions
 
-        motions = build_hand_motions(sid, lang, graph=g)
+        # Leather/suede: never attach textile mildew Steps (vinegar→oxygen→Javel)
+        if not g.get("leather_care"):
+            motions = build_hand_motions(sid, lang, graph=g)
+        else:
+            sc_m = g.get("stain_context") if isinstance(g.get("stain_context"), dict) else {}
+            path = ""
+            if lang == "vi":
+                path = str(sc_m.get("fresh_path_vi") or "")
+            elif lang == "en":
+                path = str(sc_m.get("fresh_path_en") or sc_m.get("fresh_path") or "")
+            else:
+                path = str(sc_m.get("fresh_path_ko") or "")
+            if path:
+                if lang == "vi":
+                    motions = "◆ 【Tay nghề da】\n" + path
+                elif lang == "en":
+                    motions = "◆ 【Leather hand steps】\n" + path
+                else:
+                    motions = "◆ 【가죽 손동작】\n" + path
     except Exception:
         motions = ""
     if motions:

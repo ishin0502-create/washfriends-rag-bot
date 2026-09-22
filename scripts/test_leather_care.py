@@ -81,6 +81,10 @@ def test_leather_mold_has_cream_ppe_no_soak():
     )
     assert "흰 면만 희석 락스" not in clarity
     assert "Javel" not in clarity
+    # Textile mildew Step (vinegar→oxygen→chlorine) must not appear as hand motions
+    assert "식초 Cap1" not in clarity
+    assert "흰옷 산소(테스트)" not in clarity or "가죽" in clarity
+    assert "산소(흰옷)" not in clarity.split("【준비물】")[-1].split("📩")[0] if "【준비물】" in clarity else True
     assert "가죽" in clarity or "크림" in clarity or "전문" in clarity
 
 
