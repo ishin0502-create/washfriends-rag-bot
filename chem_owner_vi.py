@@ -140,7 +140,11 @@ CHEM_OWNER_VI: dict[str, dict[str, str]] = {
         ),
         "when_use_vi": "Tẩy sáng vết còn lại trên cotton/linen trắng sau bước enzyme hoặc giấm.",
         "forbid_vi": "CẤM lụa, len, đồ màu, chưa xác nhận màu trắng.",
-        "aliases": ("bot tay oxy", "tay oxy", "oxygen bleach", "b1", "oxy"),
+        "aliases": (
+            "bot tay oxy", "tay oxy", "oxygen bleach", "b1", "oxy",
+            "산소표백제", "산소 표백제", "산소계", "과탄산", "과탄산나트륨", "옥시클린",
+            "bột tẩy oxy", "bot tay oxy",
+        ),
     },
     "B2": {
         "name_vi": "Nước Javel (tẩy clo)",
@@ -152,7 +156,10 @@ CHEM_OWNER_VI: dict[str, dict[str, str]] = {
         ),
         "when_use_vi": "Tẩy mạnh đồ cotton trắng — không dùng như bước đầu cho mọi vết.",
         "forbid_vi": "CẤM màu, lụa, len, acetate. CẤM trộn giấm/amoniac/enzyme cùng bồn.",
-        "aliases": ("javel", "javelle", "chlorine", "b2", "nuoc tay trang", "clo"),
+        "aliases": (
+            "javel", "javelle", "chlorine", "b2", "nuoc tay trang", "clo",
+            "락스", "자벨", "염소표백", "염소 표백",
+        ),
     },
     "N1": {
         "name_vi": "Baking soda (bicarbonate)",

@@ -4391,6 +4391,17 @@ def generate_response(user_message: str, channel: str = "", user_id: str = "") -
     session_lang = str(pending.get("lang") or "")
     lang = detect_reply_lang(user_message, session_lang=session_lang)
 
+    # Meta education cards (retry / pre-dry / bag / oxygen term / nitrile / beginner)
+    # — before chem/SOP so Q1·Q2·Q6·Q8·Q9·Q10 do not empty-fallback or mis-route.
+    try:
+        from education_intent_cards import try_intent_education_card
+
+        _intent = try_intent_education_card(user_message, lang=lang if lang in {"ko", "vi", "en"} else "ko")
+        if _intent:
+            return _intent
+    except Exception as e:
+        print(f"[INTENT_CARD] skip: {e}")
+
     # Chem follow-up: explain shop-language card without empty-graph EN Sorry
     try:
         from chem_explain import looks_like_chem_question, try_explain_chem

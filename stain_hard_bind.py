@@ -85,9 +85,32 @@ def bind_vn_specialty_stain(user_message: str, raw_n: Optional[str] = None) -> O
         return "S_VN_NUOC_CHAM"
 
     # --- v43 motorbike / climate (specific before generic oil) ---
-    if any(k in msg for k in ("체인 기름", "체인유", "체인 오일", "오토바이 체인")) or any(
-        k in raw_n for k in ("chain oil", "chain grease", "dau xich", "dầu xích")
+    if any(
+        k in msg
+        for k in (
+            "체인 기름",
+            "체인기름",
+            "체인유",
+            "체인 오일",
+            "체인오일",
+            "오토바이 체인",
+            "바이크 체인",
+        )
+    ) or (
+        ("체인" in msg or "chain" in raw_n)
+        and any(k in msg for k in ("기름", "오일", "묻", "얼룩"))
+    ) or any(
+        k in raw_n
+        for k in ("chain oil", "chain grease", "dau xich", "dầu xích", "dau xích")
     ) or "dầu xích" in low:
+        return "S_VN_CHAIN_OIL"
+
+    # "오토바이 … 기름" without 체인 → still prefer chain if 체인 cue; else motorbike oil later
+    if (
+        any(k in msg for k in ("오토바이", "바이크", "xe máy", "xe may"))
+        and any(k in msg for k in ("체인", "chain", "xích", "xich"))
+        and any(k in msg for k in ("기름", "오일", "dầu", "dau", "묻", "얼룩"))
+    ):
         return "S_VN_CHAIN_OIL"
 
     if any(k in msg for k in ("매연", "그을음", "배기가스", "검댕")) or any(

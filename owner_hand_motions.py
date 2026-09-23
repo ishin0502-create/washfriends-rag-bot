@@ -870,6 +870,9 @@ HAND_MOTIONS_KO.update(HAND_MOTIONS_KO_L3)
 HAND_MOTIONS_KO.update(HAND_MOTIONS_KO_TAIL)
 
 # VN L2 v41 — enrich existing + new specialty (override with richer scripts)
+_vn_vi: dict = {}
+_vn_en: dict = {}
+_vn43_vi: dict = {}
 try:
     from owner_vn_motions_v41 import all_motion_maps as _vn_motion_maps
 
@@ -877,7 +880,13 @@ try:
     HAND_MOTIONS_KO.update(_vn_ko)
 except Exception as _e:
     print(f"[MOTIONS] vn_v41 ko skip: {type(_e).__name__}: {_e}")
-    _vn_vi, _vn_en = {}, {}
+try:
+    from owner_vn_motions_v43 import merge_v43_motions as _vn43_merge
+
+    _vn43_ko, _vn43_vi = _vn43_merge()
+    HAND_MOTIONS_KO.update(_vn43_ko)
+except Exception as _e:
+    print(f"[MOTIONS] vn_v43 ko skip: {type(_e).__name__}: {_e}")
 
 _L1_REQUIRED = {
     "S_BLOOD_FRESH",
@@ -1225,6 +1234,10 @@ try:
     HAND_MOTIONS_VI.update(_vn_vi)
 except Exception:
     pass
+try:
+    HAND_MOTIONS_VI.update(_vn43_vi)
+except Exception:
+    pass
 
 HAND_MOTIONS_EN: dict[str, str] = {}
 try:
@@ -1491,6 +1504,108 @@ _DELICATE_REFUSE_STAINS = frozenset({
     "S_FOUNDATION",
     "S_MASCARA",
 })
+
+# Silk/wool coffee·tea: one-line is S1 — motions must not teach vinegar
+_DELICATE_NEUTRAL_STAINS = frozenset({"S_BLACK_COFFEE", "S_TEA", "S_FRUIT_JUICE", "S_SOFT_DRINK"})
+
+_DELICATE_NEUTRAL_KO: dict[str, str] = {
+    "S_BLACK_COFFEE": (
+        _START
+        + _step(
+            1,
+            "실크·울 · 찬물만 흡수",
+            "옷을 뒤집고 찬물로 안쪽에서 흡수하세요. 문지르지 마세요.\n"
+            "산소·알코올·강한 산은 쓰지 마세요.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "중성세제 국소만",
+            "워시프렌즈 중성세제(또는 순한 중성)를 얼룩에만 약하게.\n"
+            "식초·산소는 실크·울에서 기본 금지(매니저 승인·테스트 전).",
+        )
+        + "\n"
+        + _step(3, "찬물 헹굼 · 확인", "충분히 헹구고 말리기 전 강광 확인. 잔색 고지.")
+    ),
+    "S_TEA": (
+        _START
+        + _step(
+            1,
+            "실크·울 · 차 · 찬물",
+            "우유 탄 차면: 중성만(효소 금지). 순차도 식초 기본 금지.\n"
+            "찬물로 흡수만.",
+        )
+        + "\n"
+        + _step(
+            2,
+            "중성 국소",
+            "중성세제 국소·찬물. 산소 금지.",
+        )
+        + "\n"
+        + _step(3, "헹굼 · 확인", "헹군 뒤 강광. 잔색·당분 있으면 말리지 마세요.")
+    ),
+    "S_FRUIT_JUICE": (
+        _START
+        + _step(1, "실크·울 · 찬물 흡수", "찬물 흡수. 문지르지 마세요.")
+        + "\n"
+        + _step(2, "중성만", "중성세제 국소. 식초·산소 기본 금지.")
+        + "\n"
+        + _step(3, "헹굼 · 확인", "강광 확인 후 건조.")
+    ),
+    "S_SOFT_DRINK": (
+        _START
+        + _step(1, "실크·울 · 찬물", "찬물 흡수. 당분 남은 채 열 금지.")
+        + "\n"
+        + _step(2, "중성만", "중성세제 국소.")
+        + "\n"
+        + _step(3, "헹굼 · 확인", "강광 확인.")
+    ),
+}
+
+_DELICATE_NEUTRAL_VI: dict[str, str] = {
+    "S_BLACK_COFFEE": (
+        _START_VI
+        + _step_vi(
+            1,
+            "Lụa/len · chỉ thấm lạnh",
+            "Lật áo, thấm lạnh mặt trái. Không chà.\n"
+            "Cấm oxy/cồn/acid mạnh.",
+        )
+        + "\n"
+        + _step_vi(
+            2,
+            "Chỉ S1 cục bộ",
+            "Nước giặt trung tính chấm nhẹ.\n"
+            "Giấm/oxy: không dùng mặc định trên lụa/len.",
+        )
+        + "\n"
+        + _step_vi(3, "Xả · kiểm", "Xả kỹ, soi đèn trước khi sấy.")
+    ),
+    "S_TEA": (
+        _START_VI
+        + _step_vi(1, "Lụa/len · trà", "Trà sữa: chỉ trung tính. Trà thuần: cũng ưu tiên S1.")
+        + "\n"
+        + _step_vi(2, "S1", "Trung tính cục bộ. Cấm oxy.")
+        + "\n"
+        + _step_vi(3, "Xả", "Soi đèn. Còn đường → không sấy.")
+    ),
+    "S_FRUIT_JUICE": (
+        _START_VI
+        + _step_vi(1, "Lụa/len · lạnh", "Thấm lạnh. Không chà.")
+        + "\n"
+        + _step_vi(2, "S1", "Chỉ trung tính.")
+        + "\n"
+        + _step_vi(3, "Xả", "Soi đèn.")
+    ),
+    "S_SOFT_DRINK": (
+        _START_VI
+        + _step_vi(1, "Lụa/len · lạnh", "Thấm lạnh.")
+        + "\n"
+        + _step_vi(2, "S1", "Trung tính.")
+        + "\n"
+        + _step_vi(3, "Xả", "Soi đèn.")
+    ),
+}
 
 _MILDEW_UNKNOWN_FABRIC_KO = (
     _START
@@ -1836,6 +1951,23 @@ def build_hand_motions(
                         "Step 2 — Minimum until confirmed\n"
                         "PPE + vent → dry brush spores lightly → neutral spot only."
                     )
+        except Exception:
+            pass
+    if graph is not None and sid in _DELICATE_NEUTRAL_STAINS:
+        try:
+            from protocol import _fabric_flags
+
+            flags = _fabric_flags(graph, _entities_for_fabric(graph))
+            if (
+                flags.get("delicate_protein")
+                or flags.get("is_silk")
+                or flags.get("is_wool")
+                or flags.get("is_acetate")
+            ):
+                if lang == "vi":
+                    return _DELICATE_NEUTRAL_VI.get(sid, "")
+                if lang == "ko":
+                    return _DELICATE_NEUTRAL_KO.get(sid, "")
         except Exception:
             pass
     if graph is not None and sid in _DELICATE_REFUSE_STAINS:

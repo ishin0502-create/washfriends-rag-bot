@@ -1092,6 +1092,20 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
                 action = _en_by_id.get(sid) or sid.replace("_", " ").title()
         if not action or len(action) < 4:
             continue
+        if lang == "ko":
+            sid_step = str(s.get("id") or "").strip()
+            action = _soften_step_label(action)
+            action = _ensure_ko_step_verb(
+                sid_step,
+                action,
+                chem=str(s.get("chem") or ""),
+                blocked=bool(s.get("blocked")),
+            )
+        # Drop consecutive duplicate actions (silk mildew double-S1 etc.)
+        if lines:
+            prev_body = lines[-1].split(") ", 1)[-1] if ") " in lines[-1] else lines[-1]
+            if prev_body.split(" (")[0].strip() == action.strip():
+                continue
         n += 1
         lo, hi = s.get("minutes_lo"), s.get("minutes_hi")
         time_bit = ""
@@ -1117,15 +1131,6 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
                     time_bit = f" ({lo} phút)"
                 else:
                     time_bit = f" ({lo} min)"
-        if lang == "ko":
-            sid_step = str(s.get("id") or "").strip()
-            action = _soften_step_label(action)
-            action = _ensure_ko_step_verb(
-                sid_step,
-                action,
-                chem=str(s.get("chem") or ""),
-                blocked=bool(s.get("blocked")),
-            )
         lines.append(f"{n}) {action}{time_bit}")
         if n >= 8:
             break
