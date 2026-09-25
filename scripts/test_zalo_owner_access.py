@@ -2,6 +2,7 @@
 """Unit tests for Zalo franchise-owner allowlist gate."""
 from __future__ import annotations
 
+import importlib
 import os
 import sys
 from pathlib import Path
@@ -112,8 +113,46 @@ def test_force_gate_empty_denies_all():
         clear_owner_access_cache()
 
 
+def test_hq_api_denies_even_if_env_allowlist():
+    """When HQ API is configured, env allowlist must not bypass HQ deny."""
+    keys = (
+        "ZALO_OWNER_GATE",
+        "ZALO_OWNER_ALLOWLIST",
+        "ZALO_OWNER_ALLOWLIST_FILE",
+        "WF_HQ_API_BASE",
+        "WASHFRIENDS_API_BASE",
+        "INTERNAL_WEBHOOK_SECRET",
+        "EDUCATION_BOT_INTERNAL_SECRET",
+    )
+    saved = {k: os.environ.get(k) for k in keys}
+    try:
+        for k in keys:
+            os.environ.pop(k, None)
+        os.environ["WF_HQ_API_BASE"] = "https://example.invalid"
+        os.environ["INTERNAL_WEBHOOK_SECRET"] = "secret"
+        os.environ["ZALO_OWNER_ALLOWLIST"] = "env-only-id"
+        import zalo_owner_access as zoa
+
+        importlib.reload(zoa)
+        zoa.clear_owner_access_cache()
+        zoa.check_hq_access = lambda uid: False  # type: ignore
+        assert zoa.is_authorized_owner("env-only-id") is False
+        assert zoa.is_authorized_owner("anyone") is False
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        import zalo_owner_access as zoa
+
+        importlib.reload(zoa)
+        zoa.clear_owner_access_cache()
+
+
 if __name__ == "__main__":
     test_owner_gate_off_by_default()
     test_allowlist_only()
     test_force_gate_empty_denies_all()
+    test_hq_api_denies_even_if_env_allowlist()
     print("OK zalo_owner_access")

@@ -177,32 +177,30 @@ def owner_allowlist_size() -> int:
 
 
 def is_authorized_owner(user_id: str) -> bool:
-    """True if this Zalo sender may use the education bot."""
+    """True if this Zalo sender may use the education bot.
+
+    When HQ API is configured, ONLY HQ allowlist + education_bot_enabled
+    decide access (registered IDs only). Env allowlist must not bypass HQ.
+    """
     uid = (user_id or "").strip()
     if not uid:
         return False
 
+    if hq_api_configured():
+        hq = check_hq_access(uid)
+        if hq is True:
+            return True
+        if hq is False:
+            return False
+        # HQ check failed (network) — cached allowlist of enabled stores only
+        return uid in _hq_allowlist_cached()
+
     env_on, env_ids = _load_env_config()
-    if uid in env_ids:
-        return True
-
-    hq = check_hq_access(uid)
-    if hq is True:
-        return True
-    if hq is False:
-        # HQ says no — still allow env list above; otherwise deny if gate on
-        if env_on and not env_ids:
-            return False
-        if hq_api_configured() or env_on:
-            return False
-        return True  # gate fully off
-
-    # HQ not configured
     if not env_on:
         return True
     if not env_ids:
         return False
-    return False
+    return uid in env_ids
 
 
 def deny_reply_text(user_text: str = "") -> str:
