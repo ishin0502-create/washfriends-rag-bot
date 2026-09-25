@@ -128,10 +128,17 @@ async def health():
         checks[key] = "✅ set" if os.environ.get(key) else "⚠️ missing"
 
     neo4j_ok = "✅" in str(checks.get("neo4j", ""))
+    try:
+        from zalo_owner_access import gate_status as _owner_gate_status
+
+        checks["zalo_owner_gate"] = _owner_gate_status()
+    except Exception as e:
+        checks["zalo_owner_gate"] = f"⚠️ {e}"
+
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-09-23-edu-intent-gates-v48",
+            "build": "2026-09-25-zalo-owner-gate-v49",
             "checks": checks,
         },
         status_code=200,

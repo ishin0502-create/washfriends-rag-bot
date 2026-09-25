@@ -37,6 +37,7 @@ from brand_header import (
     _HEADER_ASSET_VER,
 )
 from user_session import get_session
+from zalo_owner_access import deny_reply_text, gate_status, is_authorized_owner
 from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret, _app_id
 
 ZALO_API_BASE   = "https://openapi.zalo.me/v3.0"
@@ -464,6 +465,17 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
     loop = asyncio.get_event_loop()
     lang_src = text or ""
     try:
+        # Franchise-owner gate: unauthorized users get a fixed refusal (no GraphRAG).
+        # OA 1:1 already keeps A/B chats private; this only controls who may use the bot.
+        if not is_authorized_owner(user_id):
+            st = gate_status()
+            print(
+                f"[ZALO OWNER GATE] denied user_id={user_id} "
+                f"mode={st.get('mode')} allowlist_size={st.get('allowlist_size')}"
+            )
+            await _send_zalo_reply(user_id, deny_reply_text(lang_src), with_brand=False)
+            return
+
         # Immediate "thinking" notice (fail-open: never block the real answer)
         if event_name == "user_send_text" and text:
             try:
@@ -615,7 +627,7 @@ async def get_zalo_oa_info() -> dict:
                         "hint": "Refresh failed. Check ZALO_OA_REFRESH_TOKEN + ZALO_APP_SECRET.",
                     }
             if isinstance(data, dict):
-                data = {**data, "diag": diag}
+                data = {**data, "diag": diag, "owner_gate": gate_status()}
             return data
         except Exception as e:
-            return {"error": str(e), "diag": diag}
+            return {"error": str(e), "diag": diag, "owner_gate": gate_status()}
