@@ -12,7 +12,16 @@ sys.path.insert(0, str(ROOT))
 
 def test_owner_gate_off_by_default(monkeypatch=None):
     # Manual env isolation without pytest dependency
-    saved = {k: os.environ.get(k) for k in ("ZALO_OWNER_GATE", "ZALO_OWNER_ALLOWLIST", "ZALO_OWNER_ALLOWLIST_FILE")}
+    keys = (
+        "ZALO_OWNER_GATE",
+        "ZALO_OWNER_ALLOWLIST",
+        "ZALO_OWNER_ALLOWLIST_FILE",
+        "WF_HQ_API_BASE",
+        "WASHFRIENDS_API_BASE",
+        "INTERNAL_WEBHOOK_SECRET",
+        "EDUCATION_BOT_INTERNAL_SECRET",
+    )
+    saved = {k: os.environ.get(k) for k in keys}
     try:
         for k in saved:
             os.environ.pop(k, None)
@@ -35,10 +44,19 @@ def test_owner_gate_off_by_default(monkeypatch=None):
 
 
 def test_allowlist_only():
-    saved = {k: os.environ.get(k) for k in ("ZALO_OWNER_GATE", "ZALO_OWNER_ALLOWLIST", "ZALO_OWNER_ALLOWLIST_FILE")}
+    keys = (
+        "ZALO_OWNER_GATE",
+        "ZALO_OWNER_ALLOWLIST",
+        "ZALO_OWNER_ALLOWLIST_FILE",
+        "WF_HQ_API_BASE",
+        "WASHFRIENDS_API_BASE",
+        "INTERNAL_WEBHOOK_SECRET",
+        "EDUCATION_BOT_INTERNAL_SECRET",
+    )
+    saved = {k: os.environ.get(k) for k in keys}
     try:
-        os.environ.pop("ZALO_OWNER_GATE", None)
-        os.environ.pop("ZALO_OWNER_ALLOWLIST_FILE", None)
+        for k in keys:
+            os.environ.pop(k, None)
         os.environ["ZALO_OWNER_ALLOWLIST"] = "aaa111, bbb222"
         from zalo_owner_access import clear_owner_access_cache, is_authorized_owner, gate_status
 
@@ -63,11 +81,21 @@ def test_allowlist_only():
 
 
 def test_force_gate_empty_denies_all():
-    saved = {k: os.environ.get(k) for k in ("ZALO_OWNER_GATE", "ZALO_OWNER_ALLOWLIST", "ZALO_OWNER_ALLOWLIST_FILE")}
+    keys = (
+        "ZALO_OWNER_GATE",
+        "ZALO_OWNER_ALLOWLIST",
+        "ZALO_OWNER_ALLOWLIST_FILE",
+        "WF_HQ_API_BASE",
+        "WASHFRIENDS_API_BASE",
+        "INTERNAL_WEBHOOK_SECRET",
+        "EDUCATION_BOT_INTERNAL_SECRET",
+    )
+    saved = {k: os.environ.get(k) for k in keys}
     try:
+        for k in keys:
+            os.environ.pop(k, None)
         os.environ["ZALO_OWNER_GATE"] = "1"
         os.environ["ZALO_OWNER_ALLOWLIST"] = ""
-        os.environ.pop("ZALO_OWNER_ALLOWLIST_FILE", None)
         from zalo_owner_access import clear_owner_access_cache, is_authorized_owner, gate_status
 
         clear_owner_access_cache()
