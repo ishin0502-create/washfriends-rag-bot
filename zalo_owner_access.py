@@ -26,10 +26,8 @@ from typing import FrozenSet, Optional, Tuple
 from reply_lang import detect_reply_lang
 
 _TRUTHY = frozenset({"1", "true", "yes", "on", "y"})
-_hq_cache: dict[str, object] = {"ts": 0.0, "allowed": frozenset(), "profiles": {}}
+_hq_cache: dict[str, object] = {"ts": 0.0, "allowed": frozenset()}
 _HQ_CACHE_TTL = 60.0  # seconds
-_profile_by_user: dict[str, dict] = {}
-_PROFILE_TTL = 60.0
 
 
 def _parse_ids(raw: str) -> FrozenSet[str]:
@@ -96,19 +94,11 @@ def _fetch_hq_allowlist() -> FrozenSet[str]:
 
             data = json.loads(resp.read().decode("utf-8"))
         items = data.get("items") or []
-        profiles: dict[str, dict] = {}
-        ids: set[str] = set()
-        for it in items:
-            uid = str(it.get("zalo_user_id") or "").strip()
-            if not uid:
-                continue
-            ids.add(uid)
-            profiles[uid] = {
-                "store_code": str(it.get("store_code") or ""),
-                "dry_clean_machine_enabled": bool(it.get("dry_clean_machine_enabled")),
-            }
-        _hq_cache["profiles"] = profiles
-        return frozenset(ids)
+        return frozenset(
+            str(it.get("zalo_user_id") or "").strip()
+            for it in items
+            if str(it.get("zalo_user_id") or "").strip()
+        )
     except Exception as e:
         print(f"[ZALO OWNER GATE] HQ allowlist fetch failed: {e}")
         return frozenset()
@@ -124,13 +114,14 @@ def _hq_allowlist_cached() -> FrozenSet[str]:
     return allowed
 
 
-def fetch_hq_access_profile(user_id: str) -> Optional[dict]:
-    """Live /access payload: allowed, store_code, dry_clean_machine_enabled."""
+def check_hq_access(user_id: str) -> Optional[bool]:
+    """True/False if HQ API answers; None if HQ not configured or request failed."""
     if not hq_api_configured():
         return None
     uid = (user_id or "").strip()
     if not uid:
-        return {"allowed": False, "dry_clean_machine_enabled": False}
+        return False
+    # Prefer live check for toggle immediacy (still short timeout)
     base = _hq_api_base()
     secret = _hq_secret()
     q = urllib.parse.urlencode({"zalo_user_id": uid})
@@ -145,60 +136,10 @@ def fetch_hq_access_profile(user_id: str) -> Optional[dict]:
             import json
 
             data = json.loads(resp.read().decode("utf-8"))
-        if not isinstance(data, dict):
-            return None
-        prof = {
-            "allowed": bool(data.get("allowed")),
-            "store_code": str(data.get("store_code") or ""),
-            "dry_clean_machine_enabled": bool(data.get("dry_clean_machine_enabled")),
-            "ts": time.time(),
-        }
-        _profile_by_user[uid] = prof
-        return prof
+        return bool(data.get("allowed"))
     except Exception as e:
-        print(f"[ZALO OWNER GATE] HQ access profile failed: {e}")
-        return None
-
-
-def get_owner_store_profile(user_id: str) -> dict:
-    """Cached store profile for education features (dry-clean machine flag)."""
-    uid = (user_id or "").strip()
-    if not uid:
-        return {"allowed": False, "dry_clean_machine_enabled": False}
-    cached = _profile_by_user.get(uid) or {}
-    if cached and time.time() - float(cached.get("ts") or 0) < _PROFILE_TTL:
-        return cached
-    live = fetch_hq_access_profile(uid)
-    if live is not None:
-        return live
-    # Fallback: allowlist bulk profiles
-    _hq_allowlist_cached()
-    profiles = _hq_cache.get("profiles") or {}
-    if isinstance(profiles, dict) and uid in profiles:
-        row = dict(profiles[uid])
-        row["allowed"] = True
-        row["ts"] = time.time()
-        _profile_by_user[uid] = row
-        return row
-    return {"allowed": False, "dry_clean_machine_enabled": False, "ts": time.time()}
-
-
-def store_has_dry_clean_machine(user_id: str) -> bool:
-    """True only when HQ verified dry-cleaning machine for this owner's store."""
-    return bool(get_owner_store_profile(user_id).get("dry_clean_machine_enabled"))
-
-
-def check_hq_access(user_id: str) -> Optional[bool]:
-    """True/False if HQ API answers; None if HQ not configured or request failed."""
-    if not hq_api_configured():
-        return None
-    uid = (user_id or "").strip()
-    if not uid:
-        return False
-    prof = fetch_hq_access_profile(uid)
-    if prof is not None:
-        return bool(prof.get("allowed"))
-    return uid in _hq_allowlist_cached()
+        print(f"[ZALO OWNER GATE] HQ access check failed, falling back to cache: {e}")
+        return uid in _hq_allowlist_cached()
 
 
 @lru_cache(maxsize=1)
@@ -217,8 +158,6 @@ def clear_owner_access_cache() -> None:
     _load_env_config.cache_clear()
     _hq_cache["ts"] = 0.0
     _hq_cache["allowed"] = frozenset()
-    _hq_cache["profiles"] = {}
-    _profile_by_user.clear()
 
 
 def owner_gate_enabled() -> bool:

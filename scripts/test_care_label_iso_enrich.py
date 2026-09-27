@@ -120,6 +120,51 @@ def test_dry_topic_gets_lock_without_machine():
     assert "본사" in out
 
 
+def test_unlock_includes_symbol_guide():
+    u = unlock_message("ko", code="P")
+    assert "교육 해금" in u
+    assert "P =" in u or "P=" in u
+    assert "본사" in u or "매뉴얼" in u
+
+
+def test_image_flow_uses_dry_flag():
+    """Care-label photo path must pass HQ dry-machine flag into formatter."""
+    label = {
+        "image_kind": "care_label",
+        "lang": "ko",
+        "confidence": "high",
+        "wash": {"do_not_wash": True},
+        "bleach": {"do_not_bleach": True},
+        "dry": {"do_not_tumble": True},
+        "iron": {},
+        "dry_clean": {"allowed": True, "code": "P"},
+    }
+    captured = {}
+
+    def _fmt(result, lang="vi", pending=None, dry_clean_machine=None):
+        captured["dry"] = dry_clean_machine
+        return f"FMT dry={dry_clean_machine}"
+
+    with patch("image_flow.analyze_image", return_value=label), patch(
+        "image_flow.get_session", return_value={}
+    ), patch("image_flow._dry_machine_flag", return_value=True), patch(
+        "image_flow.format_care_label_reply", side_effect=_fmt
+    ):
+        from image_flow import process_channel_image
+
+        out = process_channel_image("zalo", "owner1", "https://cdn.example/l.jpg", "")
+    assert captured.get("dry") is True
+    assert "dry=True" in out
+
+    with patch("image_flow.analyze_image", return_value=label), patch(
+        "image_flow.get_session", return_value={}
+    ), patch("image_flow._dry_machine_flag", return_value=False), patch(
+        "image_flow.format_care_label_reply", side_effect=_fmt
+    ):
+        out2 = process_channel_image("zalo", "owner1", "https://cdn.example/l.jpg", "")
+    assert "dry=False" in out2
+
+
 def test_append_capability_idempotent():
     base = lock_message("ko")
     again = append_capability_block(base, lang="ko", has_machine=False, force=True)

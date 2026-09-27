@@ -67,32 +67,41 @@ def unlock_message(lang: str = "vi", code: str = "") -> str:
             f"◆ [전문 케어 · 교육 해금]{code_bit}\n"
             "본사 확인된 드라이클리닝 기계 보유 매장입니다. "
             "전문 케어·기계 교육이 열려 있습니다.\n"
-            "기호 의미(P=PCE, F=석유계, W=웨트클리닝)를 따르고, "
-            "PROG·버튼 번호는 매장 기종 매뉴얼·본사 자료를 기준으로 하세요 "
+            "기호 요지:\n"
+            "· P = PCE(퍼클로) 드라이 가능\n"
+            "· F = 석유계 용제만 (PCE 금지)\n"
+            "· W = 전문 웨트클리닝 (저온·약탈수·전용 세제)\n"
+            "· 밑줄 = 약공정 / 이중 밑줄 = 매우 약 / 원+X = 드라이 금지\n"
+            "PROG·버튼 번호는 매장 기종 매뉴얼·본사 자료를 따르세요 "
             "(임의 번호 안내 금지).\n"
-            "⚠️ 초급: 밑줄(약공정)·이중 밑줄·원+X는 특히 주의. "
-            "불확실하면 매니저·본사에 확인."
+            "⚠️ 초급: 불확실하면 매니저·본사 확인. 라벨 X는 절대 무시하지 마세요."
         )
     if lang == "en":
         return (
             f"◆ [Professional care · education unlocked]{code_bit}\n"
             "HQ has confirmed a dry-cleaning machine at this store. "
             "Professional-care / machine training is open.\n"
-            "Follow symbol meaning (P=PCE, F=hydrocarbon, W=wet clean). "
+            "Symbols:\n"
+            "· P = PCE dry clean OK\n"
+            "· F = hydrocarbon solvent only (no PCE)\n"
+            "· W = professional wet clean (low temp, gentle spin, special detergent)\n"
+            "· Underline = mild / double = very mild / circle+X = no dry clean\n"
             "Use store machine manual / HQ materials for PROG numbers "
             "(do not invent button numbers).\n"
-            "⚠️ Beginners: mild underline / double underline / circle+X need care. "
-            "Ask manager/HQ if unsure."
+            "⚠️ Beginners: ask manager/HQ if unsure. Never ignore label X."
         )
     return (
         f"◆ [Chăm sóc chuyên nghiệp · đã mở]{code_bit}\n"
         "HQ đã xác nhận máy giặt khô tại cửa hàng. "
         "Đào tạo chăm sóc chuyên nghiệp / vận hành đã mở.\n"
-        "Theo ký hiệu (P=PCE, F=dung môi dầu, W=wet clean). "
+        "Ký hiệu:\n"
+        "· P = giặt khô PCE được\n"
+        "· F = chỉ dung môi dầu (cấm PCE)\n"
+        "· W = wet clean chuyên nghiệp (nhiệt thấp, vắt nhẹ, hóa chất riêng)\n"
+        "· Gạch dưới = nhẹ / hai gạch = rất nhẹ / vòng+X = cấm dry-clean\n"
         "Số PROG/nút theo sổ máy cửa hàng / tài liệu HQ "
         "(không bịa số nút).\n"
-        "⚠️ Mới: gạch dưới (nhẹ) / hai gạch / vòng+X cần thận trọng. "
-        "Không chắc → hỏi quản lý/HQ."
+        "⚠️ Mới: không chắc → hỏi quản lý/HQ. Không bỏ qua X trên nhãn."
     )
 
 
@@ -119,13 +128,13 @@ def append_capability_block(
     return f"{text}\n\n{block}"
 
 
-def resolve_has_machine(user_id: str = "", channel: str = "") -> bool:
-    """Look up HQ profile; default False (safe)."""
+def resolve_has_machine(user_id: str = "", channel: str = "", *, fresh: bool = True) -> bool:
+    """Look up HQ profile; default False (safe). fresh=True bypasses short cache for toggle immediacy."""
     if not user_id:
         return False
     try:
         from zalo_owner_access import store_has_dry_clean_machine
 
-        return bool(store_has_dry_clean_machine(user_id))
+        return bool(store_has_dry_clean_machine(user_id, fresh=fresh))
     except Exception:
         return False

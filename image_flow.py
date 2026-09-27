@@ -20,7 +20,7 @@ def _dry_machine_flag(user_id: str) -> bool:
     try:
         from zalo_owner_access import store_has_dry_clean_machine
 
-        return bool(store_has_dry_clean_machine(user_id))
+        return bool(store_has_dry_clean_machine(user_id, fresh=True))
     except Exception:
         return False
 
