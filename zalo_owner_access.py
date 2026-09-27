@@ -207,23 +207,24 @@ def deny_reply_text(user_text: str = "") -> str:
     lang = detect_reply_lang(user_text or "")
     if lang == "ko":
         return (
-            "◆ 가맹 점주 전용 교육 채널입니다.\n"
-            "등록된 Wash Friends 가맹 점주만 질문·답변을 받을 수 있습니다.\n"
-            "등록이 필요하시면 본사(Nhượng Quyền Giặt Sấy Wash Friends)에 "
-            "매장명·점주 Zalo를 알려 주세요."
+            "◆ 가맹 점주·본사 교육 채널입니다.\n"
+            "등록된 Wash Friends 가맹 점주 또는 HQ에서 허용한 본사 계정만 "
+            "질문·답변을 받을 수 있습니다.\n"
+            "본사: HQ「접근 권한」에 Zalo 숫자 ID를 연결하세요. "
+            "점주: 매장 교육봇 토글 + Zalo ID 등록이 필요합니다."
         )
     if lang == "en":
         return (
-            "◆ Franchise-owner education channel only.\n"
-            "Only registered Wash Friends owners can ask and receive answers.\n"
-            "To register, contact HQ (Nhượng Quyền Giặt Sấy Wash Friends) "
-            "with your store name and Zalo."
+            "◆ Franchise / HQ education channel.\n"
+            "Only registered store owners or HQ-allowed staff can use this bot.\n"
+            "HQ: link your numeric Zalo ID under Access permissions. "
+            "Stores: enable education bot + register Zalo IDs."
         )
     return (
-        "◆ Kênh đào tạo chỉ dành cho chủ cửa hàng nhượng quyền.\n"
-        "Chỉ chủ cửa hàng Wash Friends đã đăng ký mới hỏi và nhận hướng dẫn.\n"
-        "Cần đăng ký: liên hệ HQ (Nhượng Quyền Giặt Sấy Wash Friends), "
-        "gửi tên cửa hàng + Zalo của anh/chị."
+        "◆ Kênh đào tạo chủ cửa hàng / HQ.\n"
+        "Chỉ chủ đã đăng ký hoặc tài khoản HQ được phép mới hỏi được.\n"
+        "HQ: gắn Zalo ID số trong mục Quyền truy cập. "
+        "Cửa hàng: bật bot đào tạo + đăng ký Zalo ID."
     )
 
 
