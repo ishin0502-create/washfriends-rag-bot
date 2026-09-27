@@ -4398,7 +4398,19 @@ def generate_response(user_message: str, channel: str = "", user_id: str = "") -
 
         _intent = try_intent_education_card(user_message, lang=lang if lang in {"ko", "vi", "en"} else "ko")
         if _intent:
-            return _intent
+            try:
+                from education_label_enrich import enrich_owner_answer
+
+                return enrich_owner_answer(
+                    _intent,
+                    user_message=user_message,
+                    lang=lang if lang in {"ko", "vi", "en"} else "vi",
+                    user_id=user_id or "",
+                    channel=channel or "",
+                    entities={},
+                )
+            except Exception:
+                return _intent
     except Exception as e:
         print(f"[INTENT_CARD] skip: {e}")
 
@@ -4498,6 +4510,23 @@ def generate_response(user_message: str, channel: str = "", user_id: str = "") -
                 )
         except Exception as e:
             print(f"[SESSION] pending treatment skip: {e}")
+
+    # Care-label CTA + dry-clean machine lock/unlock (HQ flag)
+    try:
+        from education_label_enrich import enrich_owner_answer
+
+        last_ent = getattr(_generate_response_core, "last_entities", {}) or {}
+        answer = enrich_owner_answer(
+            answer,
+            user_message=user_message,
+            lang=lang if lang in {"ko", "vi", "en"} else "vi",
+            user_id=user_id or "",
+            channel=channel or "",
+            entities=last_ent,
+        )
+    except Exception as e:
+        print(f"[LABEL_ENRICH] skip: {e}")
+
     return answer
 
 

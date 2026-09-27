@@ -254,7 +254,13 @@ def build_clarify_and_label_request(entities: dict | None = None, lang: str = "v
     return "\n".join(parts)
 
 
-def format_care_label_reply(label: dict, *, lang: str = "vi", pending: dict | None = None) -> str:
+def format_care_label_reply(
+    label: dict,
+    *,
+    lang: str = "vi",
+    pending: dict | None = None,
+    dry_clean_machine: bool | None = None,
+) -> str:
     """Owner-facing care guidance from a parsed care label (no folk tips)."""
     lang = lang or label.get("lang") or "vi"
     conf = str(label.get("confidence") or "low").lower()
@@ -272,7 +278,7 @@ def format_care_label_reply(label: dict, *, lang: str = "vi", pending: dict | No
             lines.append(f"1) 조성/표기: {fiber}")
         # wash
         if wash.get("do_not_wash"):
-            lines.append("2) 세탁: 물세탁 금지 → 드라이/전문 의뢰 검토")
+            lines.append("2) 세탁: 물세탁 금지 → 전문 케어(드라이) 기준")
         elif wash.get("hand_wash_only"):
             temp = wash.get("max_temp_c") or 30
             lines.append(f"2) 세탁: 손세탁만, 최대 약 {temp}°C" + (" · 약하게" if wash.get("gentle") else ""))
@@ -282,7 +288,7 @@ def format_care_label_reply(label: dict, *, lang: str = "vi", pending: dict | No
             g = " · 약코스" if wash.get("gentle") else ""
             lines.append(f"2) 세탁: 가능 · {t}{g}")
         else:
-            lines.append("2) 세탁: 라벨 불명확 → 찬물·약하게 또는 전문 의뢰")
+            lines.append("2) 세탁: 라벨 불명확 → 찬물·약하게 또는 전문 케어 확인")
         # bleach
         if bleach.get("do_not_bleach") or bleach.get("allowed") is False:
             if bleach.get("oxygen_only"):
@@ -319,7 +325,9 @@ def format_care_label_reply(label: dict, *, lang: str = "vi", pending: dict | No
             lines.append("6) 드라이클리닝: 금지")
         elif dc.get("allowed"):
             code = dc.get("code") or ""
-            lines.append(f"6) 드라이클리닝: 가능" + (f" ({code})" if code else ""))
+            lines.append(f"6) 드라이클리닝(전문 케어): 가능" + (f" ({code})" if code else ""))
+        elif wash.get("do_not_wash"):
+            lines.append("6) 전문 케어: 물세탁 금지 → 드라이/전문 기준 확인")
         if pending and (pending.get("stain_guess") or pending.get("caption")):
             lines.append("")
             lines.append(
@@ -331,72 +339,165 @@ def format_care_label_reply(label: dict, *, lang: str = "vi", pending: dict | No
             lines.append("라벨이 흐리거나 VN 위조·오표기 가능 → 확정 안 되면 더 약한 조건(찬물·손세탁·표백 금지)으로.")
         if notes:
             lines.append(f"메모: {notes}")
-        return "\n".join(lines)
-
-    # Vietnamese
-    lines = [
-        "Ket qua doc NHAN GIAT (chu y: nhan VN co the sai — do dat/nhay cam thi xu ly an toan hon).",
-        "",
-    ]
-    if fiber:
-        lines.append(f"1) Thanh phan: {fiber}")
-    if wash.get("do_not_wash"):
-        lines.append("2) Giat: CAM giat nuoc → xem dry-clean / chuyen")
-    elif wash.get("hand_wash_only"):
-        temp = wash.get("max_temp_c") or 30
-        lines.append(f"2) Giat: CHI tay, toi da ~{temp}C" + (" · nhe" if wash.get("gentle") else ""))
-    elif wash.get("allowed", True):
-        temp = wash.get("max_temp_c")
-        t = f"toi da ~{temp}C" if temp else "theo nhiet nhan"
-        g = " · chuong trinh nhe" if wash.get("gentle") else ""
-        lines.append(f"2) Giat: duoc · {t}{g}")
+        out = "\n".join(lines)
     else:
-        lines.append("2) Giat: khong ro → uu tien lanh + nhe")
-    if bleach.get("do_not_bleach") or bleach.get("allowed") is False:
-        if bleach.get("oxygen_only"):
-            lines.append("3) Tay: chi oxy (CAM chlorine)")
+        # Vietnamese (default) / English share VI-style structure; EN via lang==en below
+        if lang == "en":
+            lines = [
+                "Care-label reading (VN labels may be wrong — for expensive/sensitive items use safer settings).",
+                "",
+            ]
+            if fiber:
+                lines.append(f"1) Fiber: {fiber}")
+            if wash.get("do_not_wash"):
+                lines.append("2) Wash: do not wash in water → professional care")
+            elif wash.get("hand_wash_only"):
+                temp = wash.get("max_temp_c") or 30
+                lines.append(f"2) Wash: hand only, max ~{temp}C" + (" · gentle" if wash.get("gentle") else ""))
+            elif wash.get("allowed", True):
+                temp = wash.get("max_temp_c")
+                t = f"max ~{temp}C" if temp else "follow label temp"
+                g = " · delicate" if wash.get("gentle") else ""
+                lines.append(f"2) Wash: OK · {t}{g}")
+            else:
+                lines.append("2) Wash: unclear → prefer cold + gentle")
+            if bleach.get("do_not_bleach") or bleach.get("allowed") is False:
+                if bleach.get("oxygen_only"):
+                    lines.append("3) Bleach: oxygen only (no chlorine)")
+                else:
+                    lines.append("3) Bleach: forbidden")
+            elif bleach.get("oxygen_only"):
+                lines.append("3) Bleach: oxygen only")
+            elif bleach.get("allowed"):
+                lines.append("3) Bleach: OK (check color)")
+            else:
+                lines.append("3) Bleach: unclear → treat as no bleach")
+            if dry.get("do_not_tumble") or dry.get("tumble_ok") is False:
+                shade = " · shade dry" if dry.get("shade") else ""
+                flat = " · flat dry" if dry.get("flat_dry") else ""
+                lines.append(f"4) Dry: no tumble{shade}{flat}")
+            elif dry.get("tumble_ok"):
+                heat = "low heat" if dry.get("low_heat") else "per label"
+                lines.append(f"4) Dry: tumble OK ({heat})")
+            else:
+                lines.append("4) Dry: air dry preferred")
+            if iron.get("do_not_iron") or iron.get("allowed") is False:
+                lines.append("5) Iron: forbidden")
+            elif iron.get("allowed", True):
+                t = iron.get("max_temp_c")
+                steam = " · no steam" if iron.get("no_steam") else ""
+                lines.append(f"5) Iron: OK" + (f" · max ~{t}C" if t else "") + steam)
+            else:
+                lines.append("5) Iron: start low + test")
+            if dc.get("do_not_dry_clean"):
+                lines.append("6) Dry-clean: forbidden")
+            elif dc.get("allowed"):
+                code = dc.get("code") or ""
+                lines.append(f"6) Dry-clean (professional): OK" + (f" ({code})" if code else ""))
+            elif wash.get("do_not_wash"):
+                lines.append("6) Professional care: no water wash — confirm dry-clean path")
+            if pending and (pending.get("stain_guess") or pending.get("caption")):
+                lines.append("")
+                lines.append(
+                    f"Stain note: {pending.get('stain_guess') or pending.get('caption') or '?'} "
+                    f"— treat stain within label limits."
+                )
+            if conf == "low" or notes:
+                lines.append("")
+                lines.append("Blurry/wrong labels happen → if unsure: cold, hand, no strong bleach.")
+            if notes:
+                lines.append(f"Note: {notes}")
+            out = "\n".join(lines)
         else:
-            lines.append("3) Tay: CAM")
-    elif bleach.get("oxygen_only"):
-        lines.append("3) Tay: chi oxy")
-    elif bleach.get("allowed"):
-        lines.append("3) Tay: duoc (kiem tra mau)")
-    else:
-        lines.append("3) Tay: khong ro → CAM tay")
-    if dry.get("do_not_tumble") or dry.get("tumble_ok") is False:
-        shade = " · phoi bong mat" if dry.get("shade") else ""
-        flat = " · phoi phang" if dry.get("flat_dry") else ""
-        lines.append(f"4) Say: CAM may{shade}{flat}")
-    elif dry.get("tumble_ok"):
-        heat = "nhiet thap" if dry.get("low_heat") else "theo nhan"
-        lines.append(f"4) Say: may duoc ({heat})")
-    else:
-        lines.append("4) Say: uu tien bong mat / thoang")
-    if iron.get("do_not_iron") or iron.get("allowed") is False:
-        lines.append("5) Ui: CAM")
-    elif iron.get("allowed", True):
-        t = iron.get("max_temp_c")
-        steam = " · CAM hoi" if iron.get("no_steam") else ""
-        lines.append(f"5) Ui: duoc" + (f" · toi da ~{t}C" if t else "") + steam)
-    else:
-        lines.append("5) Ui: nhiet thap + test")
-    if dc.get("do_not_dry_clean"):
-        lines.append("6) Dry-clean: CAM")
-    elif dc.get("allowed"):
-        code = dc.get("code") or ""
-        lines.append(f"6) Dry-clean: duoc" + (f" ({code})" if code else ""))
-    if pending and (pending.get("stain_guess") or pending.get("caption")):
-        lines.append("")
-        lines.append(
-            f"Vet tham khao: {pending.get('stain_guess') or pending.get('caption') or '?'} "
-            f"— xu ly vet trong gioi han nhan."
-        )
-    if conf == "low" or notes:
-        lines.append("")
-        lines.append("Nhan mo/sai co the xay ra → neu khong chac: lanh, tay, CAM tay hoa chat manh.")
-    if notes:
-        lines.append(f"Ghi chu: {notes}")
-    return "\n".join(lines)
+            lines = [
+                "Ket qua doc NHAN GIAT (chu y: nhan VN co the sai — do dat/nhay cam thi xu ly an toan hon).",
+                "",
+            ]
+            if fiber:
+                lines.append(f"1) Thanh phan: {fiber}")
+            if wash.get("do_not_wash"):
+                lines.append("2) Giat: CAM giat nuoc → cham soc chuyen nghiep")
+            elif wash.get("hand_wash_only"):
+                temp = wash.get("max_temp_c") or 30
+                lines.append(f"2) Giat: CHI tay, toi da ~{temp}C" + (" · nhe" if wash.get("gentle") else ""))
+            elif wash.get("allowed", True):
+                temp = wash.get("max_temp_c")
+                t = f"toi da ~{temp}C" if temp else "theo nhiet nhan"
+                g = " · chuong trinh nhe" if wash.get("gentle") else ""
+                lines.append(f"2) Giat: duoc · {t}{g}")
+            else:
+                lines.append("2) Giat: khong ro → uu tien lanh + nhe")
+            if bleach.get("do_not_bleach") or bleach.get("allowed") is False:
+                if bleach.get("oxygen_only"):
+                    lines.append("3) Tay: chi oxy (CAM chlorine)")
+                else:
+                    lines.append("3) Tay: CAM")
+            elif bleach.get("oxygen_only"):
+                lines.append("3) Tay: chi oxy")
+            elif bleach.get("allowed"):
+                lines.append("3) Tay: duoc (kiem tra mau)")
+            else:
+                lines.append("3) Tay: khong ro → CAM tay")
+            if dry.get("do_not_tumble") or dry.get("tumble_ok") is False:
+                shade = " · phoi bong mat" if dry.get("shade") else ""
+                flat = " · phoi phang" if dry.get("flat_dry") else ""
+                lines.append(f"4) Say: CAM may{shade}{flat}")
+            elif dry.get("tumble_ok"):
+                heat = "nhiet thap" if dry.get("low_heat") else "theo nhan"
+                lines.append(f"4) Say: may duoc ({heat})")
+            else:
+                lines.append("4) Say: uu tien bong mat / thoang")
+            if iron.get("do_not_iron") or iron.get("allowed") is False:
+                lines.append("5) Ui: CAM")
+            elif iron.get("allowed", True):
+                t = iron.get("max_temp_c")
+                steam = " · CAM hoi" if iron.get("no_steam") else ""
+                lines.append(f"5) Ui: duoc" + (f" · toi da ~{t}C" if t else "") + steam)
+            else:
+                lines.append("5) Ui: nhiet thap + test")
+            if dc.get("do_not_dry_clean"):
+                lines.append("6) Dry-clean: CAM")
+            elif dc.get("allowed"):
+                code = dc.get("code") or ""
+                lines.append(f"6) Dry-clean (chuyen nghiep): duoc" + (f" ({code})" if code else ""))
+            elif wash.get("do_not_wash"):
+                lines.append("6) Cham soc chuyen nghiep: cam giat nuoc — xac nhan dry-clean")
+            if pending and (pending.get("stain_guess") or pending.get("caption")):
+                lines.append("")
+                lines.append(
+                    f"Vet tham khao: {pending.get('stain_guess') or pending.get('caption') or '?'} "
+                    f"— xu ly vet trong gioi han nhan."
+                )
+            if conf == "low" or notes:
+                lines.append("")
+                lines.append("Nhan mo/sai co the xay ra → neu khong chac: lanh, tay, CAM tay hoa chat manh.")
+            if notes:
+                lines.append(f"Ghi chu: {notes}")
+            out = "\n".join(lines)
+
+    # Wet shop actions (ISO mapping) — never invent dry PROG numbers
+    try:
+        from care_label_iso3758 import needs_professional_care, professional_code, wet_action_lines
+
+        acts = wet_action_lines(label, lang=lang if lang in {"ko", "vi", "en"} else "vi")
+        if acts:
+            if lang == "ko":
+                out += "\n\n▶ 점주 액션(습식·한도)\n" + "\n".join(acts)
+            elif lang == "en":
+                out += "\n\n▶ Shop actions (wet / limits)\n" + "\n".join(acts)
+            else:
+                out += "\n\n▶ Hanh dong (uot / gioi han)\n" + "\n".join(acts)
+        if needs_professional_care(label):
+            from dry_clean_capability import lock_message, unlock_message
+
+            has_m = bool(dry_clean_machine) if dry_clean_machine is not None else False
+            code = professional_code(label)
+            block = unlock_message(lang, code=code) if has_m else lock_message(lang)
+            out += "\n\n" + block
+    except Exception as e:
+        print(f"[CARE_LABEL] enrich skip: {e}")
+
+    return out
 
 
 def analyze_image(image_url=None, image_base64=None, media_type="image/jpeg", user_caption=""):

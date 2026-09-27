@@ -16,6 +16,15 @@ from image_analyzer import (
 from user_session import get_session, set_pending_label, pop_pending_label, clear_session
 
 
+def _dry_machine_flag(user_id: str) -> bool:
+    try:
+        from zalo_owner_access import store_has_dry_clean_machine
+
+        return bool(store_has_dry_clean_machine(user_id))
+    except Exception:
+        return False
+
+
 def process_channel_image(
     channel: str,
     user_id: str,
@@ -29,6 +38,7 @@ def process_channel_image(
     caption = (caption or "").strip()
     session = get_session(channel, user_id)
     awaiting_label = session.get("awaiting") == "care_label"
+    has_dry = _dry_machine_flag(user_id)
 
     result = analyze_image(image_url=image_url, user_caption=caption)
     kind = result.get("image_kind") or "stain_photo"
@@ -39,7 +49,9 @@ def process_channel_image(
         if kind == "care_label":
             pending = pop_pending_label(channel, user_id) or session
             reply_lang = pending.get("lang") or lang
-            label_txt = format_care_label_reply(result, lang=reply_lang, pending=pending)
+            label_txt = format_care_label_reply(
+                result, lang=reply_lang, pending=pending, dry_clean_machine=has_dry
+            )
             stain = (pending.get("stain_guess") or pending.get("caption") or caption or "").strip()
             if stain:
                 try:
@@ -87,7 +99,9 @@ def process_channel_image(
 
     # Fresh image: care label without prior ask
     if kind == "care_label":
-        return format_care_label_reply(result, lang=lang, pending=None)
+        return format_care_label_reply(
+            result, lang=lang, pending=None, dry_clean_machine=has_dry
+        )
 
     if kind == "other" or needs_clarification(result):
         set_pending_label(
