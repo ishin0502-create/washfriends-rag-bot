@@ -1,0 +1,21 @@
+{
+  "machine": "Realstar",
+  "note": "HQ fills steps from the verified store manual. Empty match list = unused. Never invent PROG numbers in chat.",
+  "courses": [
+    {
+      "id": "example_silk_p",
+      "match": [],
+      "code": "P",
+      "title_ko": "예시 — 실크·P (비활성: match 비움)",
+      "title_vi": "Ví dụ — lụa·P (inactive)",
+      "title_en": "Example — silk·P (inactive)",
+      "steps_ko": [
+        "매장 Realstar 매뉴얼에서 해당 PROG를 확인한 뒤만 입력",
+        "약공정이면 밑줄(mild) PROG인지 재확인",
+        "종료 후 외관·라벨 QC"
+      ],
+      "steps_vi": [],
+      "steps_en": []
+    }
+  ]
+}

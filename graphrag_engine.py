@@ -4391,6 +4391,20 @@ def generate_response(user_message: str, channel: str = "", user_id: str = "") -
     session_lang = str(pending.get("lang") or "")
     lang = detect_reply_lang(user_message, session_lang=session_lang)
 
+    # Professional dry-machine / Realstar / PROG — before wet I_MACHINE_PROFILE
+    try:
+        from professional_machine_gate import try_professional_machine_card
+
+        _pro = try_professional_machine_card(
+            user_message,
+            lang=lang if lang in {"ko", "vi", "en"} else "ko",
+            user_id=user_id or "",
+        )
+        if _pro:
+            return _pro
+    except Exception as e:
+        print(f"[PRO_MACHINE] skip: {e}")
+
     # Meta education cards (retry / pre-dry / bag / oxygen term / nitrile / beginner)
     # — before chem/SOP so Q1·Q2·Q6·Q8·Q9·Q10 do not empty-fallback or mis-route.
     try:
