@@ -138,11 +138,43 @@ async def health():
     return JSONResponse(
         content={
             "status": "ok" if neo4j_ok else "degraded",
-            "build": "2026-09-27-hq-operator-edu-v54",
+            "build": "2026-09-28-weekly-exam-v1",
             "checks": checks,
         },
         status_code=200,
     )
+
+
+@app.post("/internal/weekly-exam/dispatch")
+async def weekly_exam_dispatch(request: Request):
+    """HQ/backend triggers Zalo invites for an exam week. Auth: X-Internal-Secret."""
+    secret = (
+        request.headers.get("X-Internal-Secret")
+        or request.headers.get("x-internal-secret")
+        or ""
+    ).strip()
+    expected = (
+        os.environ.get("EDUCATION_BOT_INTERNAL_SECRET")
+        or os.environ.get("INTERNAL_WEBHOOK_SECRET")
+        or ""
+    ).strip()
+    if not expected or secret != expected:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    week_id = str((body or {}).get("week_id") or "").strip()
+    if not week_id:
+        return JSONResponse({"error": "week_id required"}, status_code=400)
+    from weekly_exam import dispatch_week_async
+    from zalo_handler import _send_zalo_reply
+
+    async def _send(uid: str, text: str):
+        return await _send_zalo_reply(uid, text, with_brand=False)
+
+    result = await dispatch_week_async(week_id, _send)
+    return JSONResponse(result)
 
 
 # ─── Zalo webhook ─────────────────────────────────────────────────────────────
