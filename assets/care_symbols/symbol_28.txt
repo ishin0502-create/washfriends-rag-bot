@@ -1,0 +1,6 @@
+id=28
+ko=눕혀 건조
+en=Dry flat
+vi=Phơi phẳng
+cat=dry
+hint=square+hline

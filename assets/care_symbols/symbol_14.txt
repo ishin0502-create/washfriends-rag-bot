@@ -1,0 +1,6 @@
+id=14
+ko=약한 세탁 40°C
+en=Gentle wash 40°C
+vi=Giặt nhẹ 40°C
+cat=wash
+hint=tub+40+line1

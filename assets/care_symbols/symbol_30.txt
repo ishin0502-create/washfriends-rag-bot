@@ -1,0 +1,6 @@
+id=30
+ko=물기 제거 후 걸어 건조
+en=Drip dry
+vi=Phơi nhỏ giọt
+cat=dry
+hint=square+3vline

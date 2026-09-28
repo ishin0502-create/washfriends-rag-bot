@@ -1,0 +1,6 @@
+id=29
+ko=걸어 건조
+en=Line dry
+vi=Phơi treo
+cat=dry
+hint=square+vline

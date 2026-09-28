@@ -1,0 +1,6 @@
+id=12
+ko=저온 다림질 110°C
+en=Iron low 110°C
+vi=Ủi nhiệt thấp 110°C
+cat=iron
+hint=iron+dot1

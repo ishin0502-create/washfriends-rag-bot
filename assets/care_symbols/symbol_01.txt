@@ -1,0 +1,6 @@
+id=1
+ko=일반 세탁 40°C
+en=Normal wash 40°C
+vi=Giặt thường 40°C
+cat=wash
+hint=tub+40

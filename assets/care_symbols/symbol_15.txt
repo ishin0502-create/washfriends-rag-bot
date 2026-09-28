@@ -1,0 +1,6 @@
+id=15
+ko=텀블 건조 보통
+en=Tumble dry normal
+vi=Sấy máy bình thường
+cat=dry
+hint=square+circle+dot2

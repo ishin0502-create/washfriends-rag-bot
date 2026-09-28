@@ -1,0 +1,6 @@
+id=21
+ko=드라이클리닝 F 약하게
+en=Dry clean F mild
+vi=Giặt khô F nhẹ
+cat=pro
+hint=circle+F+underline

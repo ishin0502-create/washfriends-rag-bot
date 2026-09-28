@@ -1,0 +1,6 @@
+id=32
+ko=일반 세탁 70°C
+en=Normal wash 70°C
+vi=Giặt thường 70°C
+cat=wash
+hint=tub+70

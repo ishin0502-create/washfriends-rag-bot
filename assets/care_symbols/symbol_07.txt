@@ -1,0 +1,6 @@
+id=7
+ko=일반 세탁 30°C
+en=Normal wash 30°C
+vi=Giặt thường 30°C
+cat=wash
+hint=tub+30

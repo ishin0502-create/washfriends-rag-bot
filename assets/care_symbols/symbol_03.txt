@@ -1,0 +1,6 @@
+id=3
+ko=텀블 건조 저온
+en=Tumble dry low
+vi=Sấy máy nhiệt thấp
+cat=dry
+hint=square+circle+dot1

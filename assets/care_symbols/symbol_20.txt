@@ -1,0 +1,6 @@
+id=20
+ko=모든 표백 가능
+en=Any bleach allowed
+vi=Được tẩy tất cả
+cat=bleach
+hint=triangle empty

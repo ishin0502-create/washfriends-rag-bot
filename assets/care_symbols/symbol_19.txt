@@ -1,0 +1,6 @@
+id=19
+ko=매우 약한 세탁 30°C
+en=Very gentle wash 30°C
+vi=Giặt rất nhẹ 30°C
+cat=wash
+hint=tub+30+line2

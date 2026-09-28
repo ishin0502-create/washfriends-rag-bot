@@ -1,0 +1,6 @@
+id=17
+ko=다림질 금지
+en=Do not iron
+vi=Không được ủi
+cat=iron
+hint=iron+X

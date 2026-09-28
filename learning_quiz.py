@@ -174,7 +174,11 @@ def _render_question(user_id: str, *, intro: bool = False, feedback: str = "") -
         src_line = (
             "· 출처: 회원님이 물은 내용 위주\n"
             if src == "personal"
-            else "· 출처: 기본 얼룩·원단 드릴 (개인 기록 부족 시)\n"
+            else (
+                "· 출처: 세탁표시 기호 (그림 객관식·주관식)\n"
+                if src == "care_symbols"
+                else "· 출처: 기본 얼룩·원단 드릴 (개인 기록 부족 시)\n"
+            )
         )
         body = (
             f"{head} ({n}/{total})\n"

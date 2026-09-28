@@ -1,0 +1,6 @@
+id=5
+ko=일반 세탁 60°C
+en=Normal wash 60°C
+vi=Giặt thường 60°C
+cat=wash
+hint=tub+60

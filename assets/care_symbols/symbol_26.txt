@@ -1,0 +1,6 @@
+id=26
+ko=손세탁 40°C 이하
+en=Hand wash only ≤40°C
+vi=Chỉ giặt tay ≤40°C
+cat=wash
+hint=tub+hand

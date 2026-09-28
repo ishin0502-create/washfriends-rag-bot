@@ -25,6 +25,14 @@ _REVIEW_CMD = re.compile(
     r"^\s*(복습|다시\s*복습|review|ôn|ôn\s*lại|quiz)\s*$",
     re.I,
 )
+_CARE_SYMBOL_QUIZ_CMD = re.compile(
+    r"^\s*("
+    r"기호\s*퀴즈|기호\s*시험|세탁\s*표시\s*퀴즈|세탁\s*표시\s*시험|케어\s*라벨\s*퀴즈|케어라벨\s*퀴즈|"
+    r"care\s*symbol\s*quiz|care\s*label\s*quiz|symbol\s*quiz|"
+    r"ký\s*hiệu\s*quiz|ky\s*hieu\s*quiz|quiz\s*ký\s*hiệu|quiz\s*ky\s*hieu"
+    r")\s*$",
+    re.I,
+)
 
 
 def mode_menu(lang: str = "ko") -> str:
@@ -34,8 +42,9 @@ def mode_menu(lang: str = "ko") -> str:
             "\n"
             "① 현장 모드 — 지금 옷·얼룩 바로 질문 (기본)\n"
             "② 학습 모드 — 내 질문 위주로 짧게 복습 후 질문\n"
+            "③ 기호 퀴즈 — 세탁표시 그림 보고 객관식·주관식\n"
             "\n"
-            "「현장」또는 「학습」이라고 보내 주세요.\n"
+            "「현장」 / 「학습」 / 「기호퀴즈」\n"
             "언제든 「모드」로 다시 열 수 있습니다."
         )
     if lang == "en":
@@ -44,16 +53,18 @@ def mode_menu(lang: str = "ko") -> str:
             "\n"
             "① Field — ask stains/labels now (default)\n"
             "② Learning — short review from YOUR past questions\n"
+            "③ Symbol quiz — care-label pictures (MCQ + short answer)\n"
             "\n"
-            "Send 「field」 or 「learning」. 「mode」 anytime."
+            "Send 「field」 / 「learning」 / 「symbol quiz」. 「mode」 anytime."
         )
     return (
         "◆ Chế độ bot đào tạo\n"
         "\n"
         "① Hiện trường — hỏi vết bẩn ngay (mặc định)\n"
         "② Học — ôn ngắn từ câu hỏi CỦA BẠN\n"
+        "③ Quiz ký hiệu — ảnh nhãn giặt (trắc nghiệm + tự luận ngắn)\n"
         "\n"
-        "Gửi 「hiện trường」 hoặc 「học」. 「mode」 bất cứ lúc nào."
+        "Gửi 「hiện trường」 / 「học」 / 「ký hiệu quiz」. 「mode」 bất cứ lúc nào."
     )
 
 
@@ -99,6 +110,12 @@ def try_handle_mode_or_quiz(user_id: str, text: str) -> Optional[str]:
     if _FIELD_CMD.match(raw):
         set_mode(user_id, "field")
         return _field_on(lang)
+
+    if _CARE_SYMBOL_QUIZ_CMD.match(raw):
+        from care_label_quiz import start_care_symbol_quiz
+
+        set_mode(user_id, "learning")
+        return start_care_symbol_quiz(user_id, lang=lang, size=6)
 
     if _LEARN_CMD.match(raw) or _REVIEW_CMD.match(raw):
         set_mode(user_id, "learning")

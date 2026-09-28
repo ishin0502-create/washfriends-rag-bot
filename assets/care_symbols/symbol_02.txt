@@ -1,0 +1,6 @@
+id=2
+ko=표백 금지
+en=Do not bleach
+vi=Không được tẩy
+cat=bleach
+hint=triangle+X

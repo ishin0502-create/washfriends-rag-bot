@@ -1,0 +1,6 @@
+id=22
+ko=웨트클리닝 W
+en=Wet clean W
+vi=Giặt ướt W
+cat=pro
+hint=circle+W

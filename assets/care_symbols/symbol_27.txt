@@ -1,0 +1,6 @@
+id=27
+ko=일반 세탁 95°C
+en=Normal wash 95°C
+vi=Giặt thường 95°C
+cat=wash
+hint=tub+95

@@ -1,0 +1,6 @@
+id=11
+ko=고온 다림질 200°C
+en=Iron high 200°C
+vi=Ủi nhiệt cao 200°C
+cat=iron
+hint=iron+dot3

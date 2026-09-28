@@ -1,0 +1,6 @@
+id=9
+ko=물세탁 금지
+en=Do not wash
+vi=Cấm giặt
+cat=wash
+hint=tub+X

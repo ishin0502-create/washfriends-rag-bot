@@ -1,0 +1,6 @@
+id=8
+ko=텀블 건조 금지
+en=Do not tumble dry
+vi=Cấm sấy máy
+cat=dry
+hint=square+circle+X

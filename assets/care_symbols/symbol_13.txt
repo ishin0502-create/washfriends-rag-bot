@@ -1,0 +1,6 @@
+id=13
+ko=산소 표백만 가능
+en=Non-chlorine bleach only
+vi=Chỉ tẩy bằng oxy
+cat=bleach
+hint=triangle+slash

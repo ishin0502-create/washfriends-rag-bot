@@ -252,6 +252,43 @@ def _brand_send_attempts(user_id: str, att: Optional[str]) -> list[tuple[str, di
     return attempts
 
 
+async def _send_zalo_local_png(user_id: str, png_path: str) -> bool:
+    """Upload a local PNG and send as OA image. Fail-open."""
+    path = Path(png_path)
+    if not path.is_file():
+        print(f"[ZALO QUIZ IMG] missing {png_path}")
+        return False
+    token = await get_access_token()
+    if not token:
+        return False
+    url = f"{ZALO_API_BASE}/oa/message/cs"
+    async with httpx.AsyncClient(timeout=25) as client:
+        att = None
+        for mode, kwargs in _upload_attempt_specs(path):
+            result = await _upload_zalo_image_attempt(client, token, **kwargs)
+            att = result.get("attachment_id")
+            if att:
+                print(f"[ZALO QUIZ IMG] upload ok via {mode}")
+                break
+        if not att:
+            print("[ZALO QUIZ IMG] upload failed")
+            return False
+        headers = {"access_token": token, "Content-Type": "application/json"}
+        for mode, payload in (
+            ("token_only", _image_msg(user_id, {"token": att})),
+            ("attachment_id_only", _image_msg(user_id, {"attachment_id": att})),
+        ):
+            try:
+                ok, data = await _post_zalo_image(client, url, headers, payload)
+                if ok:
+                    print(f"[ZALO QUIZ IMG] sent via {mode}")
+                    return True
+                print(f"[ZALO QUIZ IMG] send fail mode={mode} {data.get('error')} {data.get('message')}")
+            except Exception as e:
+                print(f"[ZALO QUIZ IMG] {mode} {type(e).__name__}: {e}")
+    return False
+
+
 async def _send_zalo_brand_image(user_id: str) -> bool:
     """Send mascot+logo image. Never raises; False on failure."""
     token = await get_access_token()
@@ -494,6 +531,15 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
             mode_reply = try_handle_mode_or_quiz(user_id, text)
             if mode_reply:
                 await _send_zalo_reply(user_id, mode_reply, with_brand=False)
+                # Care-symbol quiz: send the symbol PNG for the current question
+                try:
+                    from care_label_quiz import current_quiz_image_path
+
+                    img = current_quiz_image_path(user_id)
+                    if img:
+                        await _send_zalo_local_png(user_id, img)
+                except Exception as img_err:
+                    print(f"[ZALO QUIZ IMG] skip: {img_err}")
                 return
 
         # Immediate "thinking" notice (fail-open: never block the real answer)

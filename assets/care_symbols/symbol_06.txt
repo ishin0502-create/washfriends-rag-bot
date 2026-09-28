@@ -1,0 +1,6 @@
+id=6
+ko=드라이클리닝 P
+en=Dry clean P
+vi=Giặt khô P
+cat=pro
+hint=circle+P

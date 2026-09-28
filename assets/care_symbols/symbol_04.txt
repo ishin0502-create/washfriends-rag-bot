@@ -1,0 +1,6 @@
+id=4
+ko=중온 다림질 150°C
+en=Iron medium 150°C
+vi=Ủi nhiệt trung bình 150°C
+cat=iron
+hint=iron+dot2

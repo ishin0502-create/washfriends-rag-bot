@@ -1,0 +1,6 @@
+id=23
+ko=웨트클리닝 W 약하게
+en=Wet clean W mild
+vi=Giặt ướt W nhẹ
+cat=pro
+hint=circle+W+underline

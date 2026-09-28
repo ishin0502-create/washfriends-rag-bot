@@ -1,0 +1,6 @@
+id=18
+ko=그늘 걸어 건조
+en=Line dry in shade
+vi=Phơi trong bóng râm
+cat=dry
+hint=square+line+slash

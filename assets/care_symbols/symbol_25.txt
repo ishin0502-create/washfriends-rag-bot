@@ -1,0 +1,6 @@
+id=25
+ko=드라이클리닝 금지
+en=Do not dry clean
+vi=Không được giặt khô
+cat=pro
+hint=circle+X

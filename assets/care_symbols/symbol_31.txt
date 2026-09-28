@@ -1,0 +1,6 @@
+id=31
+ko=일반 세탁 50°C
+en=Normal wash 50°C
+vi=Giặt thường 50°C
+cat=wash
+hint=tub+50
