@@ -204,3 +204,90 @@ def current_quiz_image_path(user_id: str) -> Optional[str]:
         return None
     path = items[idx].get("image_path")
     return str(path) if path else None
+
+
+# ── Show symbol images on request (not a quiz) ─────────────────────────────
+
+_pending_show: dict[str, list[str]] = {}
+
+_SHOW_CMD = re.compile(
+    r"(보여\s*줘|보여줘|보여\s*주|이미지|그림|photo|show|ảnh|hien\s*thi|hiển\s*thị)",
+    re.I,
+)
+_DRY_CLEAN_TOPIC = re.compile(
+    r"(드라이\s*클?리?닝|드라이클리닝|드라이\s*기호|dry\s*-?\s*clean|giặt\s*khô|giat\s*kho|"
+    r"원\s*기호|P\s*기호|F\s*기호|웨트\s*클?리?닝)",
+    re.I,
+)
+_SYMBOL_WORD = re.compile(r"(기호|세탁\s*표시|케어\s*라벨|care\s*label|ký\s*hiệu|ky\s*hieu|symbol)", re.I)
+
+
+def _dry_clean_symbol_ids() -> list[int]:
+    """Main dry-clean / professional circle symbols for display."""
+    # P, F, P mild, F mild, W, do-not-dry-clean; plus do-not-wash (often paired)
+    return [6, 10, 16, 21, 22, 25, 9]
+
+
+def match_show_symbol_ids(text: str) -> Optional[list[int]]:
+    raw = (text or "").strip()
+    if not raw:
+        return None
+    wants_show = bool(_SHOW_CMD.search(raw))
+    about_symbols = bool(_SYMBOL_WORD.search(raw))
+    about_dry = bool(_DRY_CLEAN_TOPIC.search(raw))
+    # 「드라이클리닝 기호 보여줘」 / 「드라이 기호 이미지」
+    if about_dry and (wants_show or about_symbols):
+        return _dry_clean_symbol_ids()
+    # 「기호 보여줘」 alone → skip (too vague); require dry-clean for this handler
+    return None
+
+
+def queue_symbol_images(user_id: str, symbol_ids: list[int]) -> list[str]:
+    ensure_assets()
+    paths: list[str] = []
+    for sid in symbol_ids:
+        _, png = asset_paths(sid)
+        if png.is_file():
+            paths.append(str(png))
+    if user_id:
+        _pending_show[user_id] = list(paths)
+    return paths
+
+
+def pop_queued_symbol_images(user_id: str) -> list[str]:
+    return list(_pending_show.pop(user_id, []) or [])
+
+
+def format_show_symbols_reply(symbol_ids: list[int], lang: str = "ko") -> str:
+    lines: list[str] = []
+    if lang == "ko":
+        lines.append("◆ 드라이클리닝·전문 세탁 기호")
+        lines.append("아래에 그림이 이어집니다. (원 안 글자 = 용제/방식)")
+        lines.append("")
+        for sid in symbol_ids:
+            lines.append(f"· {name_for(sid, 'ko')}")
+        lines.append("")
+        lines.append("퀴즈로 연습: 「기호퀴즈」")
+    elif lang == "en":
+        lines.append("◆ Dry-clean / professional care symbols")
+        lines.append("Images follow.")
+        for sid in symbol_ids:
+            lines.append(f"· {name_for(sid, 'en')}")
+    else:
+        lines.append("◆ Ký hiệu giặt khô / chuyên nghiệp")
+        lines.append("Ảnh gửi tiếp theo.")
+        for sid in symbol_ids:
+            lines.append(f"· {name_for(sid, 'vi')}")
+    return "\n".join(lines)
+
+
+def try_handle_show_symbols(user_id: str, text: str) -> Optional[str]:
+    """If user asks to show dry-clean (etc.) symbols, queue PNGs and return caption."""
+    ids = match_show_symbol_ids(text or "")
+    if not ids:
+        return None
+    from reply_lang import detect_reply_lang
+
+    lang = detect_reply_lang(text or "")
+    queue_symbol_images(user_id, ids)
+    return format_show_symbols_reply(ids, lang=lang)

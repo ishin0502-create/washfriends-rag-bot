@@ -36,3 +36,14 @@ def test_zalo_command_starts_quiz():
     reply = try_handle_mode_or_quiz("test-care-user", "기호퀴즈")
     assert reply
     assert "기호" in reply or "세탁표시" in reply or "학습" in reply
+
+
+def test_show_dry_clean_symbols():
+    from care_label_quiz import match_show_symbol_ids, try_handle_show_symbols, pop_queued_symbol_images
+
+    ids = match_show_symbol_ids("드라이클리닝 기호 보여줘")
+    assert ids and 6 in ids and 25 in ids
+    reply = try_handle_show_symbols("u-show", "드라이클리닝 기호 보여줘")
+    assert reply and "드라이" in reply
+    paths = pop_queued_symbol_images("u-show")
+    assert len(paths) >= 3

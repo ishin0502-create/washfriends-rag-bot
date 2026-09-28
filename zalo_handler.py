@@ -526,6 +526,20 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
                 await _send_zalo_reply(user_id, exam_reply, with_brand=False)
                 return
 
+        # Show care-symbol images on request (e.g. 「드라이클리닝 기호 보여줘」)
+        if event_name == "user_send_text" and text:
+            try:
+                from care_label_quiz import pop_queued_symbol_images, try_handle_show_symbols
+
+                show_reply = try_handle_show_symbols(user_id, text)
+                if show_reply:
+                    await _send_zalo_reply(user_id, show_reply, with_brand=False)
+                    for img in pop_queued_symbol_images(user_id):
+                        await _send_zalo_local_png(user_id, img)
+                    return
+            except Exception as show_err:
+                print(f"[ZALO SHOW SYMBOLS] skip: {show_err}")
+
         # Field / learning mode + active quiz (no GraphRAG / no LLM)
         if event_name == "user_send_text" and text:
             mode_reply = try_handle_mode_or_quiz(user_id, text)
