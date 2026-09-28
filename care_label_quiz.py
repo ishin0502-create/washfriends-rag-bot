@@ -211,15 +211,27 @@ def current_quiz_image_path(user_id: str) -> Optional[str]:
 _pending_show: dict[str, list[str]] = {}
 
 _SHOW_CMD = re.compile(
-    r"(보여\s*줘|보여줘|보여\s*주|이미지|그림|photo|show|ảnh|hien\s*thi|hiển\s*thị)",
+    r"(보여\s*줘|보여줘|보여\s*주|보여\s*달라|이미지|그림|라벨\s*이미지|"
+    r"photo|show|ảnh|hien\s*thi|hiển\s*thị)",
     re.I,
 )
 _DRY_CLEAN_TOPIC = re.compile(
-    r"(드라이\s*클?리?닝|드라이클리닝|드라이\s*기호|dry\s*-?\s*clean|giặt\s*khô|giat\s*kho|"
-    r"원\s*기호|P\s*기호|F\s*기호|웨트\s*클?리?닝)",
+    r"(드라이\s*클?리?닝|드라이클리닝|드라이\s*크리닝|크리닝|클리닝|"
+    r"드라이\s*기호|dry\s*-?\s*clean|giặt\s*khô|giat\s*kho|"
+    r"원\s*기호|P\s*기호|F\s*기호|웨트\s*클?리?닝|"
+    r"전문\s*세탁\s*기호|드라이\s*전용)",
     re.I,
 )
-_SYMBOL_WORD = re.compile(r"(기호|세탁\s*표시|케어\s*라벨|care\s*label|ký\s*hiệu|ky\s*hieu|symbol)", re.I)
+_SYMBOL_WORD = re.compile(
+    r"(기호|세탁\s*표시|케어\s*라벨|케어라벨|라벨\s*기호|레벨\s*기호|"
+    r"care\s*label|ký\s*hiệu|ky\s*hieu|symbol)",
+    re.I,
+)
+_LABEL_SHOW = re.compile(
+    r"(세탁\s*기호|케어\s*라벨|라벨\s*기호|레벨\s*기호).{0,12}(보여|이미지|그림)|"
+    r"(보여|이미지|그림).{0,12}(세탁\s*기호|케어\s*라벨|라벨\s*기호)",
+    re.I,
+)
 
 
 def _dry_clean_symbol_ids() -> list[int]:
@@ -235,10 +247,14 @@ def match_show_symbol_ids(text: str) -> Optional[list[int]]:
     wants_show = bool(_SHOW_CMD.search(raw))
     about_symbols = bool(_SYMBOL_WORD.search(raw))
     about_dry = bool(_DRY_CLEAN_TOPIC.search(raw))
-    # 「드라이클리닝 기호 보여줘」 / 「드라이 기호 이미지」
+    # 「드라이클리닝 기호 보여줘」 / 「크리닝 기호 보여줘」 / 「드라이 기호 이미지」
     if about_dry and (wants_show or about_symbols):
         return _dry_clean_symbol_ids()
-    # 「기호 보여줘」 alone → skip (too vague); require dry-clean for this handler
+    # 「세탁 기호 보여줘」 / 「라벨 기호 보여줘」 → dry-clean set (most asked) + note in caption
+    if wants_show and about_symbols:
+        return _dry_clean_symbol_ids()
+    if _LABEL_SHOW.search(raw):
+        return _dry_clean_symbol_ids()
     return None
 
 

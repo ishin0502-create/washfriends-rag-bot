@@ -240,8 +240,18 @@ def try_handle_exam_message(user_id: str, text: str) -> Optional[str]:
     raw = (text or "").strip()
     if not user_id or not raw:
         return None
-    # Don't steal mode commands
-    if re.fullmatch(r"(모드|mode|현장|학습|복습|field|learning|review|ôn|hiện\s*trường)", raw, re.I):
+    # Don't steal care-symbol show / quiz commands
+    if re.search(
+        r"(기호|크리닝|클리닝|케어\s*라벨|세탁\s*표시).{0,20}(보여|이미지|그림|퀴즈|시험)",
+        raw,
+        re.I,
+    ):
+        return None
+    if re.fullmatch(
+        r"(모드|mode|현장|학습|복습|field|learning|review|ôn|hiện\s*trường|기호\s*퀴즈)",
+        raw,
+        re.I,
+    ):
         return None
 
     part = fetch_active_assignment(user_id)

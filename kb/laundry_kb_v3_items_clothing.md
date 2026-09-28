@@ -151,12 +151,15 @@ Trả lời điểm chủ theo chuẩn Wash Friends: rõ bước, rõ hóa chấ
 **Tên**: Giày sneaker & Giày thể thao / 스니커즈 & 신발 / Sneakers & Athletic Shoes
 **Độ khó**: ★★★☆☆
 **Hóa chất**: D3, D2
-**Quy tắc vàng**: Giày sneaker TUYỆT ĐỐI không sấy máy — keo tan chảy! Chỉ nhiệt thấp hoặc sấy khí. Giày da = ít nước tối đa.
+**Quy tắc vàng**: TUYỆT ĐỐI không sấy máy/máy sấy tóc/nắng gắt — keo tan. ≤30°C. Cam Javel. Tiếp nhận: chất liệu + keo/hàng giả + tách màu.
 
 | Bước | Thao tác | Lực tay | Chi tiết | Checkpoint |
 |---|---|---|---|---|
-| 1 | Chuẩn bị giặt giày | 0 | Tháo dây (giặt riêng). Tháo lót trong (giặt riêng hoặc thay). Chổi khô chà đất mặt ngoài trước. Máy giặt: túi lưới chuyên giày hoặc kèm khăn cũ (giảm va chạm). | 📋 Giày trong máy không đệm = hỏng máy + ồn |
-| 2 | Giặt + sấy giày sneaker | 0 | Sneaker vải/lưới: 30°C tinh tế, D3 ít. Sneaker da: ít nước tối đa, chỉ spotting D2. Sấy: bắt buộc sấy khí. Nhét báo bên trong để giữ hình + hút ẩm. Tránh nắng trực tiếp (đổi màu). Lắp lại sau khi khô hoàn toàn. | 📋 Báo = dụng cụ giữ hình giày rẻ nhất |
+| 0 | Tiếp nhận 3 check | 0 | (1) Chất liệu mũ/đế/lót. (2) Keo hở / nghi hàng giả → báo miễn trách hoặc từ chối. (3) Tách trắng/sáng/tối + test lem màu. Script: giày keo yếu có thể tách đế khi giặt, bồi thường khó. | 📋 Ảnh lúc nhận = bằng chứng |
+| 1 | Chuẩn bị | 0 | Tháo dây + lót. Chổi KHÔ trước khi ướt (đất → bùn khó ra). | 📋 ướt trước = đất ngấm sâu |
+| 2 | Chổi / dụng cụ | 0 | Cứng: chỉ đế cao su. Trung: canvas. Mềm/bàn chải đánh răng: mesh/knit. Magic eraser: chỉ cao su/hông đế giữa — CẤM da/chỉ may. | 📋 Không dùng chổi cứng lên mũ |
+| 3 | Giặt theo chất liệu | 0 | Vải/canvas: tay hoặc túi lưới ≤30°C, vắt nhẹ/không. Mesh: nhồi khăn giữ form. Da: không ngâm — cleaner bề mặt + kem. Suede: không giặt nước (chuyên hoặc chải khô). | 📋 Da/suede ≠ sneaker vải |
+| 4 | Xả + khô | 0 | Xả kỹ. Nhét giấy/khăn giấy, phơi bóng mát. Cấm máy sấy / máy sấy tóc / nắng / lò sưởi. VN ẩm: quạt. | 📋 Keo + nhiệt = hỏng |
 
 ---
 

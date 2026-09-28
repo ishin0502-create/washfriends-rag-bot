@@ -4387,6 +4387,16 @@ def generate_response(user_message: str, channel: str = "", user_id: str = "") -
     """
     from user_session import clear_session, get_session, set_pending_treatment
 
+    # Care-label symbol images (Zalo sends PNGs after this text via pending queue)
+    try:
+        from care_label_quiz import try_handle_show_symbols
+
+        _show = try_handle_show_symbols(user_id or "", user_message or "")
+        if _show:
+            return _show
+    except Exception as e:
+        print(f"[CARE_SYMBOL_SHOW] skip: {e}")
+
     pending = get_session(channel, user_id) if channel and user_id else {}
     session_lang = str(pending.get("lang") or "")
     lang = detect_reply_lang(user_message, session_lang=session_lang)

@@ -1018,22 +1018,29 @@ def _sneaker_white() -> dict[str, str]:
         "precheck_ko": (
             "흰 창(미드솔)·흰 옆면 고무·흰 패널: 갑피(천/메쉬)와 분리해 처리. "
             "끈은 빼서 별도. "
+            "【접수 3체크】①소재(갑피·밑창·안감) ②접착·가품 여부(벌어짐 있으면 면책/거절) "
+            "③색상 분리(흰/밝음/짙음). "
             "접수 멘트(필수): 「표면 때는 많이 밝아지지만, "
-            "신다 누렇게 된 산화·황변은 100% 하얗게 복원 약속이 어렵습니다」."
+            "신다 누렇게 된 산화·황변은 100% 하얗게 복원 약속이 어렵습니다. "
+            "가품·접착 약한 신발은 세탁 중 밑창 분리 위험이 있고 보상이 어려울 수 있습니다」."
         ),
         "why_ko": (
             "[왜 이 순서] 흰 고무·EVA 창은 알칼리 잔여·직사광선·고온건조에 누렇게. "
-            "중성+베이킹소다 국소 → 충분히 헹굼 → 그늘 건조. "
+            "중성+베이킹소다 국소 → 충분히 헹굼 → 그늘 건조(휴지 미라법 권장). "
             "락스(염소) 남용·고온=더 황변·접착제 손상. "
-            "표면 때(흙·검댕) vs 산화 황변을 고객에게 구분해 설명할 것."
+            "표면 때(흙·검댕) vs 산화 황변을 고객에게 구분해 설명할 것. "
+            "강한 과산화수소+직사광선(레트로브라이트)은 기본 SOP에 넣지 않음 — "
+            "접착·변색 사고 위험, 숙련·동의·실패 가능 고지 없이는 금지."
         ),
         "fresh_path_ko": (
-            "(1)끈·깔창 분리. 마른 흙 털기. 사진(전). "
+            "(1)끈·깔창 분리. 마른 솔로 흙먼지 먼저(물 전!). 사진(전). "
             "(2)흰 고무·옆면: 중성세제 1작은술 + 베이킹소다 1작은술 + 물 몇 방울 페이스트. "
             "경질 솔(고무만) Cap2 한 방향. 흰 천 패널: 연질 솔·중성만. "
-            "(3)충분히 헹굼(잔여 세제=재황변). "
+            "밑창 고무 찌든 때만: 치약+베이킹소다+주방세제(1:1:1) — 고무에만. "
+            "(3)충분히 헹굼(잔여 세제=재황변). 마지막 헹굼에 구연산/식초 물(선택). "
             "(4)흰 끈: 별도 찬물 담금 15–30분+중성 → 망세탁 약하게 → 헹굼. "
-            "(5)그늘·통풍 건조, 신문지·키친타월로 형태. 고온건조기·직사광선 금지. "
+            "(5)그늘·통풍 건조. 젖은 채 흰 키친타월로 감싸 건조(휴지 미라법) 권장. "
+            "신문지·키친타월로 형태. 고온건조기·직사광선·드라이어 금지. "
             "(6)남아 있는 누런기: 1회만 재시도. "
             "산소표백은 흰 천·끈만 구석 테스트 후. 고무 창에는 신중·비권장. "
             "(7)인도 멘트: 「오늘은 여기까지 — 더 세게 하면 접착·색이 상할 수 있어요」."
@@ -1041,28 +1048,37 @@ def _sneaker_white() -> dict[str, str]:
         "dried_path_ko": (
             "오래된 산화 황변: 성공률 중간↓. "
             "고객 멘트: 「시간이 지나 노란 창은 새 신처럼 되긴 어렵고, 밝게만 가능합니다」. "
-            "강한 락스·사포 과다 금지."
+            "강한 락스·사포 과다·과산화수소+직사광선 금지."
         ),
-        "motion_ko": "고무 Cap2 경질 솔. 메쉬·갑피 Cap1–2 연질 — 솔 혼용 금지.",
+        "motion_ko": (
+            "브러시: 강모=고무 밑창만 / 중모=캔버스 / 연모·칫솔=메쉬·니트·가죽. "
+            "매직블럭=고무·중창 옆면만(가죽·실밥·코팅 금지). "
+            "고무 Cap2 경질. 메쉬·갑피 Cap1–2 연질 — 솔 혼용 금지."
+        ),
         "water_temp_ko": "찬물~30℃. 온수·고온건조 금지.",
         "aftercare_ko": (
-            "완전 건조 후 착용. 그늘 보관. "
+            "완전 건조 후 착용. 그늘 보관. VN 습도 높으면 선풍기·제습. "
             "예방: 세제 잔여 없이 헹구기, 직사광선·고온건조 피하기."
         ),
         "sense_check_ko": "눈: 누런기·잔여. 손: 미끄럼(세제 잔여) 없음.",
         "success_rate_ko": "표면 때: 양호. 산화 황변: 중간~낮음 — 반드시 사전 고지.",
-        "refuse_when_ko": "100% 새것 복원·락스 범벅·고온건조 요구 → 거절.",
-        "must_include_ko": "베이킹소다, 락스 금지, 100% 복원 불가",
+        "refuse_when_ko": (
+            "100% 새것 복원·락스 범벅·고온건조·이미 밑창 벌어진 채 보장 요구 → 거절. "
+            "클레임 시: 접수 면책 멘트·사진·저온 수세탁을 근거로 안내."
+        ),
+        "must_include_ko": "베이킹소다, 락스 금지, 100% 복원 불가, 접수 면책",
     }
 
 
 def _shoe_laces() -> dict[str, str]:
     return {
-        "precheck_ko": "운동화 끈은 반드시 빼서 따로. 흰 끈/유색 분리.",
+        "precheck_ko": "운동화 끈은 반드시 빼서 따로. 흰 끈/유색 분리. 플라스틱 팁(아일릿) 손상 주의.",
         "why_ko": "[왜 이 순서] 신에 끼운 채 세탁=이염·세척 불량. 흰 끈은 알칼리·고온에 황변.",
         "fresh_path_ko": (
-            "(1)끈 분리. (2)찬물+중성 15–30분. (3)연질 솔 또는 세탁망 약코스. "
-            "(4)충분히 헹굼. (5)그늘 건조(고온건조 금지). (6)잔여 회색: 베이킹소다 약하게 재시도 — 안 되면 교체 안내."
+            "(1)끈 분리. (2)찬물+중성 15–30분(흰 끈 찌든 때: 과탄산+베이킹소다+세제 1:1:1은 "
+            "흰 끈만·물 탁해지면 교체). (3)연질 솔 또는 세탁망 약코스. "
+            "(4)충분히 헹굼. (5)그늘 자연 건조(건조기 금지)."
+            " (6)잔여 회색: 베이킹소다 약하게 재시도 — 안 되면 교체 안내."
         ),
         "dried_path_ko": "교체 비용이 더 나을 수 있음 — 고지.",
         "motion_ko": "Cap2. 세게 비틀지 말 것.",
@@ -1076,59 +1092,91 @@ def _shoe_laces() -> dict[str, str]:
 
 def _sneaker_general() -> dict[str, str]:
     return {
-        "precheck_ko": "소재 구분(천·메쉬·가죽·스웨이드)·끈·깔창 분리. 흰창 황변이면 흰창 경로. 구두(가죽)와 혼동 금지.",
-        "why_ko": "[왜 이 순서] 갑피/밑창 솔·세제 분리. 고온건조=접착·형태 손상.",
+        "precheck_ko": (
+            "【접수 3체크】①소재(갑피·밑창·안감) ②접착/가품(벌어짐→면책 또는 거절) "
+            "③색상 분리·이염 테스트(유색). "
+            "끈·깔창 분리. 흰창 황변이면 흰창 경로. 구두(가죽)·스웨이드와 혼동 금지. "
+            "면책 멘트: 「가품·접착 약한 신발은 세탁 중 밑창 분리·손상 가능, 보상 어려울 수 있음」."
+        ),
+        "why_ko": (
+            "[왜 이 순서] 갑피/밑창 솔·세제 분리. 물 전 건식 브러싱(흙→진흙 고착 방지). "
+            "고온건조=접착·형태 손상. 염소 락스=탈색·접착 약화 → 운동화 금지."
+        ),
         "fresh_path_ko": (
-            "(1)끈·깔창 분리, 마른 흙. "
-            "【오염 없음】→손세탁 또는 망+≤30℃ 약코스(천·캔버스). "
+            "(1)끈·깔창 분리, 마른 솔로 흙 먼저. 유색은 구석 이염 테스트. "
+            "【오염 없음】→손세탁 또는 망+≤30℃ 약코스(천·캔버스). 탈수 안 함/약. "
             "【오염 있음】→갑피 연질+중성 국소 후 동일. "
-            "(2)갑피 연질+중성, 밑창 경질(고무만). "
-            "(3)헹굼. (4)신문지 채워 그늘 건조 — 고온건조 금지. "
-            "(5)가죽/스웨이드 갑피면 해당 가죽 SOP로 전환. "
-            "(6)흰창·끈은 별도 미백 경로."
+            "(2)브러시: 강모=고무 밑창만 / 중모=캔버스 / 연모=메쉬·니트. "
+            "매직블럭=고무·중창 옆면만. "
+            "(3)천연가죽 갑피: 물에 담그지 말고 가죽 클리너 표면만 → 크림. "
+            "스웨이드: 물세탁 금지(전용 브러시·지우개·전문 의뢰). "
+            "합성가죽: 중성 희석 닦기, 열풍 금지. "
+            "(4)헹굼. (5)신문지/키친타월 채워 그늘 건조 — 건조기·드라이어·직사광선·난로 금지. "
+            "빠른 건조: 빈 병에 거꾸로(선택). "
+            "(6)흰창·끈은 별도 미백 경로. VN: 레플리카 접착 확인·곰팡이는 알코올 후 세탁."
         ),
-        "dried_path_ko": "재스팟팅. 접착 분리 위험 고지.",
-        "motion_ko": "갑피 Cap1–2 연질. 밑창 Cap2–3 경질.",
-        "water_temp_ko": "≤30℃.",
-        "aftercare_ko": "완전 건조 후 착용.",
-        "sense_check_ko": "눈: 잔여. 손: 미끄럼 없음.",
-        "success_rate_ko": "천·캔버스: 양호. 가죽/스웨이드: 별도.",
-        "refuse_when_ko": "스웨이드 물세탁·고온건조 강제 → 거절.",
-        "must_include_ko": "끈·깔창 분리, 그늘 건조, 고온건조 금지",
-        "precheck_vi": "Phan loai vai/mesh/da/suede. Thao day+lot. CAM nham voi giay da tay.",
-        "why_vi": "[Tai sao] Tach than/de. Say nong = hong keo.",
+        "dried_path_ko": (
+            "재스팟팅. 접착 분리·이염·황변·변형 클레임 대비: "
+            "접수 사진·면책 멘트·≤30℃·고온건조 안 함을 근거로 안내."
+        ),
+        "motion_ko": "갑피 Cap1–2 연질/중모. 밑창 Cap2–3 강모(고무만).",
+        "water_temp_ko": "≤30℃. 가죽·스웨이드는 담금 금지.",
+        "aftercare_ko": "완전 건조 후 착용. VN 고습: 선풍기·제습제 보관.",
+        "sense_check_ko": "눈: 잔여·이염. 손: 미끄럼 없음. 코: 세제·곰팡이 냄새 없음.",
+        "success_rate_ko": "천·캔버스: 양호. 가죽/스웨이드: 별도·보수적.",
+        "refuse_when_ko": (
+            "스웨이드 물세탁·고온건조·밑창 이미 분리된 채 100% 보장 → 거절. "
+            "클레임 스크립트: 접수 시 고지한 접착 리스크·저온 수세탁 사실을 안내."
+        ),
+        "must_include_ko": "접수 3체크, 끈·깔창 분리, 그늘 건조, 고온건조 금지, 면책",
+        "precheck_vi": (
+            "3 check: chat lieu / keo-hang gia / tach mau. Thao day+lot. "
+            "CAM nham voi giay da tay/suede. Bao khach rui ro de tach."
+        ),
+        "why_vi": "[Tai sao] Tach than/de. Say nong = hong keo. Cam Javel.",
         "fresh_path_vi": (
-            "(1)Thao day+lot, chai kho. Khong vet → tay/may tui luoi <=30C. "
-            "Co vet → spot than sol mem + D2 roi giat. "
-            "(2)Than sol mem; de cao su sol cung. (3)Xa. (4)Nhet bao phoi bong mat — CAM say nong. "
-            "(5)Da/suede → SOP da. (6)Canh trang → SOP trang."
+            "(1)Thao day+lot, chai kho truoc khi uot. Test lem mau. "
+            "Khong vet → tay/may tui luoi <=30C, vat nhe. "
+            "Co vet → spot than sol mem + D2. "
+            "(2)Sol cung chi de cao su; sol mem canvas; ban chai danh rang mesh. "
+            "(3)Da that: khong ngam — cleaner be mat. Suede: CAM nuoc. "
+            "(4)Xa. (5)Nhet bao phoi bong mat — CAM say nong/may say. "
+            "(6)Canh trang → SOP trang. VN: check keo hang gia."
         ),
-        "dried_path_vi": "Spot lai. Bao rui ro keo.",
+        "dried_path_vi": "Spot lai. Bao rui ro keo/lem mau.",
         "motion_vi": "Than Cap1–2; de Cap2–3.",
         "water_temp_vi": "<=30C.",
-        "aftercare_vi": "Kho han moi mang.",
-        "sense_check_vi": "Mat: con du. Tay: khong tron.",
-        "success_rate_vi": "Vai/canvas: tot. Da/suede: khac.",
-        "refuse_when_vi": "Suede ngam nuoc / say nong → tu choi.",
-        "must_include_vi": "thao day+lot, phoi bong mat, CAM say nong",
-        "precheck_en": "Sort fabric/mesh/leather/suede; remove laces+insoles. Do not treat as leather dress shoes.",
-        "why_en": "[Why] Separate upper vs outsole tools. Hot dryer damages glue/shape.",
-        "fresh_path_en": (
-            "(1)Remove laces/insoles; brush dry soil. "
-            "No stain → hand or mesh bag ≤30°C gentle. "
-            "With stain → soft brush + mild soap on upper first. "
-            "(2)Soft brush upper; hard brush rubber outsole only. "
-            "(3)Rinse. (4)Stuff with paper; air-dry shade — no hot dryer. "
-            "(5)Leather/suede upper → leather SOP. (6)White midsole → whitening SOP."
+        "aftercare_vi": "Kho han moi mang. Do am VN: quat + hut am.",
+        "sense_check_vi": "Mat: het bot. Tay: khong tron.",
+        "success_rate_vi": "Vai/canvas: tot. Da/suede: rieng.",
+        "refuse_when_vi": "Ep giat suede bang nuoc / say nong / bao 100% → tu choi.",
+        "must_include_vi": "thao day+lot, phoi bong mat, CAM say nong, check keo",
+        "precheck_en": (
+            "Intake 3: material / glue-fake risk / color split. Remove laces+insoles. "
+            "Do not treat as leather dress shoes. Disclose sole-separation risk."
         ),
-        "dried_path_en": "Re-spot. Disclose glue/separation risk.",
-        "motion_en": "Upper Cap1–2 soft; outsole Cap2–3 hard.",
-        "water_temp_en": "≤30°C.",
-        "aftercare_en": "Wear only when fully dry.",
-        "sense_check_en": "Eyes: residue. Hand: no slipperiness.",
+        "why_en": (
+            "[Why] Separate upper vs outsole tools. Dry-brush before water. "
+            "Hot dryer damages glue. No chlorine bleach on sneakers."
+        ),
+        "fresh_path_en": (
+            "(1)Remove laces/insoles; dry-brush first; bleed-test colored pairs. "
+            "No stain → hand or mesh bag ≤30°C gentle, no/low spin. "
+            "With stain → soft brush + mild soap on upper first. "
+            "(2)Hard brush rubber outsole only; soft for mesh; medium for canvas. "
+            "Magic eraser: rubber/midsole sidewall only. "
+            "(3)Leather upper: no soak — wipe + cream. Suede: no wet wash. "
+            "(4)Rinse. (5)Stuff paper; shade air-dry — no hot dryer/sun/heater. "
+            "(6)White midsole → whitening SOP. VN: check replica glue."
+        ),
+        "dried_path_en": "Re-spot. Use intake photos + disclaimer for claims.",
+        "motion_en": "Upper Cap1–2 soft; outsole Cap2–3 hard (rubber only).",
+        "water_temp_en": "≤30°C. No soak for leather/suede.",
+        "aftercare_en": "Wear only when fully dry. Humid VN: fan + desiccant.",
+        "sense_check_en": "Eyes: residue/bleed. Hand: no slipperiness.",
         "success_rate_en": "Canvas/fabric: good. Leather/suede: separate path.",
-        "refuse_when_en": "Forced suede wet-wash or hot dryer → refuse.",
-        "must_include_en": "remove laces/insoles, shade dry, no hot dryer",
+        "refuse_when_en": "Forced suede wet-wash, hot dryer, or 100% guarantee on loose sole → refuse.",
+        "must_include_en": "intake 3 checks, remove laces/insoles, shade dry, no hot dryer",
     }
 
 

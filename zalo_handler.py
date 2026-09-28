@@ -619,6 +619,14 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
             awaiting_care_label=awaiting,
         )
         await _send_zalo_reply(user_id, reply_text, with_brand=with_brand)
+        # If generate_response queued care-symbol PNGs, send them now
+        try:
+            from care_label_quiz import pop_queued_symbol_images
+
+            for img in pop_queued_symbol_images(user_id):
+                await _send_zalo_local_png(user_id, img)
+        except Exception as img_err:
+            print(f"[ZALO SHOW SYMBOLS] after-reply skip: {img_err}")
     except Exception as exc:
         print(f"[ZALO HANDLER ERROR] {type(exc).__name__}: {exc}")
         try:
