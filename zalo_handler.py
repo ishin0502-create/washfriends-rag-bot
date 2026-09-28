@@ -39,6 +39,8 @@ from brand_header import (
 from user_session import get_session
 from zalo_owner_access import gate_status, is_authorized_owner
 from education_registration import handle_unauthorized_message
+from learning_mode import maybe_append_footer, try_handle_mode_or_quiz
+from owner_qa_log import append_turn, get_mode
 from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret, _app_id
 
 ZALO_API_BASE   = "https://openapi.zalo.me/v3.0"
@@ -479,6 +481,13 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
             await _send_zalo_reply(user_id, reply, with_brand=False)
             return
 
+        # Field / learning mode + active quiz (no GraphRAG / no LLM)
+        if event_name == "user_send_text" and text:
+            mode_reply = try_handle_mode_or_quiz(user_id, text)
+            if mode_reply:
+                await _send_zalo_reply(user_id, mode_reply, with_brand=False)
+                return
+
         # Immediate "thinking" notice (fail-open: never block the real answer)
         if event_name == "user_send_text" and text:
             try:
@@ -519,6 +528,20 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
                 _executor,
                 lambda: generate_response(text, channel="zalo", user_id=user_id),
             )
+
+        # Persist Q&A for personalized learning cards (disk, no LLM)
+        try:
+            if text and reply_text:
+                append_turn(
+                    user_id,
+                    question=text if event_name == "user_send_text" else (text or "[image]"),
+                    answer=reply_text,
+                    lang=detect_reply_lang(lang_src),
+                    bot_mode=get_mode(user_id),
+                )
+                reply_text = maybe_append_footer(reply_text, user_id, lang_src)
+        except Exception as log_err:
+            print(f"[OWNER QA LOG] skip: {log_err}")
 
         with_brand = should_send_brand_header(
             "zalo",

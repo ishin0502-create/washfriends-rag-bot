@@ -4,3 +4,5 @@ kb/reference_guides/*.pdf
 kb/reference_guides/*.html
 .env
 credentials.json
+
+data/owner_qa/
