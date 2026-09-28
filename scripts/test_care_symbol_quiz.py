@@ -40,10 +40,14 @@ def test_zalo_command_starts_quiz():
 
 def test_show_dry_clean_symbols():
     from care_label_quiz import match_show_symbol_ids, try_handle_show_symbols, pop_queued_symbol_images
+    from care_symbol_svg import public_care_symbol_url
 
     ids = match_show_symbol_ids("드라이클리닝 기호 보여줘")
     assert ids and 6 in ids and 25 in ids
+    assert len(ids) <= 5
     reply = try_handle_show_symbols("u-show", "드라이클리닝 기호 보여줘")
     assert reply and "드라이" in reply
     paths = pop_queued_symbol_images("u-show")
     assert len(paths) >= 3
+    assert "|" in paths[0]
+    assert "care_symbols/symbol_06.png" in public_care_symbol_url(6)

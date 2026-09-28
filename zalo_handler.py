@@ -14,6 +14,7 @@ import os
 import hmac
 import hashlib
 import json
+import re
 import time
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -252,34 +253,94 @@ def _brand_send_attempts(user_id: str, att: Optional[str]) -> list[tuple[str, di
     return attempts
 
 
-async def _send_zalo_local_png(user_id: str, png_path: str) -> bool:
-    """Upload a local PNG and send as OA image. Fail-open."""
-    path = Path(png_path)
-    if not path.is_file():
-        print(f"[ZALO QUIZ IMG] missing {png_path}")
-        return False
+async def _send_zalo_local_png(
+    user_id: str,
+    png_path: str,
+    *,
+    public_url: Optional[str] = None,
+) -> bool:
+    """Upload/send a care-symbol (or any) PNG. Prefer public HTTPS URL for Zalo."""
+    raw = (png_path or "").strip()
+    sid = None
+    if "|" in raw:
+        path_s, sid_s = raw.split("|", 1)
+        path = Path(path_s)
+        try:
+            sid = int(sid_s)
+        except ValueError:
+            sid = None
+    else:
+        path = Path(raw)
+        # quiz image_path may be plain .../symbol_06.png
+        m = re.search(r"symbol_(\d+)\.png$", path.name, re.I)
+        if m:
+            sid = int(m.group(1))
+
+    if public_url is None and sid is not None:
+        try:
+            from care_symbol_svg import public_care_symbol_url
+
+            public_url = public_care_symbol_url(sid)
+        except Exception:
+            public_url = None
+
     token = await get_access_token()
     if not token:
+        print("[ZALO QUIZ IMG] empty token")
         return False
-    url = f"{ZALO_API_BASE}/oa/message/cs"
+    send_url = f"{ZALO_API_BASE}/oa/message/cs"
+
     async with httpx.AsyncClient(timeout=25) as client:
         att = None
-        for mode, kwargs in _upload_attempt_specs(path):
-            result = await _upload_zalo_image_attempt(client, token, **kwargs)
-            att = result.get("attachment_id")
-            if att:
-                print(f"[ZALO QUIZ IMG] upload ok via {mode}")
-                break
+        # 1) Prefer image_url (Zalo fetches our Railway static PNG)
+        if public_url:
+            for api_ver, upload_url in ZALO_UPLOAD_URLS:
+                for auth in ("header", "query"):
+                    result = await _upload_zalo_image_attempt(
+                        client,
+                        token,
+                        upload_url=upload_url,
+                        image_url=public_url,
+                        auth=auth,
+                    )
+                    att = result.get("attachment_id")
+                    if att:
+                        print(f"[ZALO QUIZ IMG] upload ok via {api_ver}/url+{auth} sid={sid}")
+                        break
+                if att:
+                    break
+        # 2) Fallback: multipart file (path only — never brand header URL)
+        if not att and path.is_file():
+            for api_ver, upload_url in ZALO_UPLOAD_URLS:
+                for auth in ("header", "query"):
+                    result = await _upload_zalo_image_attempt(
+                        client,
+                        token,
+                        upload_url=upload_url,
+                        path=path,
+                        auth=auth,
+                    )
+                    att = result.get("attachment_id")
+                    if att:
+                        print(f"[ZALO QUIZ IMG] upload ok via {api_ver}/file+{auth}")
+                        break
+                if att:
+                    break
         if not att:
-            print("[ZALO QUIZ IMG] upload failed")
+            print(f"[ZALO QUIZ IMG] upload failed path={path} url={public_url}")
             return False
+
         headers = {"access_token": token, "Content-Type": "application/json"}
-        for mode, payload in (
+        attempts = [
             ("token_only", _image_msg(user_id, {"token": att})),
             ("attachment_id_only", _image_msg(user_id, {"attachment_id": att})),
-        ):
+        ]
+        if public_url:
+            attempts.append(("url", _image_msg(user_id, {"url": public_url})))
+            attempts.append(("media_template_url", _media_template_msg(user_id, public_url)))
+        for mode, payload in attempts:
             try:
-                ok, data = await _post_zalo_image(client, url, headers, payload)
+                ok, data = await _post_zalo_image(client, send_url, headers, payload)
                 if ok:
                     print(f"[ZALO QUIZ IMG] sent via {mode}")
                     return True
@@ -287,6 +348,43 @@ async def _send_zalo_local_png(user_id: str, png_path: str) -> bool:
             except Exception as e:
                 print(f"[ZALO QUIZ IMG] {mode} {type(e).__name__}: {e}")
     return False
+
+
+async def _send_queued_care_symbol_images(user_id: str) -> int:
+    """Send all pending care-symbol PNGs; return how many succeeded."""
+    from care_label_quiz import pop_queued_symbol_images
+    from care_symbol_svg import public_care_symbol_url
+
+    items = pop_queued_symbol_images(user_id)
+    if not items:
+        return 0
+    ok_n = 0
+    fail_urls: list[str] = []
+    for i, item in enumerate(items):
+        sid = None
+        path_s = item
+        if "|" in item:
+            path_s, sid_s = item.split("|", 1)
+            try:
+                sid = int(sid_s)
+            except ValueError:
+                sid = None
+        pub = public_care_symbol_url(sid) if sid is not None else None
+        sent = await _send_zalo_local_png(user_id, item, public_url=pub)
+        if sent:
+            ok_n += 1
+        elif pub:
+            fail_urls.append(pub)
+        if i + 1 < len(items):
+            await asyncio.sleep(0.45)
+    if ok_n == 0 and fail_urls:
+        links = "\n".join(f"· {u}" for u in fail_urls[:6])
+        await _send_zalo_reply(
+            user_id,
+            "기호 그림 전송이 잠시 막혔습니다. 아래 링크를 눌러 확인해 주세요:\n" + links,
+            with_brand=False,
+        )
+    return ok_n
 
 
 async def _send_zalo_brand_image(user_id: str) -> bool:
@@ -529,13 +627,12 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
         # Show care-symbol images on request (e.g. 「드라이클리닝 기호 보여줘」)
         if event_name == "user_send_text" and text:
             try:
-                from care_label_quiz import pop_queued_symbol_images, try_handle_show_symbols
+                from care_label_quiz import try_handle_show_symbols
 
                 show_reply = try_handle_show_symbols(user_id, text)
                 if show_reply:
                     await _send_zalo_reply(user_id, show_reply, with_brand=False)
-                    for img in pop_queued_symbol_images(user_id):
-                        await _send_zalo_local_png(user_id, img)
+                    await _send_queued_care_symbol_images(user_id)
                     return
             except Exception as show_err:
                 print(f"[ZALO SHOW SYMBOLS] skip: {show_err}")
@@ -621,10 +718,7 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
         await _send_zalo_reply(user_id, reply_text, with_brand=with_brand)
         # If generate_response queued care-symbol PNGs, send them now
         try:
-            from care_label_quiz import pop_queued_symbol_images
-
-            for img in pop_queued_symbol_images(user_id):
-                await _send_zalo_local_png(user_id, img)
+            await _send_queued_care_symbol_images(user_id)
         except Exception as img_err:
             print(f"[ZALO SHOW SYMBOLS] after-reply skip: {img_err}")
     except Exception as exc:

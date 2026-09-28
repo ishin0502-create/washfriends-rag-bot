@@ -235,9 +235,9 @@ _LABEL_SHOW = re.compile(
 
 
 def _dry_clean_symbol_ids() -> list[int]:
-    """Main dry-clean / professional circle symbols for display."""
-    # P, F, P mild, F mild, W, do-not-dry-clean; plus do-not-wash (often paired)
-    return [6, 10, 16, 21, 22, 25, 9]
+    """Dry-clean symbols to show (keep short — Zalo rate-limits multi-image)."""
+    # P, F, do-not-dry-clean, do-not-wash (most asked)
+    return [6, 10, 25, 9]
 
 
 def match_show_symbol_ids(text: str) -> Optional[list[int]]:
@@ -264,13 +264,14 @@ def queue_symbol_images(user_id: str, symbol_ids: list[int]) -> list[str]:
     for sid in symbol_ids:
         _, png = asset_paths(sid)
         if png.is_file():
-            paths.append(str(png))
+            paths.append(f"{png}|{int(sid)}")
     if user_id:
         _pending_show[user_id] = list(paths)
     return paths
 
 
 def pop_queued_symbol_images(user_id: str) -> list[str]:
+    """Return pending entries as 'path|symbol_id' (or plain path for legacy)."""
     return list(_pending_show.pop(user_id, []) or [])
 
 
@@ -278,7 +279,8 @@ def format_show_symbols_reply(symbol_ids: list[int], lang: str = "ko") -> str:
     lines: list[str] = []
     if lang == "ko":
         lines.append("◆ 드라이클리닝·전문 세탁 기호")
-        lines.append("아래에 그림이 이어집니다. (원 안 글자 = 용제/방식)")
+        lines.append("아래에 기호 그림이 이어서 전송됩니다.")
+        lines.append("(원 안 글자 = 용제/방식)")
         lines.append("")
         for sid in symbol_ids:
             lines.append(f"· {name_for(sid, 'ko')}")
@@ -286,12 +288,12 @@ def format_show_symbols_reply(symbol_ids: list[int], lang: str = "ko") -> str:
         lines.append("퀴즈로 연습: 「기호퀴즈」")
     elif lang == "en":
         lines.append("◆ Dry-clean / professional care symbols")
-        lines.append("Images follow.")
+        lines.append("Symbol images will follow.")
         for sid in symbol_ids:
             lines.append(f"· {name_for(sid, 'en')}")
     else:
         lines.append("◆ Ký hiệu giặt khô / chuyên nghiệp")
-        lines.append("Ảnh gửi tiếp theo.")
+        lines.append("Ảnh ký hiệu gửi tiếp theo.")
         for sid in symbol_ids:
             lines.append(f"· {name_for(sid, 'vi')}")
     return "\n".join(lines)

@@ -15,8 +15,9 @@ from typing import Callable, Optional
 from care_label_iso3758 import SYMBOLS
 
 ASSETS_DIR = Path(__file__).resolve().parent / "assets" / "care_symbols"
-SIZE = 240  # PNG canvas
-STROKE = 7
+SIZE = 360  # PNG canvas (larger = clearer on Zalo)
+STROKE = 9
+ASSET_VER = "v2"  # bump to bust Zalo/CDN cache
 
 
 class _Canvas:
@@ -361,16 +362,33 @@ def asset_paths(symbol_id: int) -> tuple[Path, Path]:
     return base.with_suffix(".svg"), base.with_suffix(".png")
 
 
+def public_care_symbol_url(symbol_id: int) -> str:
+    """HTTPS URL Zalo can fetch (same static mount as brand header)."""
+    import os
+
+    base = (os.getenv("PUBLIC_BASE_URL") or os.getenv("RAILWAY_PUBLIC_DOMAIN") or "").strip()
+    if base and not base.startswith("http"):
+        base = "https://" + base
+    if not base:
+        base = "https://washfriends-rag-bot-production.up.railway.app"
+    return (
+        base.rstrip("/")
+        + f"/static/care_symbols/symbol_{int(symbol_id):02d}.png?v={ASSET_VER}"
+    )
+
+
 def ensure_assets(force: bool = False) -> Path:
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+    ver_marker = ASSETS_DIR / f".ver_{ASSET_VER}"
+    if force or not ver_marker.exists():
+        force = True
     for sid in SYMBOLS:
         svg_p = ASSETS_DIR / f"symbol_{sid:02d}.svg"
         png_p = ASSETS_DIR / f"symbol_{sid:02d}.png"
-        if force or not svg_p.exists() or not png_p.exists():
+        if force or not svg_p.exists() or not png_p.exists() or png_p.stat().st_size < 1500:
             canv = _build(sid)
             svg_p.write_text(canv.to_svg(), encoding="utf-8")
             png_p.write_bytes(canv.to_png_bytes())
-        # sidecar meaning for humans / HQ
         meta = ASSETS_DIR / f"symbol_{sid:02d}.txt"
         if force or not meta.exists():
             row = SYMBOLS[sid]
@@ -379,6 +397,7 @@ def ensure_assets(force: bool = False) -> Path:
                 f"cat={row.get('cat')}\nhint={row.get('hint')}\n",
                 encoding="utf-8",
             )
+    ver_marker.write_text(ASSET_VER, encoding="utf-8")
     return ASSETS_DIR
 
 

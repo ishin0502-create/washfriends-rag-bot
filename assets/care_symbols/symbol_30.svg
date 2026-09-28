@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
-<rect width="240" height="240" fill="#ffffff"/>
-<path d="M 55.0 45.0 L 185.0 45.0 L 185.0 175.0 L 55.0 175.0 Z" fill="none" stroke="#111" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-<line x1="90.0" y1="70.0" x2="90.0" y2="150.0" stroke="#111" stroke-width="7" stroke-linecap="round"/>
-<line x1="120.0" y1="70.0" x2="120.0" y2="150.0" stroke="#111" stroke-width="7" stroke-linecap="round"/>
-<line x1="150.0" y1="70.0" x2="150.0" y2="150.0" stroke="#111" stroke-width="7" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360" width="360" height="360">
+<rect width="360" height="360" fill="#ffffff"/>
+<path d="M 55.0 45.0 L 185.0 45.0 L 185.0 175.0 L 55.0 175.0 Z" fill="none" stroke="#111" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+<line x1="90.0" y1="70.0" x2="90.0" y2="150.0" stroke="#111" stroke-width="9" stroke-linecap="round"/>
+<line x1="120.0" y1="70.0" x2="120.0" y2="150.0" stroke="#111" stroke-width="9" stroke-linecap="round"/>
+<line x1="150.0" y1="70.0" x2="150.0" y2="150.0" stroke="#111" stroke-width="9" stroke-linecap="round"/>
 </svg>

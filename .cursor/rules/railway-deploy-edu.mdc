@@ -1,0 +1,17 @@
+---
+description: Always Railway-deploy rag-bot after education-bot code changes
+alwaysApply: true
+---
+
+# Railway deploy (education / rag-bot)
+
+After committing education-bot / Zalo OA / weekly-exam / care-symbol / specialty SOP changes in this repo:
+
+1. `git push origin HEAD` (if not already pushed)
+2. Deploy production: `railway up --detach` (linked service `washfriends-rag-bot`)
+3. Confirm with `railway deployment list --limit 3` — wait until newest is `SUCCESS`
+4. Smoke-check if useful: `POST /ask` with a short Korean phrase (e.g. care-symbol show)
+
+Do **not** leave features only on GitHub. Zalo OA hits Railway; unpushed or undeployed commits will not appear to owners.
+
+Surface: education / rag only — do not touch washfriends-backend orders or frontend hosting from this repo’s deploy step.
