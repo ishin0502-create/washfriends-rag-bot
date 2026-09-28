@@ -17,7 +17,9 @@ from reply_lang import detect_reply_lang
 _REG_HINT = re.compile(
     r"(등록|허용|가맹|일반\s*세탁|세탁소|매장\s*이름|점주|직원|"
     r"đăng\s*ký|cua\s*hang|cửa\s*hàng|chu\s*cua|chủ|"
-    r"register|franchise|laundry\s*shop)",
+    r"nhân\s*viên|nhan\s*vien|"
+    r"tên\s*[:：]|ten\s*[:：]|"
+    r"register|franchise|laundry\s*shop|staff|owner)",
     re.I,
 )
 
@@ -97,17 +99,6 @@ def parse_registration(text: str) -> Optional[dict]:
     )
     if m:
         store = m.group(1).splitlines()[0].strip()[:200]
-    if not store:
-        # first non-empty line that isn't only keywords
-        for line in raw.splitlines():
-            s = line.strip()
-            if len(s) >= 2 and not re.fullmatch(
-                r"(가맹점|일반세탁소|점주|직원|franchise|general|owner|staff)", s, re.I
-            ):
-                store = s[:200]
-                break
-    if not store:
-        store = "미기재"
 
     person = ""
     m2 = re.search(
@@ -116,13 +107,51 @@ def parse_registration(text: str) -> Optional[dict]:
         re.I,
     )
     if not m2:
-        # bare "이름:" but not "매장 이름" / "store name"
+        # VI/KO bare name label: "Tên:" / "이름:" (not store name)
         m2 = re.search(
-            r"(?<![장점가매장\w])이름\s*[:：]\s*(.+)",
+            r"(?:^|[/\n\s])(?:tên|ten|이름)\s*[:：]\s*(.+)",
             raw,
+            re.I,
         )
     if m2:
-        person = m2.group(1).splitlines()[0].strip()[:120]
+        person = m2.group(1).split("/")[0].splitlines()[0].strip()[:120]
+        person = re.sub(r"\s*[-–—].*$", "", person).strip()
+
+    # "Name / role / phone" one-liner without store
+    if not person:
+        m3 = re.search(
+            r"(?:^|[/\n])\s*([A-Za-zÀ-ỹĂăÂâÊêÔôƠơƯưĐđ][A-Za-zÀ-ỹăâêôơưđ\s]{1,60})\s*/\s*(?:nhân\s*viên|nhan\s*vien|staff|점주|owner|chủ)",
+            raw,
+            re.I,
+        )
+        if m3:
+            person = m3.group(1).strip()[:120]
+
+    if not store:
+        # Prefer explicit store; else keep placeholder (do NOT steal person name line)
+        for line in raw.splitlines():
+            s = line.strip()
+            if len(s) < 2:
+                continue
+            if re.search(r"^(?:tên|ten|이름)\s*[:：]", s, re.I):
+                continue
+            if re.fullmatch(
+                r"(가맹점|일반세탁소|점주|직원|franchise|general|owner|staff|nhân\s*viên|nhan\s*vien)",
+                s,
+                re.I,
+            ):
+                continue
+            if re.search(r"nhân\s*viên|nhan\s*vien|staff|점주|owner", s, re.I) and re.search(
+                r"tên|ten|이름", s, re.I
+            ):
+                continue
+            # phone-only line
+            if re.fullmatch(r"[\d\s\-+]{8,}", s):
+                continue
+            store = s.split("/")[0].strip()[:200]
+            break
+    if not store:
+        store = "미기재"
     if not person:
         person = "미기재"
 

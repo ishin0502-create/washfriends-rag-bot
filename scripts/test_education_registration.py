@@ -42,6 +42,16 @@ def test_prompt_no_ask_zalo_id():
         assert "숫자 ID" in t or "numeric ID" in t or "ID số" in t or "Zalo ID" in t
 
 
+def test_parse_vietnamese_staff_oneline():
+    from education_registration import parse_registration
+
+    p = parse_registration("Tên: Chu Thị Minh Thoa / Nhân viên cửa hàng / 0363099562")
+    assert p is not None
+    assert p["person_role"] == "staff"
+    assert "Thoa" in p["person_name"] or "Chu" in p["person_name"]
+    assert p["person_name"] != "미기재"
+
+
 def test_unrelated_not_parsed():
     from education_registration import parse_registration
 
@@ -52,5 +62,6 @@ if __name__ == "__main__":
     test_parse_franchise_ko()
     test_parse_general_staff()
     test_prompt_no_ask_zalo_id()
+    test_parse_vietnamese_staff_oneline()
     test_unrelated_not_parsed()
     print("OK education_registration")
