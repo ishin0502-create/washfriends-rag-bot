@@ -235,6 +235,227 @@ def _finish_message(part: dict, lang: str) -> str:
     return msg + "Có thể hỏi bình thường lại."
 
 
+# Owner asking for past scores — must not be graded as an exam answer.
+_HISTORY_INTENT_RE = re.compile(
+    r"("
+    r"시험\s*(성적|점수|결과|기록)|"
+    r"(성적|점수)\s*(알려|확인|보|조회)|"
+    r"몇\s*점|"
+    r"틀린\s*(문제|문항|부분)|"
+    r"exam\s*(score|result|grade|history)|"
+    r"my\s*(score|exam)|"
+    r"điểm\s*(thi|kiểm)|"
+    r"kết\s*quả\s*(thi|kiểm)|"
+    r"lịch\s*sử\s*thi"
+    r")",
+    re.I,
+)
+
+_MONTH_EN = {
+    "january": 1,
+    "jan": 1,
+    "february": 2,
+    "feb": 2,
+    "march": 3,
+    "mar": 3,
+    "april": 4,
+    "apr": 4,
+    "may": 5,
+    "june": 6,
+    "jun": 6,
+    "july": 7,
+    "jul": 7,
+    "august": 8,
+    "aug": 8,
+    "september": 9,
+    "sept": 9,
+    "sep": 9,
+    "october": 10,
+    "oct": 10,
+    "november": 11,
+    "nov": 11,
+    "december": 12,
+    "dec": 12,
+}
+
+
+def is_exam_history_intent(text: str) -> bool:
+    return bool(_HISTORY_INTENT_RE.search((text or "").strip()))
+
+
+def _parse_year_month(text: str) -> tuple[Optional[int], Optional[int]]:
+    raw = (text or "").strip()
+    year: Optional[int] = None
+    month: Optional[int] = None
+    ym = re.search(r"(20\d{2})\s*년?\s*(\d{1,2})\s*월", raw)
+    if ym:
+        year = int(ym.group(1))
+        month = int(ym.group(2))
+        return year, month if 1 <= month <= 12 else None
+    y_only = re.search(r"(20\d{2})\s*년", raw)
+    if y_only:
+        year = int(y_only.group(1))
+    m = re.search(
+        r"(?:^|[^\d])(\d{1,2})\s*월|(january|february|march|april|may|june|july|august|"
+        r"september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)"
+        r"|tháng\s*(\d{1,2})",
+        raw,
+        re.I,
+    )
+    if m:
+        if m.group(1):
+            month = int(m.group(1))
+        elif m.group(2):
+            key = m.group(2).lower()
+            month = _MONTH_EN.get(key)
+        elif m.group(3):
+            month = int(m.group(3))
+        if month is not None and not (1 <= month <= 12):
+            month = None
+    return year, month
+
+
+def _fmt_started(iso: Optional[str]) -> str:
+    if not iso:
+        return ""
+    try:
+        # 2026-06-02T09:00:00+07:00 → 2026-06-02
+        return str(iso)[:10]
+    except Exception:
+        return ""
+
+
+def _format_history_reply(data: dict, lang: str, year: Optional[int], month: Optional[int]) -> str:
+    exams = data.get("exams") if isinstance(data, dict) else None
+    if not isinstance(exams, list) or not exams:
+        if lang == "en":
+            scope = f" for {year}-{month:02d}" if year and month else (" for that period" if year or month else "")
+            return f"◆ No exam scores found{scope}."
+        if lang == "vi":
+            return "◆ Không có điểm thi đã lưu."
+        if year and month:
+            return f"◆ {year}년 {month}월에 기록된 시험 성적이 없습니다."
+        if month:
+            return f"◆ {month}월에 기록된 시험 성적이 없습니다."
+        return "◆ 아직 제출·마감된 시험 성적이 없습니다."
+
+    # Single exam detail when filtered or only one result
+    detail_one = len(exams) == 1 or (month is not None)
+    lines: list[str] = []
+    if lang == "ko":
+        head = "◆ 내 시험 성적"
+        if year and month:
+            head += f" ({year}년 {month}월)"
+        elif month:
+            head += f" ({month}월)"
+        lines.append(head)
+    elif lang == "en":
+        lines.append("◆ My exam scores")
+    else:
+        lines.append("◆ Điểm thi của tôi")
+
+    show = exams[:5]
+    for ex in show:
+        if not isinstance(ex, dict):
+            continue
+        score = int(ex.get("score") or 0)
+        mx = int(ex.get("max_score") or 0)
+        title = (ex.get("title") or ex.get("week_key") or "시험").strip()
+        when = _fmt_started(ex.get("started_at"))
+        st = ex.get("status") or ""
+        st_ko = "제출" if st == "submitted" else ("시간초과" if st == "expired" else st)
+        if lang == "ko":
+            lines.append(f"\n· {when} {title}\n  점수: {score}/{mx} ({st_ko})")
+        else:
+            lines.append(f"\n· {when} {title}\n  {score}/{mx} ({st})")
+
+        items = ex.get("items") if detail_one else None
+        if not isinstance(items, list):
+            continue
+        wrong = [it for it in items if isinstance(it, dict) and it.get("correct") is False]
+        if not wrong:
+            if lang == "ko":
+                lines.append("  틀린 문항 없음")
+            continue
+        if lang == "ko":
+            lines.append("  틀린 문항:")
+        for it in wrong[:8]:
+            n = it.get("n") or "?"
+            q = str(it.get("q") or "").replace("\n", " ")[:80]
+            exp = str(it.get("explain") or "").replace("\n", " ")[:100]
+            ans = str(it.get("user_answer") or "").replace("\n", " ")[:40]
+            if lang == "ko":
+                bit = f"  {n}) {q}"
+                if ans:
+                    bit += f"\n     내 답: {ans}"
+                if exp:
+                    bit += f"\n     요지: {exp}"
+                lines.append(bit)
+            else:
+                lines.append(f"  {n}) {q} — {exp}")
+
+    if len(exams) > 5 and lang == "ko":
+        lines.append(f"\n(최근 {len(show)}건만 표시)")
+    if lang == "ko" and not detail_one:
+        lines.append("\n특정 달: 「6월 시험 성적」처럼 보내 주세요.")
+    return "\n".join(lines).strip()
+
+
+def try_handle_exam_history(user_id: str, text: str) -> Optional[str]:
+    """If owner asks for past exam scores, return summary. Else None.
+
+    Always queries ONLY this Zalo user_id (never accepts a third-party id).
+    """
+    raw = (text or "").strip()
+    if not user_id or not raw or not is_exam_history_intent(raw):
+        return None
+    lang = detect_reply_lang(raw)
+
+    # Don't interrupt an active exam with a history dump
+    try:
+        active = fetch_active_assignment(user_id)
+    except Exception:
+        active = None
+    if active and (active.get("status") or "") in {"invited", "in_progress"}:
+        if lang == "ko":
+            return (
+                "◆ 지금 시험이 진행 중입니다.\n"
+                "시험이 끝난 뒤에 「시험 성적」이라고 보내 주세요."
+            )
+        if lang == "en":
+            return "◆ Exam in progress. Ask for scores after you finish."
+        return "◆ Đang thi. Hỏi điểm sau khi kết thúc."
+
+    year, month = _parse_year_month(raw)
+    # Default: recent few exams (no month → limit 5). Month filter → up to 20.
+    limit = 20 if month is not None else 5
+    qs = [
+        f"zalo_user_id={quote(user_id)}",
+        f"limit={limit}",
+        "include_items=true",
+    ]
+    if year is not None:
+        qs.append(f"year={int(year)}")
+    if month is not None:
+        qs.append(f"month={int(month)}")
+    path = "/api/v1/internal/education-bot/exams/history-for-user?" + "&".join(qs)
+    try:
+        data = _http_json("GET", path)
+    except Exception as e:
+        print(f"[WEEKLY EXAM] history fetch failed: {e}")
+        if lang == "ko":
+            return "◆ 성적 조회에 실패했습니다. 잠시 후 다시 시도해 주세요."
+        return "◆ Could not load exam history. Try again later."
+
+    # Extra safety: API echoes zalo_user_id — ignore if mismatch
+    echoed = str((data or {}).get("zalo_user_id") or "").strip()
+    if echoed and echoed != user_id.strip():
+        print("[WEEKLY EXAM] history zalo_user_id mismatch — refusing")
+        return "◆ 성적 조회를 할 수 없습니다."
+
+    return _format_history_reply(data or {}, lang, year, month)
+
+
 def try_handle_exam_message(user_id: str, text: str) -> Optional[str]:
     """If user has an active weekly exam, consume message for grading. Else None."""
     raw = (text or "").strip()
@@ -246,6 +467,8 @@ def try_handle_exam_message(user_id: str, text: str) -> Optional[str]:
         raw,
         re.I,
     ):
+        return None
+    if is_exam_history_intent(raw):
         return None
     if re.fullmatch(
         r"(모드|mode|현장|학습|복습|field|learning|review|ôn|hiện\s*trường|기호\s*퀴즈)",

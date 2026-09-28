@@ -42,7 +42,7 @@ from zalo_owner_access import gate_status, is_authorized_owner
 from education_registration import handle_unauthorized_message
 from learning_mode import maybe_append_footer, try_handle_mode_or_quiz
 from owner_qa_log import append_turn, get_mode
-from weekly_exam import try_handle_exam_message
+from weekly_exam import try_handle_exam_history, try_handle_exam_message
 from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret, _app_id
 
 ZALO_API_BASE   = "https://openapi.zalo.me/v3.0"
@@ -616,6 +616,13 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
             reply = handle_unauthorized_message(user_id, lang_src)
             await _send_zalo_reply(user_id, reply, with_brand=False)
             return
+
+        # Past exam scores (own Zalo id only) — before active exam grading
+        if event_name == "user_send_text" and text:
+            hist_reply = try_handle_exam_history(user_id, text)
+            if hist_reply:
+                await _send_zalo_reply(user_id, hist_reply, with_brand=False)
+                return
 
         # Weekly exam (if assigned) — before field/learning mode
         if event_name == "user_send_text" and text:
