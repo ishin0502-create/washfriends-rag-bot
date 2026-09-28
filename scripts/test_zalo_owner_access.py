@@ -31,8 +31,10 @@ def test_owner_gate_off_by_default(monkeypatch=None):
         clear_owner_access_cache()
         assert gate_status()["enabled"] is False
         assert is_authorized_owner("111") is True
-        assert "가맹" in deny_reply_text("산소표백제 뭐예요?")
-        assert "nhượng quyền" in deny_reply_text("vết cà phê").lower() or "nhượng" in deny_reply_text("vết cà phê").lower()
+        ko = deny_reply_text("산소표백제 뭐예요?")
+        assert "등록" in ko or "허용" in ko
+        vi = deny_reply_text("vết cà phê").lower()
+        assert "đăng ký" in vi or "kiem soat" in vi or "kiểm soát" in deny_reply_text("vết cà phê")
     finally:
         for k, v in saved.items():
             if v is None:

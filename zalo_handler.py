@@ -37,7 +37,8 @@ from brand_header import (
     _HEADER_ASSET_VER,
 )
 from user_session import get_session
-from zalo_owner_access import deny_reply_text, gate_status, is_authorized_owner
+from zalo_owner_access import gate_status, is_authorized_owner
+from education_registration import handle_unauthorized_message
 from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret, _app_id
 
 ZALO_API_BASE   = "https://openapi.zalo.me/v3.0"
@@ -473,7 +474,9 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
                 f"[ZALO OWNER GATE] denied user_id={user_id} "
                 f"mode={st.get('mode')} allowlist_size={st.get('allowlist_size')}"
             )
-            await _send_zalo_reply(user_id, deny_reply_text(lang_src), with_brand=False)
+            # Registration form / pending request — Zalo ID is never asked of the user.
+            reply = handle_unauthorized_message(user_id, lang_src)
+            await _send_zalo_reply(user_id, reply, with_brand=False)
             return
 
         # Immediate "thinking" notice (fail-open: never block the real answer)

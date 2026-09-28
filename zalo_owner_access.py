@@ -204,28 +204,30 @@ def is_authorized_owner(user_id: str) -> bool:
 
 
 def deny_reply_text(user_text: str = "") -> str:
-    lang = detect_reply_lang(user_text or "")
-    if lang == "ko":
+    """Legacy helper — prefer education_registration.handle_unauthorized_message."""
+    try:
+        from education_registration import registration_prompt
+
+        return registration_prompt(detect_reply_lang(user_text or ""))
+    except Exception:
+        lang = detect_reply_lang(user_text or "")
+        if lang == "ko":
+            return (
+                "◆ 허용된 교육 채널입니다.\n"
+                "등록이 필요합니다. 구분(가맹/일반)·매장명·이름·역할(점주/직원)을 보내 주세요.\n"
+                "(Zalo 숫자 ID는 보낼 필요 없습니다.)"
+            )
+        if lang == "en":
+            return (
+                "◆ Restricted education channel.\n"
+                "Please send: type (franchise/general), store name, your name, role (owner/staff).\n"
+                "(No Zalo numeric ID needed.)"
+            )
         return (
-            "◆ 가맹 점주·본사 교육 채널입니다.\n"
-            "등록된 Wash Friends 가맹 점주 또는 HQ에서 허용한 본사 계정만 "
-            "질문·답변을 받을 수 있습니다.\n"
-            "본사: HQ「접근 권한」에 Zalo 숫자 ID를 연결하세요. "
-            "점주: 매장 교육봇 토글 + Zalo ID 등록이 필요합니다."
+            "◆ Kênh đào tạo có kiểm soát.\n"
+            "Gửi: loại (franchise/general), tên cửa hàng, tên, vai trò (owner/staff).\n"
+            "(Không cần gửi Zalo ID số.)"
         )
-    if lang == "en":
-        return (
-            "◆ Franchise / HQ education channel.\n"
-            "Only registered store owners or HQ-allowed staff can use this bot.\n"
-            "HQ: link your numeric Zalo ID under Access permissions. "
-            "Stores: enable education bot + register Zalo IDs."
-        )
-    return (
-        "◆ Kênh đào tạo chủ cửa hàng / HQ.\n"
-        "Chỉ chủ đã đăng ký hoặc tài khoản HQ được phép mới hỏi được.\n"
-        "HQ: gắn Zalo ID số trong mục Quyền truy cập. "
-        "Cửa hàng: bật bot đào tạo + đăng ký Zalo ID."
-    )
 
 
 def gate_status() -> dict:
