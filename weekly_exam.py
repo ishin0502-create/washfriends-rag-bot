@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Weekly personalized education exam — Zalo delivery + grading (low AI cost).
+"""Weekly education exam — Zalo delivery + grading (low AI cost).
 
-- One AI call per participant to generate 5–10 questions from their Q&A log
-- Fallback to heuristic/OPS cards if AI fails
+- Primary: fixed L1 curriculum bank (mastery) + 70% pass line
+- Fallback: personal/OPS deck, then optional AI from Q&A log
 - Time limit enforced server-side via deadline_at
 """
 from __future__ import annotations
@@ -17,7 +17,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from learning_quiz import _match_accept, build_deck
-from owner_qa_log import list_personal_cards, load_user
+from l1_exam_bank import pass_threshold, sample_l1_exam_questions
+from owner_qa_log import load_user
 from reply_lang import detect_reply_lang
 
 # In-memory cursor: participant_id -> current question index
@@ -117,35 +118,83 @@ def _ai_generate_questions(user_id: str, n: int, lang: str) -> list[dict[str, st
 
 
 def build_exam_questions(user_id: str, n: int = 7, lang: str = "ko") -> list[dict[str, str]]:
+    """Build weekly exam: L1 curriculum bank first (mastery), then light personal pad.
+
+    Does not change GraphRAG stain SOP paths — exam generation only.
+    """
     n = max(5, min(10, int(n or 7)))
     lang = lang if lang in {"ko", "vi", "en"} else "ko"
-    qs = _ai_generate_questions(user_id, n, lang)
-    if len(qs) >= max(3, n // 2):
-        # pad from personal/OPS if short
-        if len(qs) < n:
-            for c in build_deck(user_id, lang, size=n):
-                if len(qs) >= n:
-                    break
-                qs.append({
-                    "id": f"deck{len(qs)+1}",
-                    "q": c.get("q") or "",
-                    "accept": c.get("accept") or "",
-                    "explain": c.get("explain") or "",
-                    "lang": lang,
-                })
+
+    # P2: curriculum mastery bank is the primary source
+    qs = sample_l1_exam_questions(n=n, lang=lang)
+    if len(qs) >= n:
         return qs[:n]
-    # full fallback
-    deck = build_deck(user_id, lang, size=n)
-    out = []
-    for i, c in enumerate(deck):
-        out.append({
-            "id": f"fb{i+1}",
+
+    # Pad from personal/OPS deck if bank somehow short
+    for c in build_deck(user_id, lang, size=n):
+        if len(qs) >= n:
+            break
+        qs.append({
+            "id": f"deck{len(qs)+1}",
             "q": c.get("q") or "",
             "accept": c.get("accept") or "",
             "explain": c.get("explain") or "",
             "lang": lang,
+            "source": "deck",
         })
-    return out[:n]
+    if len(qs) >= max(3, n // 2):
+        return qs[:n]
+
+    # Last resort: previous AI path (optional enrichment — never required)
+    ai = _ai_generate_questions(user_id, n - len(qs), lang)
+    for it in ai:
+        if len(qs) >= n:
+            break
+        it = dict(it)
+        it["source"] = "ai"
+        qs.append(it)
+    return qs[:n]
+
+
+def _finish_message(part: dict, lang: str) -> str:
+    score = int(part.get("score") or 0)
+    mx = int(part.get("max_score") or 0)
+    qs = part.get("questions_json") or []
+    passed = pass_threshold(score, mx, 0.7)
+    need = max(1, min(mx, int((mx * 0.7) + 0.999))) if mx else 0
+    wrong_lines = []
+    for i, it in enumerate(qs):
+        if not isinstance(it, dict):
+            continue
+        if it.get("correct") is False:
+            wrong_lines.append(
+                f"{i+1}) {it.get('explain') or it.get('accept') or ''}"
+            )
+    wrong_block = "\n".join(wrong_lines[:8])
+    if lang == "ko":
+        result = (
+            f"결과: 합격 (기준 {need}/{mx} 이상)\n"
+            if passed
+            else f"결과: 미합격 (합격 기준 {need}/{mx} — 초급 「교육」으로 복습해 주세요)\n"
+        )
+        msg = f"◆ 시험 종료\n점수: {score}/{mx}\n{result}"
+        if wrong_lines:
+            msg += f"\n틀린 부분 복습:\n{wrong_block}\n"
+        elif passed:
+            msg += "\n모두 잘하셨습니다.\n"
+        msg += "이제 일반 질문을 다시 보내셔도 됩니다."
+        return msg
+    if lang == "en":
+        result = f"Result: PASS (need {need}/{mx})\n" if passed else f"Result: NOT YET (need {need}/{mx})\n"
+        msg = f"◆ Exam finished\nScore: {score}/{mx}\n{result}"
+        if wrong_lines:
+            msg += f"\nReview:\n{wrong_block}\n"
+        return msg + "You can ask normal questions again."
+    result = f"Kết quả: ĐẠT (cần {need}/{mx})\n" if passed else f"Kết quả: CHƯA ĐẠT (cần {need}/{mx})\n"
+    msg = f"◆ Kết thúc\nĐiểm: {score}/{mx}\n{result}"
+    if wrong_lines:
+        msg += f"\nÔn lại:\n{wrong_block}\n"
+    return msg + "Có thể hỏi bình thường lại."
 
 
 def _utc_now() -> datetime:
@@ -201,38 +250,6 @@ def _render_q(idx: int, total: int, item: dict, lang: str, minutes_left: Optiona
     if lang == "en":
         return f"◆ Weekly exam ({idx}/{total})\n{timer}{item.get('q')}\n\nSend answer only."
     return f"◆ Thi tuần ({idx}/{total})\n{timer}{item.get('q')}\n\nChỉ gửi đáp án."
-
-
-def _finish_message(part: dict, lang: str) -> str:
-    score = int(part.get("score") or 0)
-    mx = int(part.get("max_score") or 0)
-    qs = part.get("questions_json") or []
-    wrong_lines = []
-    for i, it in enumerate(qs):
-        if not isinstance(it, dict):
-            continue
-        if it.get("correct") is False:
-            wrong_lines.append(
-                f"{i+1}) {it.get('explain') or it.get('accept') or ''}"
-            )
-    wrong_block = "\n".join(wrong_lines[:8])
-    if lang == "ko":
-        msg = f"◆ 시험 종료\n점수: {score}/{mx}\n"
-        if wrong_lines:
-            msg += f"\n틀린 부분 복습:\n{wrong_block}\n"
-        else:
-            msg += "\n모두 잘하셨습니다.\n"
-        msg += "이제 일반 질문을 다시 보내셔도 됩니다."
-        return msg
-    if lang == "en":
-        msg = f"◆ Exam finished\nScore: {score}/{mx}\n"
-        if wrong_lines:
-            msg += f"\nReview:\n{wrong_block}\n"
-        return msg + "You can ask normal questions again."
-    msg = f"◆ Kết thúc\nĐiểm: {score}/{mx}\n"
-    if wrong_lines:
-        msg += f"\nÔn lại:\n{wrong_block}\n"
-    return msg + "Có thể hỏi bình thường lại."
 
 
 # Owner asking for past scores — must not be graded as an exam answer.
@@ -667,7 +684,8 @@ async def dispatch_week_async(week_id: str, send_fn) -> dict:
             )
             msg = (
                 f"◆ {title}\n"
-                f"이번 주 교육 시험입니다. {len(qs)}문항 · 제한 {duration}분\n"
+                f"이번 주 초급(L1) 복습 시험입니다. {len(qs)}문항 · 제한 {duration}분\n"
+                f"합격 기준: 약 70% ({max(1, int((len(qs) * 0.7) + 0.999))}/{len(qs)}문제 이상)\n"
                 "아무 답이나 보내면 시험이 시작됩니다.\n"
                 "(허용된 교육봇 사용자에게만 발송됩니다)"
             )
