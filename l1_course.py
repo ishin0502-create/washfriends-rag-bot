@@ -210,6 +210,12 @@ def _save_state(user_id: str, st: dict[str, Any]) -> None:
     st["updated_at"] = time.time()
     data["l1_course"] = st
     save_user(user_id, data)
+    try:
+        from course_progress_sync import push_course_progress
+
+        push_course_progress(user_id)
+    except Exception:
+        pass
 
 
 def deactivate_course(user_id: str) -> None:

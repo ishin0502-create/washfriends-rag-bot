@@ -143,6 +143,12 @@ def _save_state(user_id: str, st: dict[str, Any]) -> None:
     u = load_user(user_id)
     u["l2_course"] = st
     save_user(user_id, u)
+    try:
+        from course_progress_sync import push_course_progress
+
+        push_course_progress(user_id)
+    except Exception:
+        pass
 
 
 def deactivate_l2_course(user_id: str) -> None:
