@@ -470,6 +470,13 @@ def try_handle_exam_message(user_id: str, text: str) -> Optional[str]:
         return None
     if is_exam_history_intent(raw):
         return None
+    try:
+        from l1_course import is_l1_course_command
+
+        if is_l1_course_command(raw):
+            return None
+    except Exception:
+        pass
     if re.fullmatch(
         r"(모드|mode|현장|학습|복습|field|learning|review|ôn|hiện\s*trường|기호\s*퀴즈)",
         raw,

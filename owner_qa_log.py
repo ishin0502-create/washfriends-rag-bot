@@ -87,6 +87,12 @@ def set_mode(user_id: str, mode: str) -> str:
     data["mode"] = mode
     if mode == "field":
         data["quiz"] = None
+        # Pause L1 sequential course (additive key; never deletes progress)
+        lc = data.get("l1_course")
+        if isinstance(lc, dict) and lc.get("active"):
+            lc = dict(lc)
+            lc["active"] = False
+            data["l1_course"] = lc
     save_user(user_id, data)
     return mode
 

@@ -43,6 +43,7 @@ from education_registration import handle_unauthorized_message
 from learning_mode import maybe_append_footer, try_handle_mode_or_quiz
 from owner_qa_log import append_turn, get_mode
 from weekly_exam import try_handle_exam_history, try_handle_exam_message
+from l1_course import try_handle_l1_course
 from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret, _app_id
 
 ZALO_API_BASE   = "https://openapi.zalo.me/v3.0"
@@ -643,6 +644,16 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
                     return
             except Exception as show_err:
                 print(f"[ZALO SHOW SYMBOLS] skip: {show_err}")
+
+        # L1 sequential course (opt-in commands only — never steals stain Q&A)
+        if event_name == "user_send_text" and text:
+            try:
+                course_reply = try_handle_l1_course(user_id, text)
+                if course_reply:
+                    await _send_zalo_reply(user_id, course_reply, with_brand=False)
+                    return
+            except Exception as course_err:
+                print(f"[ZALO L1 COURSE] skip: {course_err}")
 
         # Field / learning mode + active quiz (no GraphRAG / no LLM)
         if event_name == "user_send_text" and text:
