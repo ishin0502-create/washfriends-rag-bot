@@ -20,6 +20,8 @@ from learning_quiz import _match_accept, build_deck
 from l1_exam_bank import pass_threshold, sample_l1_exam_questions
 from l2_course import is_l2_complete
 from l2_exam_bank import sample_l2_exam_questions
+from l3_course import is_l3_complete
+from l3_exam_bank import sample_l3_exam_questions
 from owner_qa_log import load_user
 from reply_lang import detect_reply_lang
 
@@ -119,32 +121,59 @@ def _ai_generate_questions(user_id: str, n: int, lang: str) -> list[dict[str, st
         return []
 
 
+def _pad_exam_questions(
+    qs: list[dict[str, str]],
+    n: int,
+    lang: str,
+    *,
+    fallbacks: list,
+) -> list[dict[str, str]]:
+    for sampler in fallbacks:
+        if len(qs) >= n:
+            break
+        for it in sampler(n=n - len(qs), lang=lang):
+            if len(qs) >= n:
+                break
+            qs.append(it)
+    return qs
+
+
 def build_exam_questions(user_id: str, n: int = 7, lang: str = "ko") -> list[dict[str, str]]:
-    """Build weekly exam: L2 bank if L2 course done, else L1 bank.
+    """Build weekly exam: L3 bank if L3 done, else L2 if L2 done, else L1.
 
     Does not change GraphRAG stain SOP paths — exam generation only.
     """
     n = max(5, min(10, int(n or 7)))
     lang = lang if lang in {"ko", "vi", "en"} else "ko"
 
-    use_l2 = False
+    use_l3 = use_l2 = False
     try:
-        use_l2 = bool(is_l2_complete(user_id))
+        use_l3 = bool(is_l3_complete(user_id))
     except Exception:
-        use_l2 = False
+        use_l3 = False
+    if not use_l3:
+        try:
+            use_l2 = bool(is_l2_complete(user_id))
+        except Exception:
+            use_l2 = False
 
-    if use_l2:
+    qs: list[dict[str, str]] = []
+    if use_l3:
+        qs = sample_l3_exam_questions(n=n, lang=lang)
+        qs = _pad_exam_questions(
+            qs,
+            n,
+            lang,
+            fallbacks=[sample_l2_exam_questions, sample_l1_exam_questions],
+        )
+        if len(qs) >= n:
+            return qs[:n]
+    elif use_l2:
         qs = sample_l2_exam_questions(n=n, lang=lang)
-        # Pad with L1 if L2 bank somehow short
-        if len(qs) < n:
-            for it in sample_l1_exam_questions(n=n - len(qs), lang=lang):
-                if len(qs) >= n:
-                    break
-                qs.append(it)
+        qs = _pad_exam_questions(qs, n, lang, fallbacks=[sample_l1_exam_questions])
         if len(qs) >= n:
             return qs[:n]
     else:
-        # Primary: L1 mastery (also for owners mid-L2)
         qs = sample_l1_exam_questions(n=n, lang=lang)
         if len(qs) >= n:
             return qs[:n]
@@ -181,8 +210,8 @@ def _exam_level_label(qs: list) -> str:
         for it in qs
         if isinstance(it, dict)
     }
-    if "l2_bank" in sources and "l1_bank" not in sources:
-        return "l2"
+    if "l3_bank" in sources:
+        return "l3"
     if "l2_bank" in sources:
         return "l2"
     return "l1"
@@ -207,6 +236,8 @@ def _finish_message(part: dict, lang: str) -> str:
     if lang == "ko":
         if passed:
             result = f"결과: 합격 (기준 {need}/{mx} 이상)\n"
+        elif level == "l3":
+            result = f"결과: 미합격 (합격 기준 {need}/{mx} — 고급 「고급」으로 복습해 주세요)\n"
         elif level == "l2":
             result = f"결과: 미합격 (합격 기준 {need}/{mx} — 중급 「중급」으로 복습해 주세요)\n"
         else:
@@ -708,7 +739,12 @@ async def dispatch_week_async(week_id: str, send_fn) -> dict:
         try:
             qs = build_exam_questions(uid, n=n, lang="ko")
             level = _exam_level_label(qs)
-            level_ko = "중급(L2)" if level == "l2" else "초급(L1)"
+            if level == "l3":
+                level_ko = "고급(L3)"
+            elif level == "l2":
+                level_ko = "중급(L2)"
+            else:
+                level_ko = "초급(L1)"
             patch_participant(
                 pid,
                 {
