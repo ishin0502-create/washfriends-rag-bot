@@ -44,8 +44,9 @@ def mode_menu(lang: str = "ko") -> str:
             "② 학습 모드 — 내 질문 위주로 짧게 복습 후 질문\n"
             "③ 기호 퀴즈 — 세탁표시 그림 보고 객관식·주관식\n"
             "④ 초급 교육 — 세탁 처음 배우기 (「교육」이라고 보내세요)\n"
+            "⑤ 중급·고급 — 초급을 마친 뒤 (「중급」또는 「고급」)\n"
             "\n"
-            "「현장」 / 「학습」 / 「기호퀴즈」 / 「교육」\n"
+            "「현장」 / 「학습」 / 「기호퀴즈」 / 「교육」 / 「중급」\n"
             "언제든 「모드」로 다시 열 수 있습니다."
         )
     if lang == "en":
@@ -55,9 +56,10 @@ def mode_menu(lang: str = "ko") -> str:
             "① Field — ask stains/labels now (default)\n"
             "② Learning — short review from YOUR past questions\n"
             "③ Symbol quiz — care-label pictures (MCQ + short answer)\n"
-            "④ L1 course — beginner path (「L1 course」)\n"
+            "④ L1 course — beginner path (send 「교육」)\n"
+            "⑤ Intermediate / advanced — after beginner (「중급」 / 「고급」)\n"
             "\n"
-            "Send 「field」 / 「learning」 / 「symbol quiz」 / 「L1 course」. 「mode」 anytime."
+            "Send 「field」 / 「learning」 / 「symbol quiz」 / 「교육」 / 「중급」. 「mode」 anytime."
         )
     return (
         "◆ Chế độ bot đào tạo\n"
@@ -65,9 +67,10 @@ def mode_menu(lang: str = "ko") -> str:
         "① Hiện trường — hỏi vết bẩn ngay (mặc định)\n"
         "② Học — ôn ngắn từ câu hỏi CỦA BẠN\n"
         "③ Quiz ký hiệu — ảnh nhãn giặt (trắc nghiệm + tự luận ngắn)\n"
-        "④ Khóa L1 — lộ trình cơ bản (「khóa L1」)\n"
+        "④ Khóa cơ bản — gửi 「교육」\n"
+        "⑤ Trung cấp / cao cấp — sau cơ bản (「중급」 / 「고급」)\n"
         "\n"
-        "Gửi 「hiện trường」 / 「học」 / 「ký hiệu quiz」 / 「khóa L1」. 「mode」 bất cứ lúc nào."
+        "Gửi 「hiện trường」 / 「học」 / 「ký hiệu quiz」 / 「교육」 / 「중급」. 「mode」 bất cứ lúc nào."
     )
 
 

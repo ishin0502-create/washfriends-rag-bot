@@ -35,6 +35,14 @@ _EXIT_RE = re.compile(
     r"kết\s*thúc\s*học|ket\s*thuc\s*hoc)\s*$",
     re.I,
 )
+_LEVEL_RE = re.compile(
+    r"^\s*("
+    r"중급|중급\s*교육|L2|L2\s*교육|L2\s*코스|"
+    r"고급|고급\s*교육|L3|L3\s*교육|L3\s*코스|"
+    r"intermediate|advanced|trung\s*cấp|cao\s*cấp"
+    r")\s*$",
+    re.I,
+)
 
 
 # Static curriculum excerpts (Zalo-sized). Source: CURRICULUM_L1_L2_L3.md — copy, not live SOP rewrite.
@@ -219,6 +227,80 @@ def is_l1_course_command(text: str) -> bool:
         or _NEXT_RE.match(raw)
         or _PROGRESS_RE.match(raw)
         or _EXIT_RE.match(raw)
+        or _LEVEL_RE.match(raw)
+    )
+
+
+def l1_done_count(user_id: str) -> int:
+    st = _state(user_id)
+    done = {str(x) for x in (st.get("completed") or [])}
+    return sum(1 for les in LESSONS if les["id"] in done)
+
+
+def is_l1_complete(user_id: str) -> bool:
+    return l1_done_count(user_id) >= len(LESSONS)
+
+
+def _level_gate_reply(user_id: str, text: str, lang: str) -> str:
+    raw = (text or "").strip()
+    want_l3 = bool(re.search(r"고급|L3|advanced|cao\s*cấp", raw, re.I))
+    level_name = "고급" if want_l3 else "중급"
+    if lang == "en":
+        level_name = "advanced" if want_l3 else "intermediate"
+    if lang == "vi":
+        level_name = "cao cấp" if want_l3 else "trung cấp"
+
+    done = l1_done_count(user_id)
+    total = len(LESSONS)
+
+    if not is_l1_complete(user_id):
+        if lang == "ko":
+            return (
+                f"◆ {level_name}은 아직 차례가 아니에요.\n\n"
+                f"먼저 초급을 끝까지 읽어 주세요. (지금 {done}/{total})\n"
+                "초급을 이어가려면 「교육」이라고 보내 주세요.\n"
+                "다 읽은 뒤에는 「중급」또는 「고급」을 다시 보내시면 됩니다.\n\n"
+                "※ 지금 당장 옷·얼룩이 급하면, 초급을 안 마쳐도 「현장」으로 물어보시면 됩니다."
+            )
+        if lang == "en":
+            return (
+                f"◆ {level_name.title()} comes after beginner.\n"
+                f"Finish beginner first ({done}/{total}). Send 「교육」 to continue.\n"
+                "Urgent stain help anytime: 「field」."
+            )
+        return (
+            f"◆ {level_name.capitalize()} sau bài cơ bản.\n"
+            f"Hãy đọc xong cơ bản trước ({done}/{total}). Gửi 「교육」.\n"
+            "Hỏi vết bẩn gấp: 「hiện trường」."
+        )
+
+    # L1 complete — soft unlock notice (full L2/L3 sequential course comes later)
+    if lang == "ko":
+        if want_l3:
+            return (
+                "◆ 초급은 모두 마치셨네요. 고맙습니다.\n\n"
+                "고급(특수·거절·클레임) 한 장씩 배우기는 곧 이어서 열 예정입니다.\n"
+                "지금은 실제 옷·얼룩을 「현장」처럼 그냥 물어보시면,\n"
+                "거절이 필요한 경우·특수 품목도 안내해 드립니다.\n\n"
+                "초급 다시 보기: 「교육」 · 시험 점수: 「시험 성적」"
+            )
+        return (
+            "◆ 초급은 모두 마치셨네요. 고맙습니다.\n\n"
+            "중급(원단·색·신선/마름 판단) 한 장씩 배우기는 곧 이어서 열 예정입니다.\n"
+            "지금은 실제 옷·얼룩을 그냥 물어보시면 됩니다.\n"
+            "초급에서 배운 습관을 지키며 「현장」질문을 해 보세요.\n\n"
+            "초급 다시 보기: 「교육」 · 시험 점수: 「시험 성적」"
+        )
+    if lang == "en":
+        return (
+            "◆ Beginner complete — thank you.\n"
+            f"Page-by-page {level_name} lessons will open soon.\n"
+            "For now, ask real stains anytime (「field」)."
+        )
+    return (
+        "◆ Đã xong bài cơ bản — cảm ơn.\n"
+        f"Bài {level_name} từng trang sẽ mở sớm.\n"
+        "Hiện hỏi vết bẩn bình thường (「hiện trường」)."
     )
 
 
@@ -298,6 +380,9 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
 
     if _PROGRESS_RE.match(raw):
         return _progress_msg(_state(user_id), lang)
+
+    if _LEVEL_RE.match(raw):
+        return _level_gate_reply(user_id, raw, lang)
 
     if _EXIT_RE.match(raw):
         deactivate_course(user_id)
@@ -408,6 +493,8 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
                     "◆ 세탁 초급 내용을 모두 읽으셨습니다.\n"
                     f"읽은 내용: {len(completed)}/{len(LESSONS)}\n\n"
                     "이제 실제 옷·얼룩을 그냥 물어보시면 됩니다.\n"
+                    "중급·고급 한 장씩 배우기는 「중급」또는 「고급」이라고 보내 보시면\n"
+                    "안내를 받을 수 있습니다.\n\n"
                     "다시 보고 싶을 때: 「교육」\n"
                     "시험 점수 볼 때: 「시험 성적」\n"
                     "안내 메뉴: 「모드」"
