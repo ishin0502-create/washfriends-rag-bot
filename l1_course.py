@@ -228,29 +228,30 @@ def _render_lesson(idx: int, lang: str, *, done_n: int) -> str:
     n = idx + 1
     if lang == "en":
         return (
-            f"◆ L1 lesson ({n}/{total})\n"
+            f"◆ Beginner lesson {n} of {total}\n"
             f"{lesson['title']}\n\n"
             f"{lesson['body']}\n\n"
-            f"Done so far: {done_n}/{total}\n"
-            "Next lesson: type 「next」\n"
-            "Pause: 「end course」 · Urgent stain help: 「field」"
+            f"Finished so far: {done_n} of {total}\n"
+            "When you finish reading, send 「next」 for the next page.\n"
+            "To stop for now: 「end course」 · Need help with a real stain now: 「field」"
         )
     if lang == "vi":
         return (
-            f"◆ Bài L1 ({n}/{total})\n"
+            f"◆ Bài cơ bản {n}/{total}\n"
             f"{lesson['title']}\n\n"
             f"{lesson['body']}\n\n"
-            f"Đã xong: {done_n}/{total}\n"
-            "Bài tiếp: gửi 「tiếp」\n"
-            "Tạm dừng: 「kết thúc học」 · Hỏi vết bẩn gấp: 「hiện trường」"
+            f"Đã đọc xong: {done_n}/{total}\n"
+            "Đọc xong thì gửi 「tiếp」 để sang trang sau.\n"
+            "Dừng tạm: 「kết thúc học」 · Cần hỏi vết bẩn ngay: 「hiện trường」"
         )
     return (
-        f"◆ 세탁 초급 과정 ({n}/{total})\n"
+        f"◆ 세탁 초급 배우기 ({n}/{total})\n"
         f"【{lesson['title']}】\n\n"
         f"{lesson['body']}\n\n"
-        f"지금까지 마친 단원: {done_n}/{total}\n"
-        "다음 단원으로 가려면 「다음」이라고 보내 주세요.\n"
-        "잠시 멈추려면 「교육 끝」 · 지금 당장 얼룩이 급하면 「현장」"
+        f"지금까지 읽은 내용: {done_n}/{total}\n"
+        "다 읽으셨으면 「다음」이라고 보내 주세요. 다음 내용이 나옵니다.\n"
+        "오늘은 여기까지 하시려면 「교육 끝」\n"
+        "지금 당장 옷·얼룩이 급하면 「현장」"
     )
 
 
@@ -262,29 +263,29 @@ def _progress_msg(st: dict[str, Any], lang: str) -> str:
     active = bool(st.get("active"))
     if lang == "en":
         return (
-            f"◆ L1 progress: {n}/{total} lessons finished\n"
-            f"{'You are in the course now.' if active else 'Course is paused.'} "
-            f"Current step {min(idx + 1, total)}/{total}.\n"
-            "Resume: 「L1 course」 · Next lesson: 「next」"
+            f"◆ Beginner progress: {n} of {total} finished\n"
+            f"{'You are learning now.' if active else 'You paused.'} "
+            f"Page {min(idx + 1, total)} of {total}.\n"
+            "Continue: send 「교육」 or 「L1 course」 · Next page: 「next」"
         )
     if lang == "vi":
         return (
-            f"◆ Tiến độ L1: đã xong {n}/{total}\n"
-            f"{'Đang học.' if active else 'Đã tạm dừng.'} "
-            f"Bước hiện tại {min(idx + 1, total)}/{total}.\n"
-            "Tiếp tục: 「khóa L1」 · Bài tiếp: 「tiếp」"
+            f"◆ Tiến độ: đã xong {n}/{total}\n"
+            f"{'Đang học.' if active else 'Đã dừng tạm.'} "
+            f"Trang {min(idx + 1, total)}/{total}.\n"
+            "Học tiếp: gửi 「교육」 · Trang sau: 「tiếp」"
         )
     cur = min(idx + 1, total)
     if active:
-        status = f"지금 초급 과정을 진행 중입니다. (보고 있는 단원 {cur}/{total})"
+        status = f"지금 초급 내용을 보고 계십니다. ({cur}/{total}번째)"
     else:
-        status = f"초급 과정이 잠시 멈춰 있습니다. (마지막 위치 {cur}/{total})"
+        status = f"초급 배우기를 잠시 멈추신 상태입니다. (마지막 위치 {cur}/{total})"
     return (
-        f"◆ 세탁 초급 과정 진도\n"
-        f"마친 단원: {n}/{total}\n"
+        f"◆ 세탁 초급, 어디까지 보셨나요\n"
+        f"읽은 내용: {n}/{total}\n"
         f"{status}\n\n"
-        "이어서 배우려면 「교육」\n"
-        "다음 단원으로 가려면 (과정이 열린 상태에서) 「다음」"
+        "다시 이어서 보려면 「교육」이라고 보내 주세요.\n"
+        "이미 배우는 중이라면, 다음 장으로 「다음」이라고 보내 주세요."
     )
 
 
@@ -302,20 +303,20 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
         deactivate_course(user_id)
         if lang == "en":
             return (
-                "◆ L1 course is paused.\n"
+                "◆ Beginner lessons are paused.\n"
                 "You can still ask about stains anytime.\n"
-                "To continue the beginner course later, type 「L1 course」."
+                "To continue later, send 「교육」."
             )
         if lang == "vi":
             return (
-                "◆ Đã tạm dừng khóa L1.\n"
+                "◆ Đã tạm dừng bài cơ bản.\n"
                 "Vẫn hỏi được về vết bẩn.\n"
-                "Học tiếp sau: gửi 「khóa L1」."
+                "Học tiếp sau: gửi 「교육」."
             )
         return (
-            "◆ 세탁 초급 과정을 잠시 멈췄습니다.\n"
-            "걱정하지 마세요. 얼룩·옷 질문은 평소처럼 보내시면 됩니다.\n"
-            "나중에 초급 과정을 이어가려면 「교육」이라고 보내 주세요."
+            "◆ 초급 배우기를 잠시 멈췄습니다.\n"
+            "괜찮습니다. 얼룩·옷 질문은 평소처럼 그냥 보내시면 됩니다.\n"
+            "나중에 초급을 다시 이어서 보시려면 「교육」이라고 보내 주세요."
         )
 
     if _START_RE.match(raw):
@@ -337,31 +338,31 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
         if lang == "ko":
             if done:
                 head = (
-                    "◆ 세탁 초급 과정을 이어서 진행합니다.\n"
-                    f"이미 마친 단원: {len(done)}/{len(LESSONS)}\n\n"
-                    "순서: 기초 습관 → 대표 얼룩 5가지 → 손님 접수·거절 말하기\n"
-                    "한 단원씩 읽고, 준비되면 「다음」이라고 보내 주세요.\n"
-                    "지금 당장 얼룩이 급하면 「현장」또는 「교육 끝」을 보내시면 됩니다.\n\n"
+                    "◆ 세탁 초급, 이어서 배워 볼게요.\n"
+                    f"이미 읽으신 내용: {len(done)}/{len(LESSONS)}\n\n"
+                    "순서: 기본 습관 → 자주 오는 얼룩 5가지 → 손님에게 어떻게 말할지\n"
+                    "한 장씩 읽고, 다 읽으면 「다음」이라고 보내 주세요.\n"
+                    "지금 당장 얼룩이 급하면 「현장」또는 「교육 끝」이라고 보내시면 됩니다.\n\n"
                 )
             else:
                 head = (
-                    "◆ 세탁 초급 과정을 시작합니다.\n\n"
-                    "처음 오신 점주님을 위한 짧은 안내입니다.\n"
-                    "기초 습관 → 대표 얼룩 5가지 → 손님 접수·거절 말하기\n"
-                    f"모두 {len(LESSONS)}단원이며, 한 번에 하나씩만 보여 드립니다.\n\n"
-                    "읽는 동안은 「다음」만 보내시면 됩니다.\n"
+                    "◆ 세탁 초급 배우기를 시작합니다.\n\n"
+                    "처음 오셔도 괜찮습니다. 짧게, 한 장씩만 보여 드릴게요.\n"
+                    "순서: 기본 습관 → 자주 오는 얼룩 5가지 → 손님에게 어떻게 말할지\n"
+                    f"전부 {len(LESSONS)}장입니다.\n\n"
+                    "읽는 동안은 「다음」이라고만 보내시면 됩니다.\n"
                     "중간에 실제 옷·얼룩이 급하면 「현장」또는 「교육 끝」이라고 보내 주세요.\n\n"
                 )
         elif lang == "en":
             head = (
-                "◆ Starting the beginner (L1) laundry course.\n"
-                "Read one short lesson at a time, then type 「next」.\n"
-                "Urgent stain question: 「field」.\n\n"
+                "◆ Starting beginner laundry lessons.\n"
+                "Read one short page, then send 「next」.\n"
+                "Urgent stain help: 「field」.\n\n"
             )
         else:
             head = (
-                "◆ Bắt đầu khóa giặt cơ bản (L1).\n"
-                "Đọc từng bài ngắn, rồi gửi 「tiếp」.\n"
+                "◆ Bắt đầu bài giặt cơ bản.\n"
+                "Đọc từng trang ngắn, rồi gửi 「tiếp」.\n"
                 "Hỏi vết bẩn gấp: 「hiện trường」.\n\n"
             )
         return head + _render_lesson(idx, lang, done_n=len(done))
@@ -371,21 +372,23 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
         if not st.get("active"):
             if lang == "ko":
                 return (
-                    "◆ 세탁 초급 과정이 아직 열려 있지 않습니다.\n\n"
-                    "초급 교육을 원하시면 채팅창에 「교육」이라고 입력해 주세요.\n"
-                    "그러면 세탁 초급 과정이 처음부터(또는 이어서) 시작됩니다.\n\n"
-                    "※ 「다음」은 과정이 열린 뒤에, 다음 단원으로 넘어갈 때 쓰는 말입니다."
+                    "◆ 아직 초급 배우기를 시작하지 않으셨어요.\n\n"
+                    "시작하려면 「교육」이라고 보내 주세요.\n"
+                    "그러면 세탁 초급 내용이 한 장씩 나옵니다.\n\n"
+                    "「다음」은, 교육을 이미 시작한 뒤에\n"
+                    "‘다음 장 보여 주세요’라고 할 때 쓰는 말입니다.\n"
+                    "지금은 먼저 「교육」을 보내 주세요."
                 )
             if lang == "en":
                 return (
-                    "◆ The beginner course is not open yet.\n"
-                    "Type 「L1 course」 (or 「교육」) to start.\n"
-                    "「next」 only works after the course is open."
+                    "◆ You have not started the beginner lessons yet.\n"
+                    "Send 「교육」 to start.\n"
+                    "Send 「next」 only after lessons have started, to see the next page."
                 )
             return (
-                "◆ Khóa cơ bản chưa mở.\n"
-                "Gửi 「khóa L1」 (hoặc 「교육」) để bắt đầu.\n"
-                "「tiếp」 chỉ dùng sau khi khóa đã mở."
+                "◆ Bạn chưa bắt đầu bài cơ bản.\n"
+                "Gửi 「교육」 để bắt đầu.\n"
+                "「tiếp」 dùng sau khi đã bắt đầu, để xem trang sau."
             )
 
         idx = int(st.get("index") or 0)
@@ -402,21 +405,21 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
             _save_state(user_id, st)
             if lang == "ko":
                 return (
-                    "◆ 세탁 초급 과정을 모두 마치셨습니다.\n"
-                    f"마친 단원: {len(completed)}/{len(LESSONS)}\n\n"
-                    "이제 실제 옷·얼룩을 물어보셔도 됩니다. 평소처럼 질문을 보내 주세요.\n"
-                    "다시 복습: 「교육」\n"
-                    "시험 점수 확인: 「시험 성적」\n"
-                    "모드 안내: 「모드」"
+                    "◆ 세탁 초급 내용을 모두 읽으셨습니다.\n"
+                    f"읽은 내용: {len(completed)}/{len(LESSONS)}\n\n"
+                    "이제 실제 옷·얼룩을 그냥 물어보시면 됩니다.\n"
+                    "다시 보고 싶을 때: 「교육」\n"
+                    "시험 점수 볼 때: 「시험 성적」\n"
+                    "안내 메뉴: 「모드」"
                 )
             if lang == "en":
                 return (
-                    f"◆ Beginner course complete ({len(completed)}/{len(LESSONS)}).\n"
-                    "You can ask about stains anytime. Review: 「L1 course」."
+                    f"◆ Beginner lessons finished ({len(completed)}/{len(LESSONS)}).\n"
+                    "Ask about stains anytime. Review: 「교육」."
                 )
             return (
-                f"◆ Đã hoàn thành khóa cơ bản ({len(completed)}/{len(LESSONS)}).\n"
-                "Có thể hỏi vết bẩn bình thường. Ôn lại: 「khóa L1」."
+                f"◆ Đã đọc xong bài cơ bản ({len(completed)}/{len(LESSONS)}).\n"
+                "Có thể hỏi vết bẩn. Xem lại: 「교육」."
             )
 
         st["index"] = idx + 1
