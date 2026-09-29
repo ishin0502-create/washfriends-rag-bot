@@ -274,16 +274,15 @@ def _level_gate_reply(user_id: str, text: str, lang: str) -> str:
             "Hỏi vết bẩn gấp: 「hiện trường」."
         )
 
-    # L1 complete — L2 is live; L3 still soft
+    # L1 complete — L2/L3 courses are live (handled by l2/l3 modules when wired first)
     if lang == "ko":
         if want_l3:
             return (
                 "◆ 초급은 모두 마치셨네요. 고맙습니다.\n\n"
-                "고급(특수·거절·클레임) 한 장씩 배우기는 곧 이어서 열 예정입니다.\n"
-                "지금은 「중급」으로 중급을 배우거나, 실제 옷·얼룩을 「현장」으로 물어보세요.\n\n"
+                "고급은 중급을 마친 뒤에 열려요.\n"
+                "먼저 「중급」을 보내 중급을 끝낸 뒤, 「고급」을 보내 주세요.\n\n"
                 "초급 다시 보기: 「교육」 · 시험 점수: 「시험 성적」"
             )
-        # 「중급」 is handled by l2_course when wired first; keep a safe fallback:
         return (
             "◆ 초급은 모두 마치셨네요. 고맙습니다.\n\n"
             "중급을 시작하려면 「중급」이라고 보내 주세요.\n"
@@ -406,8 +405,10 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
     if _START_RE.match(raw):
         try:
             from l2_course import deactivate_l2_course
+            from l3_course import deactivate_l3_course
 
             deactivate_l2_course(user_id)
+            deactivate_l3_course(user_id)
         except Exception:
             pass
         st = _state(user_id)
@@ -498,8 +499,7 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
                     "◆ 세탁 초급 내용을 모두 읽으셨습니다.\n"
                     f"읽은 내용: {len(completed)}/{len(LESSONS)}\n\n"
                     "이제 실제 옷·얼룩을 그냥 물어보시면 됩니다.\n"
-                    "중급을 이어서 배우려면 「중급」이라고 보내 주세요.\n"
-                    "고급은 곧 열릴 예정이며 「고급」으로 안내를 받을 수 있습니다.\n\n"
+                    "중급 「중급」 → 고급 「고급」 순서로 이어서 배울 수 있습니다.\n\n"
                     "다시 보고 싶을 때: 「교육」\n"
                     "시험 점수 볼 때: 「시험 성적」\n"
                     "안내 메뉴: 「모드」"

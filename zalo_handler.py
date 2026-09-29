@@ -45,6 +45,7 @@ from owner_qa_log import append_turn, get_mode
 from weekly_exam import try_handle_exam_history, try_handle_exam_message
 from l1_course import try_handle_l1_course
 from l2_course import try_handle_l2_course
+from l3_course import try_handle_l3_course
 from qa_usage import fetch_access_meta, gate_field_question, log_field_question
 from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret, _app_id
 
@@ -646,6 +647,16 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
                     return
             except Exception as show_err:
                 print(f"[ZALO SHOW SYMBOLS] skip: {show_err}")
+
+        # L3 advanced course (after L2) — before L2 so 「다음」 routes correctly
+        if event_name == "user_send_text" and text:
+            try:
+                course_reply = try_handle_l3_course(user_id, text)
+                if course_reply:
+                    await _send_zalo_reply(user_id, course_reply, with_brand=False)
+                    return
+            except Exception as course_err:
+                print(f"[ZALO L3 COURSE] skip: {course_err}")
 
         # L2 intermediate course (after L1) — before L1 so 「다음」 routes correctly
         if event_name == "user_send_text" and text:

@@ -44,9 +44,9 @@ def mode_menu(lang: str = "ko") -> str:
             "② 학습 모드 — 내 질문 위주로 짧게 복습 후 질문\n"
             "③ 기호 퀴즈 — 세탁표시 그림 보고 객관식·주관식\n"
             "④ 초급 교육 — 세탁 처음 배우기 (「교육」)\n"
-            "⑤ 중급 교육 — 초급 마친 뒤 (「중급」) · 고급은 곧 오픈\n"
+            "⑤ 중급·고급 — 초급 후 「중급」, 중급 후 「고급」\n"
             "\n"
-            "「현장」 / 「학습」 / 「기호퀴즈」 / 「교육」 / 「중급」\n"
+            "「현장」 / 「학습」 / 「기호퀴즈」 / 「교육」 / 「중급」 / 「고급」\n"
             "언제든 「모드」로 다시 열 수 있습니다."
         )
     if lang == "en":
@@ -57,9 +57,9 @@ def mode_menu(lang: str = "ko") -> str:
             "② Learning — short review from YOUR past questions\n"
             "③ Symbol quiz — care-label pictures (MCQ + short answer)\n"
             "④ L1 course — beginner (「교육」)\n"
-            "⑤ Intermediate — after beginner (「중급」); advanced soon\n"
+            "⑤ Intermediate / advanced — 「중급」 then 「고급」\n"
             "\n"
-            "Send 「field」 / 「learning」 / 「symbol quiz」 / 「교육」 / 「중급」. 「mode」 anytime."
+            "Send 「field」 / 「learning」 / 「symbol quiz」 / 「교육」 / 「중급」 / 「고급」. 「mode」 anytime."
         )
     return (
         "◆ Chế độ bot đào tạo\n"
@@ -68,9 +68,9 @@ def mode_menu(lang: str = "ko") -> str:
         "② Học — ôn ngắn từ câu hỏi CỦA BẠN\n"
         "③ Quiz ký hiệu — ảnh nhãn giặt (trắc nghiệm + tự luận ngắn)\n"
         "④ Khóa cơ bản — gửi 「교육」\n"
-        "⑤ Trung cấp — sau cơ bản (「중급」); cao cấp sắp mở\n"
+        "⑤ Trung cấp / cao cấp — 「중급」 rồi 「고급」\n"
         "\n"
-        "Gửi 「hiện trường」 / 「học」 / 「ký hiệu quiz」 / 「교육」 / 「중급」. 「mode」 bất cứ lúc nào."
+        "Gửi 「hiện trường」 / 「học」 / 「ký hiệu quiz」 / 「교육」 / 「중급」 / 「고급」. 「mode」 bất cứ lúc nào."
     )
 
 

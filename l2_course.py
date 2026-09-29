@@ -273,8 +273,10 @@ def try_handle_l2_course(user_id: str, text: str) -> Optional[str]:
         # Pause L1 if it was active
         try:
             from l1_course import deactivate_course
+            from l3_course import deactivate_l3_course
 
             deactivate_course(user_id)
+            deactivate_l3_course(user_id)
         except Exception:
             pass
         done = {str(x) for x in (st.get("completed") or [])}
@@ -353,7 +355,7 @@ def try_handle_l2_course(user_id: str, text: str) -> Optional[str]:
                     "◆ 세탁 중급 내용을 모두 읽으셨습니다.\n"
                     f"읽은 내용: {len(completed)}/{len(LESSONS)}\n\n"
                     "이제 원단·색·신선/마름을 떠올리며 「현장」질문을 해 보세요.\n"
-                    "고급 한 장씩 배우기는 곧 이어서 열 예정입니다 (「고급」).\n\n"
+                    "고급을 이어서 배우려면 「고급」이라고 보내 주세요.\n\n"
                     "중급 다시 보기: 「중급」 · 초급: 「교육」 · 시험: 「시험 성적」"
                 )
             if lang == "en":
