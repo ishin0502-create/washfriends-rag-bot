@@ -231,20 +231,26 @@ def _render_lesson(idx: int, lang: str, *, done_n: int) -> str:
             f"◆ L1 lesson ({n}/{total})\n"
             f"{lesson['title']}\n\n"
             f"{lesson['body']}\n\n"
-            f"Progress: {done_n}/{total} done · 「next」 · 「end course」 · field: 「field」"
+            f"Done so far: {done_n}/{total}\n"
+            "Next lesson: type 「next」\n"
+            "Pause: 「end course」 · Urgent stain help: 「field」"
         )
     if lang == "vi":
         return (
             f"◆ Bài L1 ({n}/{total})\n"
             f"{lesson['title']}\n\n"
             f"{lesson['body']}\n\n"
-            f"Tiến độ: {done_n}/{total} · 「tiếp」 · 「kết thúc học」 · 「hiện trường」"
+            f"Đã xong: {done_n}/{total}\n"
+            "Bài tiếp: gửi 「tiếp」\n"
+            "Tạm dừng: 「kết thúc học」 · Hỏi vết bẩn gấp: 「hiện trường」"
         )
     return (
-        f"◆ L1 초급 교육 ({n}/{total})\n"
+        f"◆ 세탁 초급 과정 ({n}/{total})\n"
         f"【{lesson['title']}】\n\n"
         f"{lesson['body']}\n\n"
-        f"진도 {done_n}/{total} · 「다음」 · 「교육 끝」 · 현장 질문은 「현장」"
+        f"지금까지 마친 단원: {done_n}/{total}\n"
+        "다음 단원으로 가려면 「다음」이라고 보내 주세요.\n"
+        "잠시 멈추려면 「교육 끝」 · 지금 당장 얼룩이 급하면 「현장」"
     )
 
 
@@ -256,20 +262,29 @@ def _progress_msg(st: dict[str, Any], lang: str) -> str:
     active = bool(st.get("active"))
     if lang == "en":
         return (
-            f"◆ L1 progress: {n}/{total}\n"
-            f"{'In course' if active else 'Paused'} · current step {min(idx + 1, total)}/{total}\n"
-            "「L1 course」 to resume · 「next」 while in course"
+            f"◆ L1 progress: {n}/{total} lessons finished\n"
+            f"{'You are in the course now.' if active else 'Course is paused.'} "
+            f"Current step {min(idx + 1, total)}/{total}.\n"
+            "Resume: 「L1 course」 · Next lesson: 「next」"
         )
     if lang == "vi":
         return (
-            f"◆ Tiến độ L1: {n}/{total}\n"
-            f"{'Đang học' if active else 'Tạm dừng'} · bước {min(idx + 1, total)}/{total}\n"
-            "「khóa L1」 để tiếp tục"
+            f"◆ Tiến độ L1: đã xong {n}/{total}\n"
+            f"{'Đang học.' if active else 'Đã tạm dừng.'} "
+            f"Bước hiện tại {min(idx + 1, total)}/{total}.\n"
+            "Tiếp tục: 「khóa L1」 · Bài tiếp: 「tiếp」"
         )
+    cur = min(idx + 1, total)
+    if active:
+        status = f"지금 초급 과정을 진행 중입니다. (보고 있는 단원 {cur}/{total})"
+    else:
+        status = f"초급 과정이 잠시 멈춰 있습니다. (마지막 위치 {cur}/{total})"
     return (
-        f"◆ L1 초급 진도: {n}/{total}\n"
-        f"{'진행 중' if active else '일시 중지'} · 현재 {min(idx + 1, total)}/{total}단원\n"
-        "이어가기: 「교육」 · 다음 장: 「다음」"
+        f"◆ 세탁 초급 과정 진도\n"
+        f"마친 단원: {n}/{total}\n"
+        f"{status}\n\n"
+        "이어서 배우려면 「교육」\n"
+        "다음 단원으로 가려면 (과정이 열린 상태에서) 「다음」"
     )
 
 
@@ -286,10 +301,22 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
     if _EXIT_RE.match(raw):
         deactivate_course(user_id)
         if lang == "en":
-            return "◆ L1 course paused. Ask stains anytime. Resume: 「L1 course」."
+            return (
+                "◆ L1 course is paused.\n"
+                "You can still ask about stains anytime.\n"
+                "To continue the beginner course later, type 「L1 course」."
+            )
         if lang == "vi":
-            return "◆ Đã tạm dừng khóa L1. Hỏi vết bẩn bình thường. Tiếp: 「khóa L1」."
-        return "◆ 초급 교육을 잠시 멈췄습니다. 얼룩 질문은 그대로 가능합니다. 이어가기: 「교육」"
+            return (
+                "◆ Đã tạm dừng khóa L1.\n"
+                "Vẫn hỏi được về vết bẩn.\n"
+                "Học tiếp sau: gửi 「khóa L1」."
+            )
+        return (
+            "◆ 세탁 초급 과정을 잠시 멈췄습니다.\n"
+            "걱정하지 마세요. 얼룩·옷 질문은 평소처럼 보내시면 됩니다.\n"
+            "나중에 초급 과정을 이어가려면 「교육」이라고 보내 주세요."
+        )
 
     if _START_RE.match(raw):
         st = _state(user_id)
@@ -308,25 +335,58 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
         _save_state(user_id, st)
         head = ""
         if lang == "ko":
-            head = (
-                "◆ L1 초급 교육을 시작합니다.\n"
-                "기초 → 대표 5얼룩 → 접수·거절 문구 순서입니다.\n"
-                "현장 질문이 급하면 「현장」또는 「교육 끝」.\n\n"
-            )
+            if done:
+                head = (
+                    "◆ 세탁 초급 과정을 이어서 진행합니다.\n"
+                    f"이미 마친 단원: {len(done)}/{len(LESSONS)}\n\n"
+                    "순서: 기초 습관 → 대표 얼룩 5가지 → 손님 접수·거절 말하기\n"
+                    "한 단원씩 읽고, 준비되면 「다음」이라고 보내 주세요.\n"
+                    "지금 당장 얼룩이 급하면 「현장」또는 「교육 끝」을 보내시면 됩니다.\n\n"
+                )
+            else:
+                head = (
+                    "◆ 세탁 초급 과정을 시작합니다.\n\n"
+                    "처음 오신 점주님을 위한 짧은 안내입니다.\n"
+                    "기초 습관 → 대표 얼룩 5가지 → 손님 접수·거절 말하기\n"
+                    f"모두 {len(LESSONS)}단원이며, 한 번에 하나씩만 보여 드립니다.\n\n"
+                    "읽는 동안은 「다음」만 보내시면 됩니다.\n"
+                    "중간에 실제 옷·얼룩이 급하면 「현장」또는 「교육 끝」이라고 보내 주세요.\n\n"
+                )
         elif lang == "en":
-            head = "◆ Starting L1 course. Urgent stains: 「field」.\n\n"
+            head = (
+                "◆ Starting the beginner (L1) laundry course.\n"
+                "Read one short lesson at a time, then type 「next」.\n"
+                "Urgent stain question: 「field」.\n\n"
+            )
         else:
-            head = "◆ Bắt đầu khóa L1. Gấp: 「hiện trường」.\n\n"
+            head = (
+                "◆ Bắt đầu khóa giặt cơ bản (L1).\n"
+                "Đọc từng bài ngắn, rồi gửi 「tiếp」.\n"
+                "Hỏi vết bẩn gấp: 「hiện trường」.\n\n"
+            )
         return head + _render_lesson(idx, lang, done_n=len(done))
 
     if _NEXT_RE.match(raw):
         st = _state(user_id)
         if not st.get("active"):
             if lang == "ko":
-                return "◆ 교육이 열려 있지 않습니다. 「교육」이라고 보내 주세요."
+                return (
+                    "◆ 세탁 초급 과정이 아직 열려 있지 않습니다.\n\n"
+                    "초급 교육을 원하시면 채팅창에 「교육」이라고 입력해 주세요.\n"
+                    "그러면 세탁 초급 과정이 처음부터(또는 이어서) 시작됩니다.\n\n"
+                    "※ 「다음」은 과정이 열린 뒤에, 다음 단원으로 넘어갈 때 쓰는 말입니다."
+                )
             if lang == "en":
-                return "◆ Course not open. Send 「L1 course」."
-            return "◆ Chưa mở khóa. Gửi 「khóa L1」."
+                return (
+                    "◆ The beginner course is not open yet.\n"
+                    "Type 「L1 course」 (or 「교육」) to start.\n"
+                    "「next」 only works after the course is open."
+                )
+            return (
+                "◆ Khóa cơ bản chưa mở.\n"
+                "Gửi 「khóa L1」 (hoặc 「교육」) để bắt đầu.\n"
+                "「tiếp」 chỉ dùng sau khi khóa đã mở."
+            )
 
         idx = int(st.get("index") or 0)
         idx = max(0, min(idx, len(LESSONS) - 1))
@@ -342,14 +402,22 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
             _save_state(user_id, st)
             if lang == "ko":
                 return (
-                    "◆ L1 초급 교육 완료\n"
-                    f"진도 {len(completed)}/{len(LESSONS)}\n\n"
-                    "이제 현장 모드에서 얼룩을 물어보세요.\n"
-                    "복습: 「교육」 · 성적: 「시험 성적」 · 모드: 「모드」"
+                    "◆ 세탁 초급 과정을 모두 마치셨습니다.\n"
+                    f"마친 단원: {len(completed)}/{len(LESSONS)}\n\n"
+                    "이제 실제 옷·얼룩을 물어보셔도 됩니다. 평소처럼 질문을 보내 주세요.\n"
+                    "다시 복습: 「교육」\n"
+                    "시험 점수 확인: 「시험 성적」\n"
+                    "모드 안내: 「모드」"
                 )
             if lang == "en":
-                return f"◆ L1 complete ({len(completed)}/{len(LESSONS)}). Ask stains anytime."
-            return f"◆ Hoàn thành L1 ({len(completed)}/{len(LESSONS)})."
+                return (
+                    f"◆ Beginner course complete ({len(completed)}/{len(LESSONS)}).\n"
+                    "You can ask about stains anytime. Review: 「L1 course」."
+                )
+            return (
+                f"◆ Đã hoàn thành khóa cơ bản ({len(completed)}/{len(LESSONS)}).\n"
+                "Có thể hỏi vết bẩn bình thường. Ôn lại: 「khóa L1」."
+            )
 
         st["index"] = idx + 1
         _save_state(user_id, st)
