@@ -18,6 +18,8 @@ from typing import Any, Optional
 
 from learning_quiz import _match_accept, build_deck
 from l1_exam_bank import pass_threshold, sample_l1_exam_questions
+from l2_course import is_l2_complete
+from l2_exam_bank import sample_l2_exam_questions
 from owner_qa_log import load_user
 from reply_lang import detect_reply_lang
 
@@ -118,17 +120,34 @@ def _ai_generate_questions(user_id: str, n: int, lang: str) -> list[dict[str, st
 
 
 def build_exam_questions(user_id: str, n: int = 7, lang: str = "ko") -> list[dict[str, str]]:
-    """Build weekly exam: L1 curriculum bank first (mastery), then light personal pad.
+    """Build weekly exam: L2 bank if L2 course done, else L1 bank.
 
     Does not change GraphRAG stain SOP paths — exam generation only.
     """
     n = max(5, min(10, int(n or 7)))
     lang = lang if lang in {"ko", "vi", "en"} else "ko"
 
-    # P2: curriculum mastery bank is the primary source
-    qs = sample_l1_exam_questions(n=n, lang=lang)
-    if len(qs) >= n:
-        return qs[:n]
+    use_l2 = False
+    try:
+        use_l2 = bool(is_l2_complete(user_id))
+    except Exception:
+        use_l2 = False
+
+    if use_l2:
+        qs = sample_l2_exam_questions(n=n, lang=lang)
+        # Pad with L1 if L2 bank somehow short
+        if len(qs) < n:
+            for it in sample_l1_exam_questions(n=n - len(qs), lang=lang):
+                if len(qs) >= n:
+                    break
+                qs.append(it)
+        if len(qs) >= n:
+            return qs[:n]
+    else:
+        # Primary: L1 mastery (also for owners mid-L2)
+        qs = sample_l1_exam_questions(n=n, lang=lang)
+        if len(qs) >= n:
+            return qs[:n]
 
     # Pad from personal/OPS deck if bank somehow short
     for c in build_deck(user_id, lang, size=n):
@@ -156,12 +175,26 @@ def build_exam_questions(user_id: str, n: int = 7, lang: str = "ko") -> list[dic
     return qs[:n]
 
 
+def _exam_level_label(qs: list) -> str:
+    sources = {
+        str(it.get("source") or "")
+        for it in qs
+        if isinstance(it, dict)
+    }
+    if "l2_bank" in sources and "l1_bank" not in sources:
+        return "l2"
+    if "l2_bank" in sources:
+        return "l2"
+    return "l1"
+
+
 def _finish_message(part: dict, lang: str) -> str:
     score = int(part.get("score") or 0)
     mx = int(part.get("max_score") or 0)
     qs = part.get("questions_json") or []
     passed = pass_threshold(score, mx, 0.7)
     need = max(1, min(mx, int((mx * 0.7) + 0.999))) if mx else 0
+    level = _exam_level_label(qs if isinstance(qs, list) else [])
     wrong_lines = []
     for i, it in enumerate(qs):
         if not isinstance(it, dict):
@@ -172,11 +205,12 @@ def _finish_message(part: dict, lang: str) -> str:
             )
     wrong_block = "\n".join(wrong_lines[:8])
     if lang == "ko":
-        result = (
-            f"결과: 합격 (기준 {need}/{mx} 이상)\n"
-            if passed
-            else f"결과: 미합격 (합격 기준 {need}/{mx} — 초급 「교육」으로 복습해 주세요)\n"
-        )
+        if passed:
+            result = f"결과: 합격 (기준 {need}/{mx} 이상)\n"
+        elif level == "l2":
+            result = f"결과: 미합격 (합격 기준 {need}/{mx} — 중급 「중급」으로 복습해 주세요)\n"
+        else:
+            result = f"결과: 미합격 (합격 기준 {need}/{mx} — 초급 「교육」으로 복습해 주세요)\n"
         msg = f"◆ 시험 종료\n점수: {score}/{mx}\n{result}"
         if wrong_lines:
             msg += f"\n틀린 부분 복습:\n{wrong_block}\n"
@@ -673,6 +707,8 @@ async def dispatch_week_async(week_id: str, send_fn) -> dict:
         pid = p.get("id") or ""
         try:
             qs = build_exam_questions(uid, n=n, lang="ko")
+            level = _exam_level_label(qs)
+            level_ko = "중급(L2)" if level == "l2" else "초급(L1)"
             patch_participant(
                 pid,
                 {
@@ -684,7 +720,7 @@ async def dispatch_week_async(week_id: str, send_fn) -> dict:
             )
             msg = (
                 f"◆ {title}\n"
-                f"이번 주 초급(L1) 복습 시험입니다. {len(qs)}문항 · 제한 {duration}분\n"
+                f"이번 주 {level_ko} 복습 시험입니다. {len(qs)}문항 · 제한 {duration}분\n"
                 f"합격 기준: 약 70% ({max(1, int((len(qs) * 0.7) + 0.999))}/{len(qs)}문제 이상)\n"
                 "아무 답이나 보내면 시험이 시작됩니다.\n"
                 "(허용된 교육봇 사용자에게만 발송됩니다)"
