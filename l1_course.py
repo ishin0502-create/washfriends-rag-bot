@@ -274,21 +274,20 @@ def _level_gate_reply(user_id: str, text: str, lang: str) -> str:
             "Hỏi vết bẩn gấp: 「hiện trường」."
         )
 
-    # L1 complete — soft unlock notice (full L2/L3 sequential course comes later)
+    # L1 complete — L2 is live; L3 still soft
     if lang == "ko":
         if want_l3:
             return (
                 "◆ 초급은 모두 마치셨네요. 고맙습니다.\n\n"
                 "고급(특수·거절·클레임) 한 장씩 배우기는 곧 이어서 열 예정입니다.\n"
-                "지금은 실제 옷·얼룩을 「현장」처럼 그냥 물어보시면,\n"
-                "거절이 필요한 경우·특수 품목도 안내해 드립니다.\n\n"
+                "지금은 「중급」으로 중급을 배우거나, 실제 옷·얼룩을 「현장」으로 물어보세요.\n\n"
                 "초급 다시 보기: 「교육」 · 시험 점수: 「시험 성적」"
             )
+        # 「중급」 is handled by l2_course when wired first; keep a safe fallback:
         return (
             "◆ 초급은 모두 마치셨네요. 고맙습니다.\n\n"
-            "중급(원단·색·신선/마름 판단) 한 장씩 배우기는 곧 이어서 열 예정입니다.\n"
-            "지금은 실제 옷·얼룩을 그냥 물어보시면 됩니다.\n"
-            "초급에서 배운 습관을 지키며 「현장」질문을 해 보세요.\n\n"
+            "중급을 시작하려면 「중급」이라고 보내 주세요.\n"
+            "한 장씩 읽고 「다음」으로 이어갑니다.\n\n"
             "초급 다시 보기: 「교육」 · 시험 점수: 「시험 성적」"
         )
     if lang == "en":
@@ -405,6 +404,12 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
         )
 
     if _START_RE.match(raw):
+        try:
+            from l2_course import deactivate_l2_course
+
+            deactivate_l2_course(user_id)
+        except Exception:
+            pass
         st = _state(user_id)
         done = {str(x) for x in (st.get("completed") or [])}
         # Resume at first incomplete, else restart from 0 if all done
@@ -493,8 +498,8 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
                     "◆ 세탁 초급 내용을 모두 읽으셨습니다.\n"
                     f"읽은 내용: {len(completed)}/{len(LESSONS)}\n\n"
                     "이제 실제 옷·얼룩을 그냥 물어보시면 됩니다.\n"
-                    "중급·고급 한 장씩 배우기는 「중급」또는 「고급」이라고 보내 보시면\n"
-                    "안내를 받을 수 있습니다.\n\n"
+                    "중급을 이어서 배우려면 「중급」이라고 보내 주세요.\n"
+                    "고급은 곧 열릴 예정이며 「고급」으로 안내를 받을 수 있습니다.\n\n"
                     "다시 보고 싶을 때: 「교육」\n"
                     "시험 점수 볼 때: 「시험 성적」\n"
                     "안내 메뉴: 「모드」"
