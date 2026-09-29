@@ -44,6 +44,7 @@ from learning_mode import maybe_append_footer, try_handle_mode_or_quiz
 from owner_qa_log import append_turn, get_mode
 from weekly_exam import try_handle_exam_history, try_handle_exam_message
 from l1_course import try_handle_l1_course
+from qa_usage import fetch_access_meta, gate_field_question, log_field_question
 from zalo_token import get_access_token, is_token_error, refresh_tokens, _app_secret, _app_id
 
 ZALO_API_BASE   = "https://openapi.zalo.me/v3.0"
@@ -671,6 +672,26 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
                     print(f"[ZALO QUIZ IMG] skip: {img_err}")
                 return
 
+        # Optional HQ daily field-question limit (off by default; fail-open)
+        if event_name == "user_send_text" and text:
+            try:
+                limit_reply = gate_field_question(user_id, text)
+                if limit_reply:
+                    await _send_zalo_reply(user_id, limit_reply, with_brand=False)
+                    return
+            except Exception as qa_err:
+                print(f"[QA USAGE] gate skip: {qa_err}")
+
+        # Image field questions also count toward the optional daily limit
+        if event_name == "user_send_image":
+            try:
+                limit_reply = gate_field_question(user_id, text or "")
+                if limit_reply:
+                    await _send_zalo_reply(user_id, limit_reply, with_brand=False)
+                    return
+            except Exception as qa_err:
+                print(f"[QA USAGE] image gate skip: {qa_err}")
+
         # Immediate "thinking" notice (fail-open: never block the real answer)
         if event_name == "user_send_text" and text:
             try:
@@ -725,6 +746,16 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
                 reply_text = maybe_append_footer(reply_text, user_id, lang_src)
         except Exception as log_err:
             print(f"[OWNER QA LOG] skip: {log_err}")
+
+        # HQ usage log (for counts/history + optional daily limit) — fail-open
+        try:
+            if reply_text and (event_name == "user_send_text" or event_name == "user_send_image"):
+                q_log = text if event_name == "user_send_text" else (text or "[image]")
+                if q_log:
+                    meta = fetch_access_meta(user_id)
+                    log_field_question(user_id, q_log, meta=meta)
+        except Exception as qa_log_err:
+            print(f"[QA USAGE] log skip: {qa_log_err}")
 
         with_brand = should_send_brand_header(
             "zalo",
