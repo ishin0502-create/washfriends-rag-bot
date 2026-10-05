@@ -198,22 +198,25 @@ def _l1_gate_msg(user_id: str, lang: str) -> str:
 
 
 def _render_lesson(idx: int, lang: str, *, done_n: int) -> str:
+    from course_i18n import lesson_title_body
+
     total = len(LESSONS)
     lesson = LESSONS[idx]
+    title, body = lesson_title_body(lesson, lang)
     n = idx + 1
     if lang == "en":
         return (
             f"◆ Intermediate lesson {n} of {total}\n"
-            f"{lesson['title']}\n\n"
-            f"{lesson['body']}\n\n"
+            f"{title}\n\n"
+            f"{body}\n\n"
             f"Finished so far: {done_n} of {total}\n"
             "Send 「next」 for the next page · Pause: 「end course」"
         )
     if lang == "vi":
         return (
             f"◆ Bài trung cấp {n}/{total}\n"
-            f"{lesson['title']}\n\n"
-            f"{lesson['body']}\n\n"
+            f"{title}\n\n"
+            f"{body}\n\n"
             f"Đã đọc: {done_n}/{total}\n"
             "Gửi 「tiếp」 · Dừng: 「kết thúc học」"
         )
