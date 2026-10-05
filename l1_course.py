@@ -309,14 +309,17 @@ def _level_gate_reply(user_id: str, text: str, lang: str) -> str:
 
 
 def _render_lesson(idx: int, lang: str, *, done_n: int) -> str:
+    from course_i18n import lesson_title_body
+
     total = len(LESSONS)
     lesson = LESSONS[idx]
+    title, body = lesson_title_body(lesson, lang)
     n = idx + 1
     if lang == "en":
         return (
             f"◆ Beginner lesson {n} of {total}\n"
-            f"{lesson['title']}\n\n"
-            f"{lesson['body']}\n\n"
+            f"{title}\n\n"
+            f"{body}\n\n"
             f"Finished so far: {done_n} of {total}\n"
             "When you finish reading, send 「next」 for the next page.\n"
             "To stop for now: 「end course」 · Need help with a real stain now: 「field」"
@@ -324,8 +327,8 @@ def _render_lesson(idx: int, lang: str, *, done_n: int) -> str:
     if lang == "vi":
         return (
             f"◆ Bài cơ bản {n}/{total}\n"
-            f"{lesson['title']}\n\n"
-            f"{lesson['body']}\n\n"
+            f"{title}\n\n"
+            f"{body}\n\n"
             f"Đã đọc xong: {done_n}/{total}\n"
             "Đọc xong thì gửi 「tiếp」 để sang trang sau.\n"
             "Dừng tạm: 「kết thúc học」 · Cần hỏi vết bẩn ngay: 「hiện trường」"
