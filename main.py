@@ -45,6 +45,21 @@ from facebook_handler import handle_fb_verify, handle_fb_webhook
 from zalo_token import token_refresh_loop
 
 
+async def _course_progress_retry_loop(stop: asyncio.Event) -> None:
+    """Flush failed HQ course-progress PUTs every 5 minutes."""
+    from course_progress_sync import flush_course_progress_retries
+
+    while not stop.is_set():
+        try:
+            await asyncio.wait_for(stop.wait(), timeout=300)
+            return
+        except asyncio.TimeoutError:
+            try:
+                flush_course_progress_retries()
+            except Exception as e:
+                print(f"[COURSE PROGRESS] retry flush skipped: {e}")
+
+
 # ─── App lifecycle ────────────────────────────────────────────────────────────
 
 @asynccontextmanager
@@ -59,13 +74,19 @@ async def lifespan(app: FastAPI):
         print(f"[BRAND] boot clear skipped: {e}")
     stop = asyncio.Event()
     refresh_task = asyncio.create_task(token_refresh_loop(stop))
+    retry_task = asyncio.create_task(_course_progress_retry_loop(stop))
     try:
         yield
     finally:
         stop.set()
         refresh_task.cancel()
+        retry_task.cancel()
         try:
             await refresh_task
+        except asyncio.CancelledError:
+            pass
+        try:
+            await retry_task
         except asyncio.CancelledError:
             pass
         print("🛑 Shutting down — closing Neo4j driver...")

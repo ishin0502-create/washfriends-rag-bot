@@ -29,6 +29,22 @@ from reply_lang import detect_reply_lang
 _exam_cursor: dict[str, int] = {}
 
 
+def owner_exam_lang(user_id: str, fallback_text: str = "") -> str:
+    data = load_user(user_id)
+    for t in reversed(data.get("turns") or []):
+        if not isinstance(t, dict):
+            continue
+        lg = str(t.get("lang") or "").strip().lower()
+        if lg in {"ko", "vi", "en"}:
+            return lg
+        raw = str(t.get("q") or t.get("question") or "").strip()
+        if raw:
+            return detect_reply_lang(raw)
+    if (fallback_text or "").strip():
+        return detect_reply_lang(fallback_text)
+    return "ko"
+
+
 def _hq_base() -> str:
     return (
         os.environ.get("WF_HQ_API_BASE")
@@ -250,15 +266,33 @@ def _finish_message(part: dict, lang: str) -> str:
         msg += "이제 일반 질문을 다시 보내셔도 됩니다."
         return msg
     if lang == "en":
-        result = f"Result: PASS (need {need}/{mx})\n" if passed else f"Result: NOT YET (need {need}/{mx})\n"
+        if passed:
+            result = f"Result: PASS (need {need}/{mx}+)\n"
+        elif level == "l3":
+            result = f"Result: NOT YET (need {need}/{mx}). Review L3 — send 「advanced」 or 「L3」.\n"
+        elif level == "l2":
+            result = f"Result: NOT YET (need {need}/{mx}). Review L2 — send 「intermediate」 or 「L2」.\n"
+        else:
+            result = f"Result: NOT YET (need {need}/{mx}). Review L1 — send 「L1 course」 or 「beginner course」.\n"
         msg = f"◆ Exam finished\nScore: {score}/{mx}\n{result}"
         if wrong_lines:
             msg += f"\nReview:\n{wrong_block}\n"
+        elif passed:
+            msg += "\nWell done.\n"
         return msg + "You can ask normal questions again."
-    result = f"Kết quả: ĐẠT (cần {need}/{mx})\n" if passed else f"Kết quả: CHƯA ĐẠT (cần {need}/{mx})\n"
+    if passed:
+        result = f"Kết quả: ĐẠT (cần {need}/{mx}+)\n"
+    elif level == "l3":
+        result = f"Kết quả: CHƯA ĐẠT (cần {need}/{mx}). Ôn L3 — gửi 「cao cấp」 hoặc 「L3」.\n"
+    elif level == "l2":
+        result = f"Kết quả: CHƯA ĐẠT (cần {need}/{mx}). Ôn L2 — gửi 「trung cấp」 hoặc 「L2」.\n"
+    else:
+        result = f"Kết quả: CHƯA ĐẠT (cần {need}/{mx}). Ôn L1 — gửi 「khóa L1」 hoặc 「học L1」.\n"
     msg = f"◆ Kết thúc\nĐiểm: {score}/{mx}\n{result}"
     if wrong_lines:
         msg += f"\nÔn lại:\n{wrong_block}\n"
+    elif passed:
+        msg += "\nLàm tốt.\n"
     return msg + "Có thể hỏi bình thường lại."
 
 
@@ -592,13 +626,17 @@ def try_handle_exam_message(user_id: str, text: str) -> Optional[str]:
             },
         )
         _exam_cursor.pop(pid, None)
+        sc = int(part.get("score") or 0)
+        mx = max(len(qs), int(part.get("max_score") or 0))
         if lang == "ko":
             return (
                 f"◆ 시험 시간 종료\n"
-                f"점수: {int(part.get('score') or 0)}/{max(len(qs), int(part.get('max_score') or 0))}\n"
+                f"점수: {sc}/{mx}\n"
                 "미완료 문항은 미응시 처리됩니다. 결과는 본사 HQ에 기록됩니다."
             )
-        return "◆ Exam time over. Partial score recorded at HQ."
+        if lang == "en":
+            return f"◆ Time over\nScore: {sc}/{mx}\nUnfinished items counted incomplete. HQ has the score."
+        return f"◆ Hết giờ\nĐiểm: {sc}/{mx}\nCâu chưa làm = chưa dự. HQ đã ghi điểm."
 
     # First touch: start clock if invited with questions ready
     if status == "invited":
@@ -621,10 +659,13 @@ def try_handle_exam_message(user_id: str, text: str) -> Optional[str]:
                 )
                 _exam_cursor[pid] = 0
                 mins = duration
-                return (
-                    (f"◆ 주간 교육 시험 시작 ({len(qs)}문항, {duration}분)\n\n" if lang == "ko" else f"◆ Exam start ({len(qs)} Q, {duration}m)\n\n")
-                    + _render_q(1, len(qs), qs[0], lang, minutes_left=mins)
-                )
+                if lang == "ko":
+                    head = f"◆ 주간 교육 시험 시작 ({len(qs)}문항, {duration}분)\n\n"
+                elif lang == "en":
+                    head = f"◆ Exam start ({len(qs)} Q, {duration}m)\n\n"
+                else:
+                    head = f"◆ Bắt đầu bài ({len(qs)} câu, {duration} phút)\n\n"
+                return head + _render_q(1, len(qs), qs[0], lang, minutes_left=mins)
             except Exception as e:
                 print(f"[WEEKLY EXAM] start gen failed: {e}")
                 return None
@@ -640,10 +681,13 @@ def try_handle_exam_message(user_id: str, text: str) -> Optional[str]:
         )
         _exam_cursor[pid] = 0
         mins = duration
-        return (
-            (f"◆ 주간 교육 시험 시작 ({len(qs)}문항, {duration}분)\n\n" if lang == "ko" else f"◆ Exam start\n\n")
-            + _render_q(1, len(qs), qs[0], lang, minutes_left=mins)
-        )
+        if lang == "ko":
+            head = f"◆ 주간 교육 시험 시작 ({len(qs)}문항, {duration}분)\n\n"
+        elif lang == "en":
+            head = f"◆ Exam start ({len(qs)} Q, {duration}m)\n\n"
+        else:
+            head = f"◆ Bắt đầu bài ({len(qs)} câu, {duration} phút)\n\n"
+        return head + _render_q(1, len(qs), qs[0], lang, minutes_left=mins)
 
     if status != "in_progress" or not qs:
         return None
@@ -682,7 +726,12 @@ def try_handle_exam_message(user_id: str, text: str) -> Optional[str]:
             "max_score": len(qs),
             "questions_json": qs,
         }
-        fb = ("○ 맞습니다.\n" if ok else "× 아쉽습니다.\n") if lang == "ko" else ("○\n" if ok else "×\n")
+        if lang == "ko":
+            fb = "○ 맞습니다.\n" if ok else "× 아쉽습니다.\n"
+        elif lang == "en":
+            fb = "○ Correct.\n" if ok else "× Not yet.\n"
+        else:
+            fb = "○ Đúng.\n" if ok else "× Chưa đúng.\n"
         return fb + _finish_message(part2, lang)
 
     patch_participant(
@@ -694,11 +743,12 @@ def try_handle_exam_message(user_id: str, text: str) -> Optional[str]:
             "status": "in_progress",
         },
     )
-    fb = ""
     if lang == "ko":
         fb = ("○ 맞습니다.\n\n" if ok else f"× 아쉽습니다. 요지: {item.get('explain') or ''}\n\n")
+    elif lang == "en":
+        fb = ("○ Correct.\n\n" if ok else f"× {item.get('explain') or ''}\n\n")
     else:
-        fb = ("○\n\n" if ok else f"× {item.get('explain') or ''}\n\n")
+        fb = ("○ Đúng.\n\n" if ok else f"× {item.get('explain') or ''}\n\n")
     return fb + _render_q(idx + 1, len(qs), qs[idx], lang, minutes_left=mins_left)
 
 
@@ -737,14 +787,37 @@ async def dispatch_week_async(week_id: str, send_fn) -> dict:
         uid = p.get("zalo_user_id") or ""
         pid = p.get("id") or ""
         try:
-            qs = build_exam_questions(uid, n=n, lang="ko")
+            lang = owner_exam_lang(uid)
+            qs = build_exam_questions(uid, n=n, lang=lang)
             level = _exam_level_label(qs)
-            if level == "l3":
-                level_ko = "고급(L3)"
-            elif level == "l2":
-                level_ko = "중급(L2)"
+            need = max(1, int((len(qs) * 0.7) + 0.999))
+            if lang == "en":
+                level_l = {"l3": "advanced (L3)", "l2": "intermediate (L2)"}.get(level, "beginner (L1)")
+                msg = (
+                    f"◆ {title}\n"
+                    f"This week’s {level_l} review. {len(qs)} questions · {duration} min\n"
+                    f"Pass: about 70% ({need}/{len(qs)}+)\n"
+                    "Send any reply to start.\n"
+                    "(Allowed education-bot users only)"
+                )
+            elif lang == "vi":
+                level_l = {"l3": "nâng cao (L3)", "l2": "trung cấp (L2)"}.get(level, "cơ bản (L1)")
+                msg = (
+                    f"◆ {title}\n"
+                    f"Bài ôn {level_l} tuần này. {len(qs)} câu · {duration} phút\n"
+                    f"Đạt: khoảng 70% ({need}/{len(qs)}+)\n"
+                    "Gửi bất kỳ tin để bắt đầu.\n"
+                    "(Chỉ người được phép dùng bot)"
+                )
             else:
-                level_ko = "초급(L1)"
+                level_l = {"l3": "고급(L3)", "l2": "중급(L2)"}.get(level, "초급(L1)")
+                msg = (
+                    f"◆ {title}\n"
+                    f"이번 주 {level_l} 복습 시험입니다. {len(qs)}문항 · 제한 {duration}분\n"
+                    f"합격 기준: 약 70% ({need}/{len(qs)}문제 이상)\n"
+                    "아무 답이나 보내면 시험이 시작됩니다.\n"
+                    "(허용된 교육봇 사용자에게만 발송됩니다)"
+                )
             patch_participant(
                 pid,
                 {
@@ -753,13 +826,6 @@ async def dispatch_week_async(week_id: str, send_fn) -> dict:
                     "status": "invited",
                     "invite_error": None,
                 },
-            )
-            msg = (
-                f"◆ {title}\n"
-                f"이번 주 {level_ko} 복습 시험입니다. {len(qs)}문항 · 제한 {duration}분\n"
-                f"합격 기준: 약 70% ({max(1, int((len(qs) * 0.7) + 0.999))}/{len(qs)}문제 이상)\n"
-                "아무 답이나 보내면 시험이 시작됩니다.\n"
-                "(허용된 교육봇 사용자에게만 발송됩니다)"
             )
             await send_fn(uid, msg)
             ok_n += 1

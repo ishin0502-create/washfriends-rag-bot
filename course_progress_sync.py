@@ -2,9 +2,16 @@
 """Push L1/L2/L3 course counts to HQ (fail-open)."""
 from __future__ import annotations
 
+import json
+import threading
+import time
 from typing import Any
 
 from qa_usage import _http_json, fetch_access_meta
+
+_RETRY_LOCK = threading.Lock()
+_RETRY_MAX = 80
+_RETRY_FILE = "_course_progress_retry.json"
 
 
 def _snapshot(user_id: str) -> dict[str, Any]:
@@ -22,6 +29,90 @@ def _snapshot(user_id: str) -> dict[str, Any]:
         "l3_done": l3_done_count(uid),
         "l3_total": len(L3),
     }
+
+
+def _retry_path():
+    from owner_qa_log import _data_dir
+
+    d = _data_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    return d / _RETRY_FILE
+
+
+def _load_retry_ids() -> list[str]:
+    path = _retry_path()
+    with _RETRY_LOCK:
+        if not path.exists():
+            return []
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return []
+    ids = data.get("zalo_user_ids") if isinstance(data, dict) else data
+    if not isinstance(ids, list):
+        return []
+    out = []
+    seen = set()
+    for uid in ids:
+        u = str(uid or "").strip()
+        if u and u not in seen:
+            seen.add(u)
+            out.append(u)
+    return out[:_RETRY_MAX]
+
+
+def _save_retry_ids(ids: list[str]) -> None:
+    path = _retry_path()
+    uniq: list[str] = []
+    seen = set()
+    for uid in ids:
+        u = str(uid or "").strip()
+        if u and u not in seen:
+            seen.add(u)
+            uniq.append(u)
+        if len(uniq) >= _RETRY_MAX:
+            break
+    with _RETRY_LOCK:
+        path.write_text(
+            json.dumps({"zalo_user_ids": uniq, "updated_at": time.time()}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+
+def enqueue_course_progress_retry(user_id: str) -> None:
+    uid = (user_id or "").strip()
+    if not uid:
+        return
+    ids = _load_retry_ids()
+    if uid not in ids:
+        ids.append(uid)
+        _save_retry_ids(ids)
+
+
+def dequeue_course_progress_retry(user_id: str) -> None:
+    uid = (user_id or "").strip()
+    if not uid:
+        return
+    ids = [x for x in _load_retry_ids() if x != uid]
+    _save_retry_ids(ids)
+
+
+def flush_course_progress_retries(*, limit: int = 20) -> dict:
+    """Retry failed HQ PUTs. Fail-open; keep remaining ids on disk."""
+    ids = _load_retry_ids()
+    ok = fail = 0
+    kept: list[str] = []
+    for i, uid in enumerate(ids):
+        if i >= max(1, int(limit)):
+            kept.extend(ids[i:])
+            break
+        if push_course_progress(uid, from_retry=True):
+            ok += 1
+        else:
+            fail += 1
+            kept.append(uid)
+    _save_retry_ids(kept)
+    return {"ok": True, "tried": min(len(ids), max(1, int(limit))), "pushed_ok": ok, "pushed_fail": fail, "queued": len(kept)}
 
 
 def snapshot_owner_qa_dir(dest) -> dict:
@@ -100,7 +191,7 @@ def backfill_course_progress(*, apply: bool) -> dict:
     }
 
 
-def push_course_progress(user_id: str) -> bool:
+def push_course_progress(user_id: str, *, from_retry: bool = False) -> bool:
     uid = (user_id or "").strip()
     if not uid:
         return False
@@ -115,5 +206,14 @@ def push_course_progress(user_id: str) -> bool:
             body["store_name"] = str(meta["store_name"])[:200]
         if meta.get("person_name"):
             body["person_name"] = str(meta["person_name"])[:120]
-    data = _http_json("PUT", "/api/v1/internal/education-bot/course-progress", body)
-    return bool(data and data.get("ok"))
+    delays = (0.0, 0.4, 1.0) if not from_retry else (0.0,)
+    for delay in delays:
+        if delay:
+            time.sleep(delay)
+        data = _http_json("PUT", "/api/v1/internal/education-bot/course-progress", body)
+        if data and data.get("ok"):
+            dequeue_course_progress_retry(uid)
+            return True
+    if not from_retry:
+        enqueue_course_progress_retry(uid)
+    return False

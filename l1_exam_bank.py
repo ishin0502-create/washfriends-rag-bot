@@ -117,32 +117,15 @@ def sample_l1_exam_questions(
     *,
     rng: Optional[random.Random] = None,
 ) -> list[dict[str, str]]:
-    """Return up to n shuffled L1 bank items (currently KO text; VI/EN reuse KO with note)."""
+    """Return up to n shuffled L1 bank items in KO/VI/EN."""
+    from exam_i18n import localized_bank_item
+
     n = max(1, min(10, int(n or 7)))
     lang = lang if lang in {"ko", "vi", "en"} else "ko"
     pool = list(L1_BANK_KO)
     r = rng or random.Random()
     r.shuffle(pool)
-    out: list[dict[str, str]] = []
-    for i, it in enumerate(pool[:n]):
-        q = it["q"]
-        if lang == "en":
-            q = q + "\n(Answer in short Korean or English keywords OK)"
-        elif lang == "vi":
-            q = q + "\n(Trả lời ngắn — từ khóa tiếng Hàn/Việt OK)"
-        else:
-            q = q + "\n(짧게 정답만 보내 주세요)"
-        out.append(
-            {
-                "id": it["id"],
-                "q": q,
-                "accept": it["accept"],
-                "explain": it["explain"],
-                "lang": lang,
-                "source": "l1_bank",
-            }
-        )
-    return out
+    return [localized_bank_item(it, lang, "l1_bank") for it in pool[:n]]
 
 
 def pass_threshold(score: int, max_score: int, ratio: float = 0.7) -> bool:
