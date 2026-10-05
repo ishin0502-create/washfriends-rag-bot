@@ -177,6 +177,34 @@ async def weekly_exam_dispatch(request: Request):
     return JSONResponse(result)
 
 
+@app.post("/internal/education-bot/course-progress/backfill")
+async def course_progress_backfill(request: Request, apply: int = Query(0), snapshot: int = Query(0)):
+    """One-shot owner_qa → HQ course-progress. Default dry-run (apply=0)."""
+    secret = (
+        request.headers.get("X-Internal-Secret")
+        or request.headers.get("x-internal-secret")
+        or ""
+    ).strip()
+    expected = (
+        os.environ.get("EDUCATION_BOT_INTERNAL_SECRET")
+        or os.environ.get("INTERNAL_WEBHOOK_SECRET")
+        or ""
+    ).strip()
+    if not expected or secret != expected:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    from course_progress_sync import backfill_course_progress, snapshot_owner_qa_dir
+    from owner_qa_log import _data_dir
+    import time as _time
+
+    snap_meta = None
+    if snapshot:
+        dest = _data_dir().parent / f"owner_qa_snapshot_{_time.strftime('%Y%m%d_%H%M%S')}"
+        snap_meta = snapshot_owner_qa_dir(dest)
+    report = backfill_course_progress(apply=bool(apply))
+    report["snapshot"] = snap_meta
+    return JSONResponse(report)
+
+
 # ─── Zalo webhook ─────────────────────────────────────────────────────────────
 
 @app.post("/webhook/zalo")
