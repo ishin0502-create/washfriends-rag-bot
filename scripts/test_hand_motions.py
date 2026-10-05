@@ -185,7 +185,7 @@ def test_inject_drops_toc():
     assert "◆ (1) 👕" not in detail
     assert "◆ (2) 🧰" not in detail
     assert "긴 도구" not in detail
-    assert "한 줄 순서" in parts[0]
+    assert "아래 메시지 Step만" in parts[0]
     assert "왜 이 순서" in detail
 
 

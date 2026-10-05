@@ -145,63 +145,62 @@ REFUSE_GATE_VI = (
     "Da/Da lộn cần dung môi."
 )
 
-# Compact legend — prepended once per stain answer (keep short for Zalo 2000).
-# Zalo = plain text only (no real color/box UI). We fake a "frame" with lines + blank gaps.
-GLOSSARY = {
-    "ko": (
-        "┌─ 기본 안내 (용어·등급) ─┐\n"
-        "◆ [용어 안내]\n"
-        "· L1 초보 단독 — 찬물·세제·식초 수준. 알코올·아세톤·표백은 L1 아님\n"
-        "· L2 감독 필요 — 매니저·경력자 확인 후(용제·강한 표백 포함)\n"
-        "· L3 전문 의뢰·거절 우선 — 접수 시 전문 의뢰 또는 반려 우선\n"
-        "· 등급 1 시도 / 등급 2 부분 제거 / 등급 3 복원 불가 — 고객에게 먼저 고지\n"
-        "· 실크·울·가죽·아세테이트·모피, 또는 건조기·다림질 지났으면 한 단계 상향"
-    ),
-    "vi": (
-        "┌─ Hướng dẫn cơ bản (thuật ngữ·cấp) ─┐\n"
-        "◆ [Thuật ngữ]\n"
-        "· L1 Tự xử lý — lạnh/xà phòng/giấm. Cồn/acetone/tẩy không thuộc L1\n"
-        "· L2 Cần giám sát — hỏi quản lý (gồm dung môi/tẩy mạnh)\n"
-        "· L3 Ưu tiên từ chối / chuyên nghiệp\n"
-        "· Cấp 1 thử / Cấp 2 một phần / Cấp 3 không khôi phục — báo khách trước\n"
-        "· Lụa/Len/Da/Acetate/Lông hoặc đã sấy/ủi → nâng 1 cấp"
-    ),
-    "en": (
-        "┌─ Basics (terms · grade) ─┐\n"
-        "◆ [Terms]\n"
-        "· L1 beginner OK — cold water / detergent / vinegar. Alcohol·acetone·bleach are not L1\n"
-        "· L2 supervisor needed — check with a senior (includes solvents/strong bleach)\n"
-        "· L3 refuse / refer first\n"
-        "· Grade 1 attempt / Grade 2 partial / Grade 3 cannot restore — tell the guest first\n"
-        "· Silk/wool/leather/acetate/fur, or after dryer/iron → bump one level"
-    ),
+# Shop-floor header — one job, one meaning. No L1/L2/L3 glossary dump.
+JOB_HEADER = {
+    "ko": {
+        "L1": (
+            "◆ 이번 건: 초보도 따라 할 수 있습니다.\n"
+            "완전 제거는 보장하지 마세요. 고객에게 한 번만 말해 주세요."
+        ),
+        "L2": (
+            "◆ 이번 건: 매니저(또는 경력 직원)와 확인한 뒤 시작하세요.\n"
+            "완전 제거는 어려울 수 있어요. 진행 전에 고객에게 한 번만 확인하세요."
+        ),
+        "L3": (
+            "◆ 이번 건: 매장에서 무리하지 마세요.\n"
+            "전문 의뢰 또는 접수를 정중히 거절하세요. 배상 약속은 하지 마세요."
+        ),
+    },
+    "vi": {
+        "L1": (
+            "◆ Việc này: nhân viên mới có thể làm theo.\n"
+            "Không cam kết sạch 100%. Nói với khách một lần."
+        ),
+        "L2": (
+            "◆ Việc này: hỏi quản lý rồi mới bắt đầu.\n"
+            "Có thể còn vết. Xin đồng ý một lần trước khi làm."
+        ),
+        "L3": (
+            "◆ Việc này: đừng cố tại cửa hàng.\n"
+            "Gửi chuyên hoặc từ chối tiếp nhận. Không hứa bồi thường."
+        ),
+    },
+    "en": {
+        "L1": (
+            "◆ This job: a beginner can follow the steps.\n"
+            "Do not promise full removal. Tell the guest once."
+        ),
+        "L2": (
+            "◆ This job: check with a manager before you start.\n"
+            "Full removal may not be possible. Get consent once."
+        ),
+        "L3": (
+            "◆ This job: do not force it in-store.\n"
+            "Refer out or decline. Do not promise compensation."
+        ),
+    },
 }
 
 SOP_DIVIDER = {
-    "ko": (
-        "└────────────────────────┘\n"
-        "\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "▼ 이번 건 세탁 교육 (아래부터 SOP)\n"
-        "━━━━━━━━━━━━━━━━━━━━"
-    ),
-    "vi": (
-        "└────────────────────────┘\n"
-        "\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "▼ SOP cho vết này (bên dưới)\n"
-        "━━━━━━━━━━━━━━━━━━━━"
-    ),
-    "en": (
-        "└────────────────────────┘\n"
-        "\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "▼ This job's wash SOP (below)\n"
-        "━━━━━━━━━━━━━━━━━━━━"
-    ),
+    "ko": "▼ 지금부터 순서대로 따라 하세요",
+    "vi": "▼ Làm theo thứ tự bên dưới",
+    "en": "▼ Follow the steps below in order",
 }
 
 _GLOSSARY_MARKERS = (
+    "◆ 이번 건:",
+    "◆ Việc này:",
+    "◆ This job:",
     "┌─ 기본 안내",
     "┌─ Hướng dẫn cơ bản",
     "┌─ Basics",
@@ -332,8 +331,10 @@ def format_intake_block(level: str, grade: int, lang: str = "ko") -> str:
     return "\n".join(parts)
 
 
-def format_glossary(lang: str = "ko") -> str:
-    return GLOSSARY[lang if lang in GLOSSARY else "ko"]
+def format_glossary(lang: str = "ko", level: str = "L2") -> str:
+    lang_key = lang if lang in JOB_HEADER else "ko"
+    lv = level if level in {"L1", "L2", "L3"} else "L2"
+    return JOB_HEADER[lang_key][lv]
 
 
 def _has_glossary_or_level_header(answer: str) -> bool:
@@ -354,11 +355,7 @@ def prepend_level_to_answer(
     user_text: str = "",
     lang: str = "ko",
 ) -> str:
-    """Prepend compact glossary + this-job L/grade intake, then the SOP body.
-
-    Order (one Zalo bubble): 용어 안내 → 이번 건 L·등급·접수 고지 → 세탁 SOP.
-    Skips when there is no stain id (item-care / non-stain) so education paths stay intact.
-    """
+    """Prepend one short job header, then SOP body. No L1/L2 glossary dump."""
     if not answer:
         return answer
     g = graph if isinstance(graph, dict) else {}
@@ -372,10 +369,8 @@ def prepend_level_to_answer(
         return answer
     if _has_glossary_or_level_header(answer):
         return answer
-    level, grade = resolve_level(sid, graph=g, entities=entities or {}, user_text=user_text)
-    lang_key = lang if lang in GLOSSARY else "ko"
-    glossary = format_glossary(lang_key)
-    case_block = format_intake_block(level, grade, lang_key)
+    level, _grade = resolve_level(sid, graph=g, entities=entities or {}, user_text=user_text)
+    lang_key = lang if lang in JOB_HEADER else "ko"
+    header = format_glossary(lang_key, level)
     divider = SOP_DIVIDER[lang_key]
-    # Frame: [기본 안내 box open] + glossary + this-job L/grade + [box close + SOP divider] + body
-    return glossary + "\n\n" + case_block + "\n" + divider + "\n\n" + answer.lstrip()
+    return header + "\n\n" + divider + "\n\n" + answer.lstrip()

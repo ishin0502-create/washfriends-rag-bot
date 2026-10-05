@@ -76,16 +76,12 @@ def test_fish_sauce_clarity_plain():
     assert "연질 스포팅 솔 —" in out
     assert "소화제" in out
     assert "손님에게" in out and "고지하지" in out
-    assert "바르고" in out or "담가" in out or "바르" in out  # one-line has verbs
-    order_i = out.find("【한 줄 순서】")
-    assert order_i >= 0
-    order = out[order_i : order_i + 450]
-    assert "주방세제" in order
-    assert "바르" in order or "담가" in order
-    assert "섞지" in order or "하나씩" in out
+    assert "바르고" in out or "담가" in out or "바르" in out
+    assert "아래 메시지 Step만" in out
+    assert "주방세제" in out
+    assert "섞지" in out or "하나씩" in out or "한 번에" in out
     assert "(과탄산·옥시클린 계열)(과탄산" not in out
-    # 1→2→3 are sequential actions, not mix-all
-    assert "식초" in order and ("냄새" in order or "줄이" in order)
+    assert "식초" in out and ("냄새" in out or "줄이" in out)
 
 
 def test_expand_enzyme_oxygen_all_stains():

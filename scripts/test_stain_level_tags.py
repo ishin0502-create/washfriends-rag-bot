@@ -37,10 +37,12 @@ def test_resolve_levels():
         entities={},
         lang="ko",
     )
-    assert ans.startswith("┌─ 기본 안내")
-    assert "용어 안내" in ans
-    assert "이번 건 세탁 교육" in ans
+    assert ans.startswith("◆ 이번 건:")
+    assert "무리하지" in ans or "전문" in ans
+    assert "지금부터 순서대로" in ans
     assert "본문입니다." in ans
+    assert "L1 초보 단독" not in ans
+    assert "용어 안내" not in ans
     # idempotent
     assert prepend_level_to_answer(ans, stain_id="S_ENGINE_OIL", lang="ko") == ans
 

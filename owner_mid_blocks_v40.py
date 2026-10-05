@@ -180,21 +180,16 @@ def _fabric_type(graph: Optional[dict]) -> str:
 
 INTAKE_SHORT = {
     "ko": (
-        "◆ 【접수 체크 · L2】 시작 전\n"
-        "① 고객 동의 후 사진 3장(얼룩 근접·라벨·전체)\n"
-        "② 등급 고지(완전 제거 보장 금지) ③ 소요(일반 당일~1일 / 어려움 2~3일)\n"
-        "④ 「잔색 가능·잔색은 배상 대상 아님. 진행할까요?」 동의 확인"
+        "◆ 【시작 전】 사진 3장(얼룩 근접·라벨·전체)만 받아 두세요. "
+        "고객 확인은 위 안내 한 번이면 됩니다."
     ),
     "vi": (
-        "◆ 【Checklist tiếp nhận · L2】 Trước khi làm\n"
-        "① Ảnh (đồng ý): cận vết · nhãn · tổng thể\n"
-        "② Báo cấp độ (không cam kết sạch 100%) ③ Thời gian (thường 1 ngày / khó 2–3 ngày)\n"
-        "④ Xác nhận: có thể còn vết, không bồi thường phần còn"
+        "◆ 【Trước khi làm】 Chụp 3 ảnh (cận vết · nhãn · tổng thể). "
+        "Phần đồng ý khách: chỉ một lần ở trên."
     ),
     "en": (
-        "◆ 【Intake check · L2】 Before starting\n"
-        "① Photos with consent (stain / label / full) ② Grade disclosure "
-        "③ Turnaround ④ Consent: residual marks not compensable"
+        "◆ 【Before starting】 Take 3 photos (stain / label / full). "
+        "Guest consent is only the line above — do not repeat it."
     ),
 }
 
@@ -426,7 +421,7 @@ def retry_full(sid: str, lang: str = "ko") -> str:
 
 def block_intake(level: str, lang: str) -> str:
     if level == "L1":
-        return INTAKE_SHORT_L1.get(lang) or INTAKE_SHORT_L1["ko"]
+        return ""
     if level not in {"L2", "L3"}:
         return ""
     return INTAKE_SHORT.get(lang) or INTAKE_SHORT["ko"]
@@ -480,11 +475,12 @@ def block_chem(graph: Optional[dict], lang: str) -> str:
 
 
 def block_retry(sid: str, level: str, graph: Optional[dict], lang: str) -> str:
+    """Full retry/acetone path only when the owner asked for a 2nd try."""
     if level not in {"L2", "L3"}:
         return ""
-    if wants_retry_full(graph, lang):
-        return retry_full(sid, lang)
-    return RETRY_SHORT.get(lang) or RETRY_SHORT["ko"]
+    if not wants_retry_full(graph, lang):
+        return ""
+    return retry_full(sid, lang)
 
 
 # ── VN L2 tip modules (language-pure; short; no %) ─────────────────────────

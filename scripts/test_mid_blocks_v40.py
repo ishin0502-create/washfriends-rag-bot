@@ -51,9 +51,10 @@ def test_l1_no_intake_no_retry():
 def test_l2_intake_and_retry_short():
     assert "사진" in block_intake("L2", "ko")
     r = block_retry("S_RED_WINE", "L2", {"_raw": "와인"}, "ko")
-    assert "2차" in r or "안 빠" in r
-    assert "60~80" not in r and "%" not in r.replace("100%", "")  # allow nothing
-    assert not re.search(r"\d{2}\s*~\s*\d{2}\s*%", r)
+    assert r == ""
+    r2 = block_retry("S_RED_WINE", "L2", {"_raw": "와인이 안 빠져요 2차"}, "ko")
+    assert "2차" in r2 or "안 빠" in r2 or "재시도" in r2
+    assert not re.search(r"\d{2}\s*~\s*\d{2}\s*%", r2)
 
 
 def test_compound_bbq():
@@ -82,16 +83,17 @@ def test_inject_bbq_l2_has_compound_intake_retry():
     out = inject_clarity_into_answer(_body(), graph=g, level="L2", grade=2, lang="ko")
     parts = split_zalo_messages(out)
     flow, detail = parts[0], "\n".join(parts[1:])
-    assert "접수 체크" in flow
+    assert "시작 전" in flow or "사진" in flow
     assert "복합" in detail
     assert "약품 여러 개" in detail or "약품 상호작용" in detail
-    assert "안 빠졌" in detail or "2차" in detail
+    assert "아세톤" not in detail
     assert not re.search(r"\d{2}\s*~\s*\d{2}\s*%", out)
 
 
 def test_inject_l1_coffee_no_l2_intake():
     g = _graph("S_BLACK_COFFEE", raw="커피 얼룩", chems=[{"code": "A3"}])
     out = inject_clarity_into_answer(_body(), graph=g, level="L1", grade=1, lang="ko")
+    assert "시작 전" not in out
     assert "접수 체크" not in out
     assert "안 빠졌을 때 · L2" not in out
 
@@ -113,3 +115,16 @@ def test_fabric_early_attach_without_glossary():
     raw = "효소로 약하게만 하세요.\n"
     out = inject_clarity_into_answer(raw, graph=g, level="L1", grade=1, lang="ko")
     assert "원단 판단" in out or "라벨" in out
+
+
+if __name__ == "__main__":
+    test_l1_no_intake_no_retry()
+    test_l2_intake_and_retry_short()
+    test_compound_bbq()
+    test_chem_mix_full_and_multi_short()
+    test_fabric_silk_short_and_full_on_question()
+    test_inject_bbq_l2_has_compound_intake_retry()
+    test_inject_l1_coffee_no_l2_intake()
+    test_retry_protein_no_heat()
+    test_fabric_early_attach_without_glossary()
+    print("OK mid_blocks_v40")

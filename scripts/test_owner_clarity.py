@@ -60,7 +60,7 @@ def test_two_message_split():
     parts = split_zalo_messages(out, max_len=1900)
     assert len(parts) >= 2
     flow, detail = parts[0], parts[1]
-    assert "【한 줄 순서】" in flow
+    assert "【아래 메시지 Step만" in flow or "아래 메시지 Step만" in flow
     assert "【준비물】" in flow
     assert "다음 메시지" in flow
     assert "손동작 상세" in detail or "구석 테스트" in detail
@@ -69,7 +69,19 @@ def test_two_message_split():
     assert "말리기 전" in out
     assert "보류하며 진행" not in out
     assert "30–180" not in out
-    assert "이소프로필" in flow or "70%" in flow
+    assert "이소프로필" in out or "70%" in out
+    g_unknown = {
+        "protocol": proto.to_dict(),
+        "stain_context": {"id": "S_HAIR_DYE"},
+        "chemicals": [{"code": "A1"}, {"code": "B1"}],
+        "tools": [],
+        "_raw": "옷에 염색약이 묻었는데.어떻게 지워요?",
+    }
+    out2 = inject_clarity_into_answer(body, graph=g_unknown, level="L2", grade=2, lang="ko")
+    assert "옷 색·원단을 모르면" in out2
+    assert "유색이면 산소" in out2
+    assert out2.split("<<<ZALO_MSG2>>>")[0].count("진행할까요") <= 1
+    assert "아세톤" not in out2.split("<<<ZALO_MSG2>>>")[0]
     assert detail.count("【담금 시간】") == 1
     assert "70~80" not in out and "50~60" not in out and "80%" not in out
     disp = for_ask_display(out)
@@ -204,13 +216,14 @@ def test_delicate_makeup_refuse():
 
 
 def test_p2_glossary_blood_compound_intake_mildew():
-    from stain_level_tags import GLOSSARY
+    from stain_level_tags import JOB_HEADER
     from owner_hand_motions import build_hand_motions, HAND_MOTIONS_EN
     from owner_mid_blocks_v40 import COMPOUND_STAINS, block_compound
     from owner_answer_clarity import STAIN_STATUS_KO
     from protocol import PROTOCOL_BUILDERS, apply_context_to_protocol
 
-    assert "알코올" in GLOSSARY["ko"] and "L1 아님" in GLOSSARY["ko"]
+    assert "매니저" in JOB_HEADER["ko"]["L2"]
+    assert "L1 초보 단독" not in JOB_HEADER["ko"]["L2"]
     blood = build_hand_motions("S_BLOOD_FRESH", "ko")
     assert "15–30분" in blood or "15-30" in blood
     assert "【담금 시간】" not in blood.split("Step 2")[1].split("Step 3")[0]

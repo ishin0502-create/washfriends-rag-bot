@@ -810,6 +810,33 @@ _NEXT_MSG = {
     "en": "📩 Hand-motion details follow in the next message.",
 }
 
+_FOLLOW_STEPS = {
+    "ko": "◆ 아래 메시지 Step만 번호 순서대로 하세요. 약을 한꺼번에 섞지 마세요.",
+    "vi": "◆ Chỉ làm các Step ở tin nhắn sau, đúng số. Không trộn hóa chất.",
+    "en": "◆ Follow only the numbered Steps in the next message. Do not mix chemicals.",
+}
+
+_COLOR_GATE = {
+    "ko": (
+        "◆ 【옷 색·원단을 모르면】\n"
+        "· 유색이면 산소표백·락스는 하지 마세요.\n"
+        "· 실크·울처럼 보이면 알코올·표백을 멈추고 매니저에게 넘기세요.\n"
+        "· 흰 면이라고 확인된 뒤에만 산소를 쓰세요."
+    ),
+    "vi": (
+        "◆ 【Chưa rõ màu/vải】\n"
+        "· Áo màu: không oxy / javel.\n"
+        "· Giống lụa/len: dừng cồn/tẩy, hỏi quản lý.\n"
+        "· Chỉ dùng oxy khi đã chắc là cotton trắng."
+    ),
+    "en": (
+        "◆ 【If color/fabric is unknown】\n"
+        "· Colored garments: skip oxygen and chlorine.\n"
+        "· If it looks like silk/wool: stop alcohol/bleach and ask a manager.\n"
+        "· Use oxygen only after you confirm white cotton."
+    ),
+}
+
 _DETAIL_HEAD = {
     "ko": "▼ 손동작 상세 — 위에서 아래로 하나씩 따라 해 주세요",
     "vi": "▼ Chi tiết thao tác — làm lần lượt từ trên xuống",
@@ -1081,6 +1108,16 @@ def build_one_line_order(graph: dict, lang: str = "ko") -> str:
         if not isinstance(s, dict) or s.get("blocked"):
             continue
         if str(s.get("id") or "") == "id":
+            continue
+        sid_step = str(s.get("id") or "").strip()
+        # Do not list oxygen/acetone until white cotton is confirmed.
+        if sid_step == "oxygen" and (
+            not _color_known_white_safe(graph) or _bleach_unsafe_fabric(graph)
+        ):
+            continue
+        if sid_step == "acetone":
+            continue
+        if sid_step == "chlorine" and not _color_known_white_safe(graph):
             continue
         action = str(s.get("action_ko") or s.get("action_vi") or "").strip()
         if lang == "vi":
@@ -1533,6 +1570,9 @@ def _apply_tone_softening(text: str) -> str:
 def _split_glossary_and_body(answer: str) -> tuple[str, str]:
     """Return (front_including_sop_header, body_after_header)."""
     markers = (
+        "▼ 지금부터 순서대로 따라 하세요",
+        "▼ Làm theo thứ tự bên dưới",
+        "▼ Follow the steps below in order",
         "▼ 이번 건 세탁 교육",
         "▼ SOP cho vết này",
         "▼ This job's wash SOP",
@@ -1632,7 +1672,8 @@ def inject_clarity_into_answer(
     )
 
     flow_bits: list[str] = []
-    if level in {"L2", "L3"}:
+    front_has_job = "이번 건:" in front or "Việc này:" in front or "This job:" in front
+    if level in {"L2", "L3"} and not front_has_job:
         flow_bits.append(_SUPERVISOR[lang])
     sid = _motion_stain_id(g)
 
@@ -1669,11 +1710,7 @@ def inject_clarity_into_answer(
                 "· 침투·갈라짐 → 전문"
             )
     if outlook_override:
-        outlook = outlook_override
-    else:
-        outlook = (_SOFT_OUTLOOK.get(lang) or _SOFT_OUTLOOK["ko"]).get(int(grade) or 2, "")
-    if outlook:
-        flow_bits.append(outlook)
+        flow_bits.append(outlook_override)
     if g.get("leather_care"):
         if lang == "vi":
             status = (
@@ -1700,13 +1737,18 @@ def inject_clarity_into_answer(
         status = build_status_check(g, lang)
     if status:
         flow_bits.append(status)
+    if (not _color_known_white_safe(g)) or (not _fabric_known(g)):
+        flow_bits.append(_COLOR_GATE.get(lang) or _COLOR_GATE["ko"])
     if _mid is not None:
         fab = _mid.block_fabric(g, lang)
         if fab:
             flow_bits.append(fab)
-    order = build_one_line_order(g, lang)
-    if order:
-        flow_bits.append(order)
+        elif not _fabric_known(g) and not g.get("leather_care"):
+            unk = (_mid.FABRIC_SHORT.get("unknown") or {})
+            u = unk.get(lang) or unk.get("ko") or ""
+            if u:
+                flow_bits.append(u)
+    flow_bits.append(_FOLLOW_STEPS.get(lang) or _FOLLOW_STEPS["ko"])
     tools = build_tools_names_only(g, lang)
     if tools:
         flow_bits.append(tools)
@@ -1861,9 +1903,6 @@ def inject_clarity_into_answer(
         retry_blk = _mid.block_retry(sid, level, g, lang)
         if retry_blk:
             detail_bits.append(retry_blk)
-    foot = (_GRADE_FOOTER.get(lang) or _GRADE_FOOTER["ko"]).get(grade, "")
-    if foot:
-        detail_bits.append(foot)
 
     flow = front.rstrip() + "\n\n" + "\n\n".join(flow_bits)
     detail = "\n\n".join(detail_bits)
