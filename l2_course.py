@@ -23,7 +23,7 @@ _START_RE = re.compile(
     re.I,
 )
 _NEXT_RE = re.compile(
-    r"^\s*(다음|다음\s*장|next|tiếp|tiep)\s*$",
+    r"^\s*(다음|다음\s*장|next|tiếp|tiep|học\s*tiếp|hoc\s*tiep|trang\s*sau)\s*$",
     re.I,
 )
 _PROGRESS_RE = re.compile(

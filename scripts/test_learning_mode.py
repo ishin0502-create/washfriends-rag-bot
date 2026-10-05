@@ -62,7 +62,13 @@ def test_ops_fallback_deck():
 def test_menu():
     uid = "u-menu-4"
     r = try_handle_mode_or_quiz(uid, "모드")
-    assert "현장" in r and "학습" in r
+    assert "현장" in r and "교육" in r
+    r2 = try_handle_mode_or_quiz(uid, "menu")
+    assert r2 and "L1 course" in r2
+    r3 = try_handle_mode_or_quiz(uid, "hướng dẫn")
+    assert r3 and "khóa L1" in r3 and "tiếp" in r3
+    assert try_handle_mode_or_quiz(uid, "Áo trắng dính máu tươi, làm sao?") is None
+    assert try_handle_mode_or_quiz(uid, "피 얼룩 어떻게 빼요?") is None
 
 
 if __name__ == "__main__":

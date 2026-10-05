@@ -10,7 +10,15 @@ from owner_qa_log import get_mode, get_quiz, set_mode
 from reply_lang import detect_reply_lang
 
 _MODE_CMD = re.compile(
-    r"^\s*(모드|mode|모드\s*변경|đổi\s*chế\s*độ|doi\s*che\s*do)\s*$",
+    r"^\s*("
+    r"모드|mode|모드\s*변경|메뉴|도움말|help|"
+    r"đổi\s*chế\s*độ|doi\s*che\s*do|"
+    r"hướng\s*dẫn|huong\s*dan|menu|"
+    r"bắt\s*đầu|bat\s*dau|"
+    r"xin\s*chào|xin\s*chao|chào|chao|"
+    r"hello|hi|"
+    r"안녕|안녕하세요"
+    r")\s*$",
     re.I,
 )
 _FIELD_CMD = re.compile(
@@ -38,39 +46,41 @@ _CARE_SYMBOL_QUIZ_CMD = re.compile(
 def mode_menu(lang: str = "ko") -> str:
     if lang == "ko":
         return (
-            "◆ Wash Friends 교육봇 모드\n"
+            "◆ Wash Friends 교육봇\n"
             "\n"
-            "① 현장 모드 — 지금 옷·얼룩 바로 질문 (기본)\n"
-            "② 학습 모드 — 내 질문 위주로 짧게 복습 후 질문\n"
-            "③ 기호 퀴즈 — 세탁표시 그림 보고 객관식·주관식\n"
-            "④ 초급 교육 — 세탁 처음 배우기 (「교육」)\n"
-            "⑤ 중급·고급 — 초급 후 「중급」, 중급 후 「고급」\n"
+            "얼룩·옷은 문장 그대로 보내 주세요. (메뉴를 고르지 않아도 됩니다)\n"
             "\n"
-            "「현장」 / 「학습」 / 「기호퀴즈」 / 「교육」 / 「중급」 / 「고급」\n"
-            "언제든 「모드」로 다시 열 수 있습니다."
+            "① 현장 질문 — 지금 바로 물어보기\n"
+            "② 초급 배우기 — 「교육」 한 장씩, 다음 장 「다음」\n"
+            "③ 내 진도 — 「진도」\n"
+            "④ 중급 / 고급 — 초급 후 「중급」, 그다음 「고급」\n"
+            "\n"
+            "언제든 「메뉴」또는 「모드」."
         )
     if lang == "en":
         return (
-            "◆ Education bot mode\n"
+            "◆ Wash Friends education bot\n"
             "\n"
-            "① Field — ask stains/labels now (default)\n"
-            "② Learning — short review from YOUR past questions\n"
-            "③ Symbol quiz — care-label pictures (MCQ + short answer)\n"
-            "④ L1 course — beginner (「교육」)\n"
-            "⑤ Intermediate / advanced — 「중급」 then 「고급」\n"
+            "For a real stain, just type the question. You do not need this menu.\n"
             "\n"
-            "Send 「field」 / 「learning」 / 「symbol quiz」 / 「교육」 / 「중급」 / 「고급」. 「mode」 anytime."
+            "① Field — ask now (or just send the stain)\n"
+            "② Beginner course — 「L1 course」, next page 「next」\n"
+            "③ Progress — 「progress」\n"
+            "④ Intermediate / advanced — 「intermediate」 then 「advanced」\n"
+            "\n"
+            "Anytime: 「menu」 or 「help」."
         )
     return (
-        "◆ Chế độ bot đào tạo\n"
+        "◆ Bot đào tạo Wash Friends\n"
         "\n"
-        "① Hiện trường — hỏi vết bẩn ngay (mặc định)\n"
-        "② Học — ôn ngắn từ câu hỏi CỦA BẠN\n"
-        "③ Quiz ký hiệu — ảnh nhãn giặt (trắc nghiệm + tự luận ngắn)\n"
-        "④ Khóa cơ bản — gửi 「교육」\n"
-        "⑤ Trung cấp / cao cấp — 「중급」 rồi 「고급」\n"
+        "Hỏi vết bẩn thì gõ câu hỏi bình thường. Không cần chọn menu.\n"
         "\n"
-        "Gửi 「hiện trường」 / 「học」 / 「ký hiệu quiz」 / 「교육」 / 「중급」 / 「고급」. 「mode」 bất cứ lúc nào."
+        "① Hỏi ngay — gửi câu hỏi (hoặc 「hiện trường」)\n"
+        "② Học cơ bản — 「khóa L1」, trang sau 「tiếp」\n"
+        "③ Tiến độ — 「tiến độ」\n"
+        "④ Trung cấp / cao cấp — 「trung cấp」 rồi 「cao cấp」\n"
+        "\n"
+        "Mở lại: 「menu」 hoặc 「hướng dẫn」."
     )
 
 

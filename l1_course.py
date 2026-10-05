@@ -18,12 +18,13 @@ from reply_lang import detect_reply_lang
 _START_RE = re.compile(
     r"^\s*("
     r"교육|초급\s*교육|L1\s*교육|L1\s*코스|교육\s*시작|"
-    r"l1\s*course|beginner\s*course|khóa\s*l1|hoc\s*l1"
+    r"l1\s*course|beginner\s*course|khóa\s*l1|khoa\s*l1|hoc\s*l1|"
+    r"học\s*cơ\s*bản|hoc\s*co\s*ban"
     r")\s*$",
     re.I,
 )
 _NEXT_RE = re.compile(
-    r"^\s*(다음|다음\s*장|next|tiếp|tiep)\s*$",
+    r"^\s*(다음|다음\s*장|next|tiếp|tiep|học\s*tiếp|hoc\s*tiep|trang\s*sau)\s*$",
     re.I,
 )
 _PROGRESS_RE = re.compile(
