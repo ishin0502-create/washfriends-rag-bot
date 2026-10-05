@@ -415,7 +415,7 @@ async def _send_zalo_brand_image(user_id: str) -> bool:
                         f"code={err} msg={data.get('message')}"
                     )
                     if attempt == 0 and err and is_token_error(err):
-                        token = await refresh_tokens(force=True)
+                        token = await refresh_tokens(force=True)  # HQ access reload only
                         global _zalo_header_token, _zalo_header_token_ts
                         _zalo_header_token = None
                         _zalo_header_token_ts = 0.0
@@ -571,7 +571,7 @@ async def _send_zalo_text_once(user_id: str, text: str) -> bool:
                 err = data.get("error")
                 if err and err != 0:
                     if attempt == 0 and is_token_error(err):
-                        print(f"[ZALO SEND] token error {err} — refreshing and retrying")
+                        print(f"[ZALO SEND] token error {err} — reloading access from HQ")
                         token = await refresh_tokens(force=True)
                         continue
                     print(f"[ZALO SEND ERROR] code={err} msg={data.get('message')}")
@@ -891,7 +891,7 @@ async def get_zalo_oa_info() -> dict:
                         "error": err,
                         "message": data.get("message"),
                         "diag": diag,
-                        "hint": "Refresh failed. Check ZALO_OA_REFRESH_TOKEN + ZALO_APP_SECRET.",
+                        "hint": "HQ access reload failed. Check WF_HQ_API_BASE + education-bot secret.",
                     }
             if isinstance(data, dict):
                 data = {**data, "diag": diag, "owner_gate": gate_status()}
