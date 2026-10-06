@@ -513,19 +513,7 @@ async def diagnose_zalo_brand(*, user_id: Optional[str] = None, reset: bool = Fa
 
 
 async def _send_zalo_reply(user_id: str, text: str, *, with_brand: bool = False) -> bool:
-    """Send optional brand image, then text (supports multi-part / 2000-char split)."""
-    if with_brand:
-        try:
-            ok = await _send_zalo_brand_image(user_id)
-            if ok:
-                confirm_brand_header_sent("zalo", user_id)
-            else:
-                clear_brand_header("zalo", user_id)
-                print("[ZALO BRAND] send failed — topic gate cleared for retry")
-        except Exception as e:
-            clear_brand_header("zalo", user_id)
-            print(f"[ZALO BRAND] skipped: {e}")
-
+    """Send text first (owners wait on GraphRAG already), then optional brand image."""
     try:
         from owner_answer_clarity import split_zalo_messages
 
@@ -543,6 +531,18 @@ async def _send_zalo_reply(user_id: str, text: str, *, with_brand: bool = False)
             break
         if i + 1 < len(parts):
             await asyncio.sleep(0.45)
+
+    if with_brand:
+        try:
+            ok = await _send_zalo_brand_image(user_id)
+            if ok:
+                confirm_brand_header_sent("zalo", user_id)
+            else:
+                clear_brand_header("zalo", user_id)
+                print("[ZALO BRAND] send failed after text — topic gate cleared for retry")
+        except Exception as e:
+            clear_brand_header("zalo", user_id)
+            print(f"[ZALO BRAND] skipped after text: {e}")
     return all_ok
 
 
@@ -750,10 +750,14 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
         else:
             if not text:
                 return
+            import time as _t
+
+            _t0 = _t.time()
             reply_text = await loop.run_in_executor(
                 _executor,
                 lambda: generate_response(text, channel="zalo", user_id=user_id),
             )
+            print(f"[ZALO TIMING] generate_s={_t.time() - _t0:.1f} chars={len(reply_text or '')}")
 
         # Persist Q&A for personalized learning cards (disk, no LLM)
         try:

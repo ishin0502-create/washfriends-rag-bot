@@ -46,7 +46,140 @@ _LEVEL_RE = re.compile(
 )
 
 
-# Static curriculum excerpts (Zalo-sized). Source: CURRICULUM_L1_L2_L3.md — copy, not live SOP rewrite.
+# After these lesson ids, 「다음」 shows a 1-question checkpoint (not stain Q&A).
+_CHECKPOINT_QUIZ = {
+    "l1a_03": "l1e_blot",
+    "l1a_06": "l1e_mix",
+    "l1a_09": "l1e_ppe",
+    "l1b_coffee": "l1e_oxygen",
+    "l1b_mud": "l1e_heat",
+    "l1d_grades": "l1e_refuse",
+}
+
+_STAIN_HINT_RE = re.compile(
+    r"얼룩|셔츠|블라우스|혈액|커피|와인|기름|잉크|"
+    r"vết|máu|cà\s*phê|cà phê|áo |giặt|blot|stain",
+    re.I,
+)
+
+
+def _looks_like_stain_question(raw: str) -> bool:
+    t = (raw or "").strip()
+    if len(t) >= 24:
+        return True
+    if _STAIN_HINT_RE.search(t) and len(t) >= 8:
+        return True
+    return False
+
+
+def _l1_bank_item(qid: str) -> Optional[dict[str, Any]]:
+    from l1_exam_bank import L1_BANK_KO
+
+    for it in L1_BANK_KO:
+        if str(it.get("id") or "") == qid:
+            return it
+    return None
+
+
+def _quiz_prompt(qid: str, lang: str) -> str:
+    from exam_i18n import localized_bank_item
+
+    it = _l1_bank_item(qid)
+    if not it:
+        return ""
+    loc = localized_bank_item(it, lang, "l1_bank")
+    q = loc.get("q") or it.get("q") or ""
+    if lang == "en":
+        return (
+            "◆ Checkpoint (1 question)\n"
+            "You cannot skip with 「next」 until this is correct.\n"
+            "Urgent stain: just type the stain (this quiz waits).\n\n"
+            f"{q}"
+        )
+    if lang == "vi":
+        return (
+            "◆ Câu hỏi chốt (1 câu)\n"
+            "Chưa đúng thì chưa sang trang (「tiếp」 không bỏ qua).\n"
+            "Vết bẩn gấp: gửi câu hỏi vết bẩn (câu này chờ).\n\n"
+            f"{q}"
+        )
+    return (
+        "◆ 확인 문제 (1문항)\n"
+        "맞히기 전에는 「다음」으로 넘어가지 않습니다.\n"
+        "지금 얼룩이 급하면, 얼룩 질문을 그냥 보내 주세요. (이 문제는 나중에)\n\n"
+        f"{q}"
+    )
+
+
+def _grade_checkpoint(qid: str, raw: str, lang: str) -> bool:
+    from exam_i18n import localized_bank_item
+    from learning_quiz import _match_accept
+
+    it = _l1_bank_item(qid)
+    if not it:
+        return False
+    loc = localized_bank_item(it, lang, "l1_bank")
+    accept = str(loc.get("accept") or it.get("accept") or "")
+    return _match_accept(raw, accept)
+
+
+def _quiz_explain(qid: str, lang: str) -> str:
+    from exam_i18n import localized_bank_item
+
+    it = _l1_bank_item(qid)
+    if not it:
+        return ""
+    loc = localized_bank_item(it, lang, "l1_bank")
+    return str(loc.get("explain") or it.get("explain") or "")
+
+
+def _after_lesson_advance(user_id: str, st: dict[str, Any], lang: str) -> str:
+    """Mark current page done; maybe checkpoint quiz; else next page or finish."""
+    idx = int(st.get("index") or 0)
+    idx = max(0, min(idx, len(LESSONS) - 1))
+    completed = [str(x) for x in (st.get("completed") or [])]
+    lid = LESSONS[idx]["id"]
+    if lid not in completed:
+        completed.append(lid)
+    st["completed"] = completed
+    passed = [str(x) for x in (st.get("quiz_passed") or [])]
+    qid = _CHECKPOINT_QUIZ.get(lid)
+    if qid and qid not in passed:
+        st["pending_quiz"] = qid
+        st["active"] = True
+        _save_state(user_id, st)
+        return _quiz_prompt(qid, lang)
+
+    if idx + 1 >= len(LESSONS):
+        st["active"] = False
+        st["index"] = len(LESSONS) - 1
+        st["pending_quiz"] = None
+        _save_state(user_id, st)
+        if lang == "ko":
+            return (
+                "◆ 세탁 초급 내용을 모두 읽으셨습니다.\n"
+                f"읽은 내용: {len(completed)}/{len(LESSONS)}\n"
+                f"확인 문제: {len(passed)}개 통과\n\n"
+                "이제 실제 옷·얼룩을 그냥 물어보시면 됩니다.\n"
+                "중급 「중급」 → 고급 「고급」 순서로 이어서 배울 수 있습니다.\n\n"
+                "다시 보고 싶을 때: 「교육」\n"
+                "시험 점수 볼 때: 「시험 성적」\n"
+                "안내 메뉴: 「모드」"
+            )
+        if lang == "en":
+            return (
+                f"◆ Beginner lessons finished ({len(completed)}/{len(LESSONS)}).\n"
+                "Ask about stains anytime. Review: 「교육」."
+            )
+        return (
+            f"◆ Đã đọc xong bài cơ bản ({len(completed)}/{len(LESSONS)}).\n"
+            "Có thể hỏi vết bẩn. Xem lại: 「교육」."
+        )
+
+    st["index"] = idx + 1
+    st["pending_quiz"] = None
+    _save_state(user_id, st)
+    return _render_lesson(st["index"], lang, done_n=len(completed))
 LESSONS: list[dict[str, str]] = [
     {
         "id": "l1a_01",
@@ -202,6 +335,10 @@ def _state(user_id: str) -> dict[str, Any]:
     st.setdefault("completed", [])
     if not isinstance(st["completed"], list):
         st["completed"] = []
+    st.setdefault("quiz_passed", [])
+    if not isinstance(st["quiz_passed"], list):
+        st["quiz_passed"] = []
+    st.setdefault("pending_quiz", None)
     return st
 
 
@@ -386,6 +523,32 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
         return None
     lang = detect_reply_lang(raw)
 
+    st_now = _state(user_id)
+    pending = st_now.get("pending_quiz")
+    if pending and not is_l1_course_command(raw):
+        if _looks_like_stain_question(raw):
+            return None
+        if _grade_checkpoint(str(pending), raw, lang):
+            passed = [str(x) for x in (st_now.get("quiz_passed") or [])]
+            if str(pending) not in passed:
+                passed.append(str(pending))
+            st_now["quiz_passed"] = passed
+            st_now["pending_quiz"] = None
+            explain = _quiz_explain(str(pending), lang)
+            nxt = _after_lesson_advance(user_id, st_now, lang)
+            if lang == "en":
+                return f"◆ Correct.\n{explain}\n\n{nxt}"
+            if lang == "vi":
+                return f"◆ Đúng.\n{explain}\n\n{nxt}"
+            return f"◆ 맞았습니다.\n{explain}\n\n{nxt}"
+        explain = _quiz_explain(str(pending), lang)
+        again = _quiz_prompt(str(pending), lang)
+        if lang == "en":
+            return f"◆ Not yet.\n{explain}\n\n{again}"
+        if lang == "vi":
+            return f"◆ Chưa đúng.\n{explain}\n\n{again}"
+        return f"◆ 아직 아닙니다.\n{explain}\n\n다시:\n{again}"
+
     if _PROGRESS_RE.match(raw):
         return _progress_msg(_state(user_id), lang)
 
@@ -466,10 +629,15 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
                 "Đọc từng trang ngắn, rồi gửi 「tiếp」.\n"
                 "Hỏi vết bẩn gấp: 「hiện trường」.\n\n"
             )
+        if st.get("pending_quiz"):
+            _save_state(user_id, st)
+            return head + _quiz_prompt(str(st["pending_quiz"]), lang)
         return head + _render_lesson(idx, lang, done_n=len(done))
 
     if _NEXT_RE.match(raw):
         st = _state(user_id)
+        if st.get("pending_quiz"):
+            return _quiz_prompt(str(st["pending_quiz"]), lang)
         if not st.get("active"):
             if lang == "ko":
                 return (
@@ -491,41 +659,6 @@ def try_handle_l1_course(user_id: str, text: str) -> Optional[str]:
                 "Gửi 「교육」 để bắt đầu.\n"
                 "「tiếp」 dùng sau khi đã bắt đầu, để xem trang sau."
             )
-
-        idx = int(st.get("index") or 0)
-        idx = max(0, min(idx, len(LESSONS) - 1))
-        completed = [str(x) for x in (st.get("completed") or [])]
-        lid = LESSONS[idx]["id"]
-        if lid not in completed:
-            completed.append(lid)
-        st["completed"] = completed
-
-        if idx + 1 >= len(LESSONS):
-            st["active"] = False
-            st["index"] = len(LESSONS) - 1
-            _save_state(user_id, st)
-            if lang == "ko":
-                return (
-                    "◆ 세탁 초급 내용을 모두 읽으셨습니다.\n"
-                    f"읽은 내용: {len(completed)}/{len(LESSONS)}\n\n"
-                    "이제 실제 옷·얼룩을 그냥 물어보시면 됩니다.\n"
-                    "중급 「중급」 → 고급 「고급」 순서로 이어서 배울 수 있습니다.\n\n"
-                    "다시 보고 싶을 때: 「교육」\n"
-                    "시험 점수 볼 때: 「시험 성적」\n"
-                    "안내 메뉴: 「모드」"
-                )
-            if lang == "en":
-                return (
-                    f"◆ Beginner lessons finished ({len(completed)}/{len(LESSONS)}).\n"
-                    "Ask about stains anytime. Review: 「교육」."
-                )
-            return (
-                f"◆ Đã đọc xong bài cơ bản ({len(completed)}/{len(LESSONS)}).\n"
-                "Có thể hỏi vết bẩn. Xem lại: 「교육」."
-            )
-
-        st["index"] = idx + 1
-        _save_state(user_id, st)
-        return _render_lesson(st["index"], lang, done_n=len(completed))
+        return _after_lesson_advance(user_id, st, lang)
 
     return None
