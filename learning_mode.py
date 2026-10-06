@@ -54,6 +54,7 @@ def mode_menu(lang: str = "ko") -> str:
             "② 초급 배우기 — 「교육」 한 장씩, 다음 장 「다음」\n"
             "③ 내 진도 — 「진도」\n"
             "④ 중급 / 고급 — 초급 후 「중급」, 그다음 「고급」\n"
+            "⑤ 사진 과제 — 라벨·접수 3장 「사진과제」\n"
             "\n"
             "언제든 「메뉴」또는 「모드」."
         )
@@ -67,6 +68,7 @@ def mode_menu(lang: str = "ko") -> str:
             "② Beginner course — 「L1 course」, next page 「next」\n"
             "③ Progress — 「progress」\n"
             "④ Intermediate / advanced — 「intermediate」 then 「advanced」\n"
+            "⑤ Photo drill — 「photo task」\n"
             "\n"
             "Anytime: 「menu」 or 「help」."
         )
@@ -79,6 +81,7 @@ def mode_menu(lang: str = "ko") -> str:
         "② Học cơ bản — 「khóa L1」, trang sau 「tiếp」\n"
         "③ Tiến độ — 「tiến độ」\n"
         "④ Trung cấp / cao cấp — 「trung cấp」 rồi 「cao cấp」\n"
+        "⑤ Bài ảnh — 「bài tập ảnh」\n"
         "\n"
         "Mở lại: 「menu」 hoặc 「hướng dẫn」."
     )

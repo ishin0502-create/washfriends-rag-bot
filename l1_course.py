@@ -164,7 +164,8 @@ def _after_lesson_advance(user_id: str, st: dict[str, Any], lang: str) -> str:
                 "중급 「중급」 → 고급 「고급」 순서로 이어서 배울 수 있습니다.\n\n"
                 "다시 보고 싶을 때: 「교육」\n"
                 "시험 점수 볼 때: 「시험 성적」\n"
-                "안내 메뉴: 「모드」"
+                "안내 메뉴: 「모드」\n"
+                "사진 연습: 「사진과제」"
             )
         if lang == "en":
             return (

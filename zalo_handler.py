@@ -678,6 +678,18 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
             except Exception as course_err:
                 print(f"[ZALO L1 COURSE] skip: {course_err}")
 
+        # Opt-in photo homework (exact command only — never steals stain Q&A)
+        if event_name == "user_send_text" and text:
+            try:
+                from photo_task import try_handle_photo_task_text
+
+                photo_reply = try_handle_photo_task_text(user_id, text)
+                if photo_reply:
+                    await _send_zalo_reply(user_id, photo_reply, with_brand=False)
+                    return
+            except Exception as photo_err:
+                print(f"[ZALO PHOTO TASK] text skip: {photo_err}")
+
         # Field / learning mode + active quiz (no GraphRAG / no LLM)
         if event_name == "user_send_text" and text:
             mode_reply = try_handle_mode_or_quiz(user_id, text)
@@ -703,6 +715,29 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
                     return
             except Exception as qa_err:
                 print(f"[QA USAGE] gate skip: {qa_err}")
+
+        # Photo homework consumes the next image only while a drill is pending
+        if event_name == "user_send_image":
+            try:
+                from photo_task import pending_photo_task, try_handle_photo_task_image
+
+                if pending_photo_task(user_id):
+                    if not image_url:
+                        await _send_zalo_reply(
+                            user_id,
+                            "사진을 받지 못했습니다. 다시 보내 주세요. 과제를 멈추려면 「사진과제 끝」.",
+                            with_brand=False,
+                        )
+                        return
+                    photo_img = await loop.run_in_executor(
+                        _executor,
+                        lambda: try_handle_photo_task_image(user_id, image_url, text or ""),
+                    )
+                    if photo_img:
+                        await _send_zalo_reply(user_id, photo_img, with_brand=False)
+                        return
+            except Exception as photo_img_err:
+                print(f"[ZALO PHOTO TASK] image skip: {photo_img_err}")
 
         # Image field questions also count toward the optional daily limit
         if event_name == "user_send_image":
