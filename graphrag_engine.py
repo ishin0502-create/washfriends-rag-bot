@@ -4216,10 +4216,40 @@ def _answer_with_optional_cache(
     if cached and reply_language_leaks(cached, lang):
         print(f"[LANG] ignore contaminated cache lang={lang} leaks={reply_language_leaks(cached, lang)}")
 
+    item_wash = _graph_is_item_wash(graph_context)
+    g0 = graph_context.get("graph") if isinstance(graph_context, dict) else {}
+    sid0 = ""
+    if isinstance(g0, dict):
+        sid0 = str(g0.get("_owner_stain_id") or (g0.get("stain_context") or {}).get("id") or "")
+    sid0 = sid0 or str(entities.get("stain_id") or "")
+    templ0 = ""
+    if (not item_wash) and sid0:
+        try:
+            from protocol import has_protocol
+
+            if has_protocol(sid0):
+                templ0 = _template_stain_reply(sid0, lang) or ""
+        except Exception as e:
+            print(f"[LLM] protocol-skip fail: {type(e).__name__}: {e}")
+            templ0 = ""
+    if templ0:
+        print(f"[LLM] skip protocol template sid={sid0}")
+        answer = templ0
+        answer = _rewrite_item_care_step1_header(answer, graph_context, lang)
+        answer = _enforce_stain_education(answer, graph_context, lang)
+        answer = _enforce_must_include(answer, graph_context, lang)
+        answer = _enforce_rescue_pass(answer, graph_context, lang)
+        if lang == "ko":
+            answer = _polish_owner_ko_phrasing(answer, item_wash=item_wash)
+            answer = _strip_misplaced_fresh_rescue(answer, graph_context, lang)
+        answer = _prepend_stain_level_banner(answer, graph_context, entities, cache_question, lang)
+        if not reply_language_leaks(answer, lang):
+            cache_store(cache_question, answer, ctx_key)
+        return answer
+
     try:
         base_prompt = _build_llm_prompt(cache_question, graph_context, lang=lang)
         llm_prompt = (prefix + "\n\n" + base_prompt) if prefix else base_prompt
-        item_wash = _graph_is_item_wash(graph_context)
         answer = _call_llm(llm_prompt, lang=lang, item_wash=item_wash and lang == "ko")
     except Exception as e:
         print(f"[LLM] fail-open template: {type(e).__name__}: {e}")
@@ -4621,7 +4651,19 @@ def _generate_response_core(
     if cached and reply_language_leaks(cached, lang):
         print(f"[LANG] ignore contaminated early-cache lang={lang} leaks={reply_language_leaks(cached, lang)}")
 
-    entities = extract_entities(user_message)
+    sid_fast = None
+    if not _looks_like_item_care_question(user_message):
+        try:
+            from stain_fast_front import bind_fast_stain_id
+
+            sid_fast = bind_fast_stain_id(user_message)
+        except Exception:
+            sid_fast = None
+    if sid_fast:
+        entities = {"intent": "treatment", "stain_id": sid_fast}
+        print(f"[ENT] skip LLM extract bind={sid_fast}")
+    else:
+        entities = extract_entities(user_message)
     entities["_raw"] = user_message
     # Hard override language from script (more reliable than LLM lang field)
     entities["lang"] = lang

@@ -135,6 +135,10 @@ def _state(user_id: str) -> dict[str, Any]:
         st["completed"] = []
     st.setdefault("active", False)
     st.setdefault("index", 0)
+    st.setdefault("pending_quiz", None)
+    st.setdefault("quiz_passed", [])
+    if not isinstance(st["quiz_passed"], list):
+        st["quiz_passed"] = []
     return st
 
 
@@ -161,6 +165,88 @@ def deactivate_l2_course(user_id: str) -> None:
 
 def is_l2_active(user_id: str) -> bool:
     return bool(_state(user_id).get("active"))
+
+
+_CHECKPOINT_QUIZ = {
+    "l2a_01": "l2e_cotton_dry_color",
+    "l2a_03": "l2e_leather",
+    "l2b_02": "l2e_protein_heat",
+    "l2d_01": "l2e_oxygen_tree",
+    "l2e_01": "l2e_dye_transfer",
+}
+
+
+def _l2_bank_item(qid: str) -> Optional[dict[str, Any]]:
+    from l2_exam_bank import L2_BANK_KO
+
+    for it in L2_BANK_KO:
+        if str(it.get("id") or "") == qid:
+            return it
+    return None
+
+
+def is_l2_course_command(text: str) -> bool:
+    raw = (text or "").strip()
+    return bool(
+        _START_RE.match(raw)
+        or _NEXT_RE.match(raw)
+        or _PROGRESS_RE.match(raw)
+        or _EXIT_RE.match(raw)
+    )
+
+
+def l2_quiz_counts(user_id: str) -> tuple[int, int]:
+    st = _state(user_id)
+    passed = {str(x) for x in (st.get("quiz_passed") or []) if x}
+    return len(passed), len(_CHECKPOINT_QUIZ)
+
+
+def _after_lesson_advance(user_id: str, st: dict[str, Any], lang: str) -> str:
+    from course_checkpoint import quiz_prompt
+
+    idx = int(st.get("index") or 0)
+    idx = max(0, min(idx, len(LESSONS) - 1))
+    completed = [str(x) for x in (st.get("completed") or [])]
+    lid = LESSONS[idx]["id"]
+    if lid not in completed:
+        completed.append(lid)
+    st["completed"] = completed
+    passed = [str(x) for x in (st.get("quiz_passed") or [])]
+    qid = _CHECKPOINT_QUIZ.get(lid)
+    if qid and qid not in passed:
+        st["pending_quiz"] = qid
+        st["active"] = True
+        _save_state(user_id, st)
+        return quiz_prompt(qid, lang, find_item=_l2_bank_item, source="l2_bank")
+
+    if idx + 1 >= len(LESSONS):
+        st["active"] = False
+        st["index"] = len(LESSONS) - 1
+        st["pending_quiz"] = None
+        _save_state(user_id, st)
+        if lang == "ko":
+            return (
+                "◆ 세탁 중급 내용을 모두 읽으셨습니다.\n"
+                f"읽은 내용: {len(completed)}/{len(LESSONS)}\n"
+                f"확인 문제: {len(passed)}개 통과\n\n"
+                "이제 원단·색·신선/마름을 떠올리며 「현장」질문을 해 보세요.\n"
+                "고급을 이어서 배우려면 「고급」이라고 보내 주세요.\n\n"
+                "중급 다시 보기: 「중급」 · 초급: 「교육」 · 시험: 「시험 성적」"
+            )
+        if lang == "en":
+            return (
+                f"◆ Intermediate finished ({len(completed)}/{len(LESSONS)}).\n"
+                "Ask stains anytime. Review: 「중급」."
+            )
+        return (
+            f"◆ Đã xong trung cấp ({len(completed)}/{len(LESSONS)}).\n"
+            "Hỏi vết bẩn. Xem lại: 「중급」."
+        )
+
+    st["index"] = idx + 1
+    st["pending_quiz"] = None
+    _save_state(user_id, st)
+    return _render_lesson(st["index"], lang, done_n=len(completed))
 
 
 def l2_done_count(user_id: str) -> int:
@@ -271,6 +357,26 @@ def try_handle_l2_course(user_id: str, text: str) -> Optional[str]:
     st = _state(user_id)
     l2_on = bool(st.get("active"))
 
+    pending = st.get("pending_quiz")
+    if pending and l2_on and not is_l2_course_command(raw):
+        from course_checkpoint import fail_message, grade_checkpoint, pass_message, quiz_explain, quiz_prompt
+        from l1_course import _looks_like_stain_question
+
+        if _looks_like_stain_question(raw):
+            return None
+        if grade_checkpoint(str(pending), raw, lang, find_item=_l2_bank_item, source="l2_bank"):
+            passed = [str(x) for x in (st.get("quiz_passed") or [])]
+            if str(pending) not in passed:
+                passed.append(str(pending))
+            st["quiz_passed"] = passed
+            st["pending_quiz"] = None
+            explain = quiz_explain(str(pending), lang, find_item=_l2_bank_item, source="l2_bank")
+            nxt = _after_lesson_advance(user_id, st, lang)
+            return pass_message(lang, explain, nxt)
+        explain = quiz_explain(str(pending), lang, find_item=_l2_bank_item, source="l2_bank")
+        again = quiz_prompt(str(pending), lang, find_item=_l2_bank_item, source="l2_bank")
+        return fail_message(lang, explain, again)
+
     if _PROGRESS_RE.match(raw):
         if not is_l1_complete(user_id):
             return _l1_gate_msg(user_id, lang)
@@ -322,6 +428,12 @@ def try_handle_l2_course(user_id: str, text: str) -> Optional[str]:
                 "◆ Bắt đầu bài trung cấp.\n"
                 "Gửi 「tiếp」 sau mỗi trang · Gấp: 「hiện trường」.\n\n"
             )
+        if st.get("pending_quiz"):
+            from course_checkpoint import quiz_prompt
+
+            return head + quiz_prompt(
+                str(st["pending_quiz"]), lang, find_item=_l2_bank_item, source="l2_bank"
+            )
         return head + _render_lesson(idx, lang, done_n=len(done))
 
     # Shared 「다음」 / 「교육 끝」 only while L2 is the active course
@@ -349,36 +461,10 @@ def try_handle_l2_course(user_id: str, text: str) -> Optional[str]:
     if _NEXT_RE.match(raw):
         idx = int(st.get("index") or 0)
         idx = max(0, min(idx, len(LESSONS) - 1))
-        completed = [str(x) for x in (st.get("completed") or [])]
-        lid = LESSONS[idx]["id"]
-        if lid not in completed:
-            completed.append(lid)
-        st["completed"] = completed
+        if st.get("pending_quiz"):
+            from course_checkpoint import quiz_prompt
 
-        if idx + 1 >= len(LESSONS):
-            st["active"] = False
-            st["index"] = len(LESSONS) - 1
-            _save_state(user_id, st)
-            if lang == "ko":
-                return (
-                    "◆ 세탁 중급 내용을 모두 읽으셨습니다.\n"
-                    f"읽은 내용: {len(completed)}/{len(LESSONS)}\n\n"
-                    "이제 원단·색·신선/마름을 떠올리며 「현장」질문을 해 보세요.\n"
-                    "고급을 이어서 배우려면 「고급」이라고 보내 주세요.\n\n"
-                    "중급 다시 보기: 「중급」 · 초급: 「교육」 · 시험: 「시험 성적」"
-                )
-            if lang == "en":
-                return (
-                    f"◆ Intermediate finished ({len(completed)}/{len(LESSONS)}).\n"
-                    "Ask stains anytime. Review: 「중급」."
-                )
-            return (
-                f"◆ Đã xong trung cấp ({len(completed)}/{len(LESSONS)}).\n"
-                "Hỏi vết bẩn. Xem lại: 「중급」."
-            )
-
-        st["index"] = idx + 1
-        _save_state(user_id, st)
-        return _render_lesson(st["index"], lang, done_n=len(completed))
+            return quiz_prompt(str(st["pending_quiz"]), lang, find_item=_l2_bank_item, source="l2_bank")
+        return _after_lesson_advance(user_id, st, lang)
 
     return None

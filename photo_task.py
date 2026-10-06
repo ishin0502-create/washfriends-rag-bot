@@ -56,6 +56,12 @@ def _save(user_id: str, st: dict[str, Any]) -> None:
     u = load_user(user_id)
     u["photo_task"] = st
     save_user(user_id, u)
+    try:
+        from course_progress_sync import push_course_progress
+
+        push_course_progress(user_id)
+    except Exception:
+        pass
 
 
 def pending_photo_task(user_id: str) -> Optional[str]:

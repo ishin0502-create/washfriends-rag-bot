@@ -18,9 +18,11 @@ def _snapshot(user_id: str) -> dict[str, Any]:
     from l1_course import LESSONS as L1, l1_done_count, l1_quiz_counts
     from l2_course import LESSONS as L2, l2_done_count
     from l3_course import LESSONS as L3, l3_done_count
+    from photo_task import photo_task_counts
 
     uid = (user_id or "").strip()
     quiz_n, quiz_total = l1_quiz_counts(uid)
+    photo_n, photo_t = photo_task_counts(uid)
     return {
         "zalo_user_id": uid,
         "l1_done": l1_done_count(uid),
@@ -31,6 +33,8 @@ def _snapshot(user_id: str) -> dict[str, Any]:
         "l2_total": len(L2),
         "l3_done": l3_done_count(uid),
         "l3_total": len(L3),
+        "l1_photo_passed": photo_n,
+        "l1_photo_total": photo_t,
     }
 
 
@@ -160,7 +164,10 @@ def backfill_course_progress(*, apply: bool) -> dict:
     ok = fail = skip = 0
     for uid in uids:
         data = load_user(uid)
-        if not any(isinstance(data.get(k), dict) for k in ("l1_course", "l2_course", "l3_course")):
+        if not any(
+            isinstance(data.get(k), dict)
+            for k in ("l1_course", "l2_course", "l3_course", "photo_task")
+        ):
             skip += 1
             continue
         snap = _snapshot(uid)
