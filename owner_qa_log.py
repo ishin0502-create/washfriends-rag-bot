@@ -264,3 +264,43 @@ def append_turn(
         }
     )
     save_user(user_id, data)
+
+
+def get_exam_retry_ids(user_id: str) -> list[str]:
+    data = load_user(user_id)
+    raw = data.get("exam_retry_ids") or []
+    out: list[str] = []
+    seen: set[str] = set()
+    if not isinstance(raw, list):
+        return []
+    for x in raw:
+        k = str(x or "").strip()
+        if k and k not in seen:
+            seen.add(k)
+            out.append(k)
+    return out[:40]
+
+
+def merge_exam_retry_ids(
+    user_id: str,
+    *,
+    wrong_ids: Optional[list[str]] = None,
+    correct_ids: Optional[list[str]] = None,
+) -> None:
+    if not (user_id or "").strip():
+        return
+    data = load_user(user_id)
+    drop = {str(c or "").strip() for c in (correct_ids or []) if str(c or "").strip()}
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for w in wrong_ids or []:
+        k = str(w or "").strip()
+        if k and k not in seen and k not in drop:
+            seen.add(k)
+            ordered.append(k)
+    for old in get_exam_retry_ids(user_id):
+        if old not in seen and old not in drop:
+            seen.add(old)
+            ordered.append(old)
+    data["exam_retry_ids"] = ordered[:40]
+    save_user(user_id, data)

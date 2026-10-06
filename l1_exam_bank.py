@@ -108,6 +108,12 @@ L1_BANK_KO: list[dict[str, str]] = [
         "accept": r"2|이|등급\s*2",
         "explain": "등급 2 = 부분 제거 가능·잔색 남을 수 있음 고지.",
     },
+    {
+        "id": "l1e_care_x",
+        "q": "케어라벨 세탁통(물세탁) 표시 위에 X가 있으면 무슨 뜻인가요?",
+        "accept": r"금지|하지\s*말|하지\s*마|물세탁\s*금|세탁\s*금|엑스|X",
+        "explain": "X = 하지 말 것. 물세탁 표시에 X면 물세탁 금지.",
+    },
 ]
 
 
@@ -116,16 +122,16 @@ def sample_l1_exam_questions(
     lang: str = "ko",
     *,
     rng: Optional[random.Random] = None,
+    prefer_ids: Optional[list] = None,
 ) -> list[dict[str, str]]:
-    """Return up to n shuffled L1 bank items in KO/VI/EN."""
+    """Return up to n L1 bank items; failed ids first, then shuffle."""
     from exam_i18n import localized_bank_item
+    from exam_sample import pick_exam_pool
 
     n = max(1, min(10, int(n or 7)))
     lang = lang if lang in {"ko", "vi", "en"} else "ko"
-    pool = list(L1_BANK_KO)
-    r = rng or random.Random()
-    r.shuffle(pool)
-    return [localized_bank_item(it, lang, "l1_bank") for it in pool[:n]]
+    picked = pick_exam_pool(list(L1_BANK_KO), n, prefer_ids=prefer_ids, rng=rng)
+    return [localized_bank_item(it, lang, "l1_bank") for it in picked]
 
 
 def pass_threshold(score: int, max_score: int, ratio: float = 0.7) -> bool:

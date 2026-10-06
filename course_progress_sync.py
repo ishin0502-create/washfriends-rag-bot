@@ -15,15 +15,18 @@ _RETRY_FILE = "_course_progress_retry.json"
 
 
 def _snapshot(user_id: str) -> dict[str, Any]:
-    from l1_course import LESSONS as L1, l1_done_count
+    from l1_course import LESSONS as L1, l1_done_count, l1_quiz_counts
     from l2_course import LESSONS as L2, l2_done_count
     from l3_course import LESSONS as L3, l3_done_count
 
     uid = (user_id or "").strip()
+    quiz_n, quiz_total = l1_quiz_counts(uid)
     return {
         "zalo_user_id": uid,
         "l1_done": l1_done_count(uid),
         "l1_total": len(L1),
+        "l1_quiz_passed": quiz_n,
+        "l1_quiz_total": quiz_total,
         "l2_done": l2_done_count(uid),
         "l2_total": len(L2),
         "l3_done": l3_done_count(uid),

@@ -118,6 +118,13 @@ TEXTS: dict[str, dict[str, str]] = {
         "explain_vi": "Cấp 2 = có thể sạch một phần, còn màu — phải báo trước.",
         "accept_extra": r"two|grade\s*2|cấp\s*2|cap\s*2",
     },
+    "l1e_care_x": {
+        "q_en": "Care label: wash-tub symbol with an X over it means?",
+        "q_vi": "Nhãn: hình thùng giặt bị gạch X nghĩa là gì?",
+        "explain_en": "X = do not. X over the wash tub = do not wash in water.",
+        "explain_vi": "X = cấm. X trên thùng giặt = cấm giặt nước.",
+        "accept_extra": r"do\s*not\s*wash|no\s*wash|không\s*giặt|khong\s*giat|cấm\s*giặt|cam\s*giat",
+    },
     "l2e_cotton_dry_color": {
         "q_en": "Dried stain on colored cotton/linen: is oxygen bleach allowed in principle? (yes/no + short)",
         "q_vi": "Vết khô trên cotton/linen màu: nguyên tắc có được tẩy oxy không? (có/không + ngắn)",
@@ -293,9 +300,16 @@ _SUFFIX = {
     "en": "\n(Short answer — English or Korean keywords OK)",
     "vi": "\n(Trả lời ngắn — từ khóa Việt/Hàn OK)",
 }
+_MCQ_SUFFIX = {
+    "ko": "\nA/B/C/D 또는 짧은 답을 보내 주세요.",
+    "en": "\nSend A/B/C/D or a short keyword.",
+    "vi": "\nGửi A/B/C/D hoặc từ khóa ngắn.",
+}
 
 
-def localized_bank_item(it: dict[str, Any], lang: str, source: str) -> dict[str, str]:
+def localized_bank_item(it: dict[str, Any], lang: str, source: str) -> dict[str, Any]:
+    from exam_mcq import mcq_for
+
     lang = lang if lang in {"ko", "vi", "en"} else "ko"
     extra = TEXTS.get(str(it.get("id") or ""), {})
     if lang == "en":
@@ -311,11 +325,17 @@ def localized_bank_item(it: dict[str, Any], lang: str, source: str) -> dict[str,
     more = (extra.get("accept_extra") or "").strip()
     if more:
         accept = f"{accept}|{more}" if accept else more
-    return {
+    choices, answer = mcq_for(str(it.get("id") or ""), lang)
+    tail = _MCQ_SUFFIX[lang] if choices else _SUFFIX[lang]
+    out: dict[str, Any] = {
         "id": str(it.get("id") or ""),
-        "q": q + _SUFFIX[lang],
+        "q": q + tail,
         "accept": accept,
         "explain": explain,
         "lang": lang,
         "source": source,
     }
+    if choices:
+        out["choices"] = choices
+        out["answer"] = answer
+    return out

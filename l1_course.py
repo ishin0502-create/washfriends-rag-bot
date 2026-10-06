@@ -375,6 +375,13 @@ def is_l1_course_command(text: str) -> bool:
     )
 
 
+def l1_quiz_counts(user_id: str) -> tuple[int, int]:
+    st = _state(user_id)
+    passed = {str(x) for x in (st.get("quiz_passed") or []) if x}
+    total = len(_CHECKPOINT_QUIZ)
+    return len(passed), total
+
+
 def l1_done_count(user_id: str) -> int:
     st = _state(user_id)
     done = {str(x) for x in (st.get("completed") or [])}

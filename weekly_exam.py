@@ -22,7 +22,7 @@ from l2_course import is_l2_complete
 from l2_exam_bank import sample_l2_exam_questions
 from l3_course import is_l3_complete
 from l3_exam_bank import sample_l3_exam_questions
-from owner_qa_log import load_user
+from owner_qa_log import get_exam_retry_ids, load_user, merge_exam_retry_ids
 from reply_lang import detect_reply_lang
 
 # In-memory cursor: participant_id -> current question index
@@ -143,11 +143,12 @@ def _pad_exam_questions(
     lang: str,
     *,
     fallbacks: list,
+    prefer_ids: Optional[list] = None,
 ) -> list[dict[str, str]]:
     for sampler in fallbacks:
         if len(qs) >= n:
             break
-        for it in sampler(n=n - len(qs), lang=lang):
+        for it in sampler(n=n - len(qs), lang=lang, prefer_ids=prefer_ids):
             if len(qs) >= n:
                 break
             qs.append(it)
@@ -161,6 +162,11 @@ def build_exam_questions(user_id: str, n: int = 7, lang: str = "ko") -> list[dic
     """
     n = max(5, min(10, int(n or 7)))
     lang = lang if lang in {"ko", "vi", "en"} else "ko"
+    prefer: list[str] = []
+    try:
+        prefer = get_exam_retry_ids(user_id)
+    except Exception:
+        prefer = []
 
     use_l3 = use_l2 = False
     try:
@@ -175,22 +181,25 @@ def build_exam_questions(user_id: str, n: int = 7, lang: str = "ko") -> list[dic
 
     qs: list[dict[str, str]] = []
     if use_l3:
-        qs = sample_l3_exam_questions(n=n, lang=lang)
+        qs = sample_l3_exam_questions(n=n, lang=lang, prefer_ids=prefer)
         qs = _pad_exam_questions(
             qs,
             n,
             lang,
             fallbacks=[sample_l2_exam_questions, sample_l1_exam_questions],
+            prefer_ids=prefer,
         )
         if len(qs) >= n:
             return qs[:n]
     elif use_l2:
-        qs = sample_l2_exam_questions(n=n, lang=lang)
-        qs = _pad_exam_questions(qs, n, lang, fallbacks=[sample_l1_exam_questions])
+        qs = sample_l2_exam_questions(n=n, lang=lang, prefer_ids=prefer)
+        qs = _pad_exam_questions(
+            qs, n, lang, fallbacks=[sample_l1_exam_questions], prefer_ids=prefer
+        )
         if len(qs) >= n:
             return qs[:n]
     else:
-        qs = sample_l1_exam_questions(n=n, lang=lang)
+        qs = sample_l1_exam_questions(n=n, lang=lang, prefer_ids=prefer)
         if len(qs) >= n:
             return qs[:n]
 
@@ -264,6 +273,8 @@ def _finish_message(part: dict, lang: str) -> str:
         elif passed:
             msg += "\n모두 잘하셨습니다.\n"
         msg += "이제 일반 질문을 다시 보내셔도 됩니다."
+        if not passed:
+            msg += "\n다음 시험에서는 틀린 문항을 먼저 냅니다."
         return msg
     if lang == "en":
         if passed:
@@ -279,7 +290,9 @@ def _finish_message(part: dict, lang: str) -> str:
             msg += f"\nReview:\n{wrong_block}\n"
         elif passed:
             msg += "\nWell done.\n"
-        return msg + "You can ask normal questions again."
+        return msg + "You can ask normal questions again." + (
+            "" if passed else " Next exam will start with the items you missed."
+        )
     if passed:
         result = f"Kết quả: ĐẠT (cần {need}/{mx}+)\n"
     elif level == "l3":
@@ -293,7 +306,9 @@ def _finish_message(part: dict, lang: str) -> str:
         msg += f"\nÔn lại:\n{wrong_block}\n"
     elif passed:
         msg += "\nLàm tốt.\n"
-    return msg + "Có thể hỏi bình thường lại."
+    return msg + "Có thể hỏi bình thường lại." + (
+        "" if passed else " Bài sau sẽ hỏi lại câu sai trước."
+    )
 
 
 def _utc_now() -> datetime:
@@ -339,16 +354,54 @@ def _render_q(idx: int, total: int, item: dict, lang: str, minutes_left: Optiona
             timer = f"~{max(0, minutes_left)} min left\n"
         else:
             timer = f"Còn ~{max(0, minutes_left)} phút\n"
+    opts = item.get("choices") or []
+    opt_block = ""
+    if isinstance(opts, list) and opts:
+        opt_block = "\n" + "\n".join(str(x) for x in opts) + "\n"
+    qtxt = item.get("q") or ""
     if lang == "ko":
         return (
             f"◆ 주간 시험 ({idx}/{total})\n"
             f"{timer}"
-            f"{item.get('q')}\n\n"
+            f"{qtxt}{opt_block}\n"
             "답만 보내 주세요. (시험 중에는 일반 질문이 잠시 중단됩니다)"
         )
     if lang == "en":
-        return f"◆ Weekly exam ({idx}/{total})\n{timer}{item.get('q')}\n\nSend answer only."
-    return f"◆ Thi tuần ({idx}/{total})\n{timer}{item.get('q')}\n\nChỉ gửi đáp án."
+        return f"◆ Weekly exam ({idx}/{total})\n{timer}{qtxt}{opt_block}\nSend answer only."
+    return f"◆ Thi tuần ({idx}/{total})\n{timer}{qtxt}{opt_block}\nChỉ gửi đáp án."
+
+
+def _grade_exam_answer(raw: str, item: dict) -> bool:
+    if _match_accept(raw, item.get("accept") or ""):
+        return True
+    letter = str(item.get("answer") or "").strip().upper()[:1]
+    if letter not in "ABCD":
+        return False
+    u = (raw or "").strip().upper()
+    if not u:
+        return False
+    if u == letter:
+        return True
+    return bool(re.match(rf"^{re.escape(letter)}[\.\)\:\s]", u))
+
+
+def _record_exam_retries(user_id: str, qs: list) -> None:
+    wrong: list[str] = []
+    ok: list[str] = []
+    for it in qs or []:
+        if not isinstance(it, dict):
+            continue
+        qid = str(it.get("id") or "").strip()
+        if not qid:
+            continue
+        if it.get("correct") is True:
+            ok.append(qid)
+        elif it.get("correct") is False:
+            wrong.append(qid)
+    try:
+        merge_exam_retry_ids(user_id, wrong_ids=wrong, correct_ids=ok)
+    except Exception as e:
+        print(f"[WEEKLY EXAM] retry ids skip: {e}")
 
 
 # Owner asking for past scores — must not be graded as an exam answer.
@@ -697,7 +750,7 @@ def try_handle_exam_message(user_id: str, text: str) -> Optional[str]:
         return None
 
     item = qs[idx]
-    ok = _match_accept(raw, item.get("accept") or "")
+    ok = _grade_exam_answer(raw, item)
     item["user_answer"] = raw[:200]
     item["correct"] = bool(ok)
     qs[idx] = item
@@ -721,6 +774,10 @@ def try_handle_exam_message(user_id: str, text: str) -> Optional[str]:
             },
         )
         _exam_cursor.pop(pid, None)
+        try:
+            _record_exam_retries(user_id, qs)
+        except Exception:
+            pass
         part2 = (updated or {}).get("participant") or {
             "score": score,
             "max_score": len(qs),

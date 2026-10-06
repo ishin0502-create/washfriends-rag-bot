@@ -715,16 +715,29 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
                 print(f"[QA USAGE] image gate skip: {qa_err}")
 
         # Immediate "thinking" notice (fail-open: never block the real answer)
+        sent_fast = False
         if event_name == "user_send_text" and text:
             try:
-                await _send_zalo_reply(user_id, _thinking_ack_text(lang_src), with_brand=False)
-            except Exception as ack_err:
-                print(f"[ZALO ACK] failed (continuing): {ack_err}")
-        elif event_name == "user_send_image":
-            try:
-                await _send_zalo_reply(user_id, _thinking_ack_text(lang_src), with_brand=False)
-            except Exception as ack_err:
-                print(f"[ZALO ACK] failed (continuing): {ack_err}")
+                from stain_fast_front import try_fast_front_card
+
+                fast = try_fast_front_card(text)
+                if fast:
+                    await _send_zalo_reply(user_id, fast, with_brand=False)
+                    sent_fast = True
+                    print("[ZALO FAST] front card sent")
+            except Exception as fast_err:
+                print(f"[ZALO FAST] skip: {fast_err}")
+        if not sent_fast:
+            if event_name == "user_send_text" and text:
+                try:
+                    await _send_zalo_reply(user_id, _thinking_ack_text(lang_src), with_brand=False)
+                except Exception as ack_err:
+                    print(f"[ZALO ACK] failed (continuing): {ack_err}")
+            elif event_name == "user_send_image":
+                try:
+                    await _send_zalo_reply(user_id, _thinking_ack_text(lang_src), with_brand=False)
+                except Exception as ack_err:
+                    print(f"[ZALO ACK] failed (continuing): {ack_err}")
 
         awaiting = get_session("zalo", user_id).get("awaiting") == "care_label"
         if event_name == "user_send_image":
@@ -758,6 +771,8 @@ async def _process_zalo_event(event_name: str, user_id: str, text: str, image_ur
                 lambda: generate_response(text, channel="zalo", user_id=user_id),
             )
             print(f"[ZALO TIMING] generate_s={_t.time() - _t0:.1f} chars={len(reply_text or '')}")
+            if sent_fast and reply_text and "<<<ZALO_MSG2>>>" in reply_text:
+                reply_text = "<<<ZALO_MSG2>>>" + reply_text.split("<<<ZALO_MSG2>>>", 1)[1]
 
         # Persist Q&A for personalized learning cards (disk, no LLM)
         try:

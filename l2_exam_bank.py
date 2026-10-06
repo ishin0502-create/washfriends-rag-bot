@@ -93,13 +93,13 @@ def sample_l2_exam_questions(
     lang: str = "ko",
     *,
     rng: Optional[random.Random] = None,
+    prefer_ids: Optional[list] = None,
 ) -> list[dict[str, str]]:
-    """Return up to n shuffled L2 bank items in KO/VI/EN."""
+    """Return up to n L2 bank items; failed ids first, then shuffle."""
     from exam_i18n import localized_bank_item
+    from exam_sample import pick_exam_pool
 
     n = max(1, min(10, int(n or 7)))
     lang = lang if lang in {"ko", "vi", "en"} else "ko"
-    pool = list(L2_BANK_KO)
-    r = rng or random.Random()
-    r.shuffle(pool)
-    return [localized_bank_item(it, lang, "l2_bank") for it in pool[:n]]
+    picked = pick_exam_pool(list(L2_BANK_KO), n, prefer_ids=prefer_ids, rng=rng)
+    return [localized_bank_item(it, lang, "l2_bank") for it in picked]
