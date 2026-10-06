@@ -1439,6 +1439,71 @@ def build_spot_test_block(graph: dict, lang: str = "ko") -> str:
     )
 
 
+def build_front_summary(graph: dict, lang: str = "ko") -> str:
+    """3–6 line “do this now” card for message 1. Long SOP stays in message 2.
+
+    Presentation only — does not change protocol chemistry order.
+    """
+    g = graph if isinstance(graph, dict) else {}
+    lang = lang if lang in ("ko", "vi", "en") else "ko"
+    order = build_one_line_order(g, lang) or ""
+    step_lines = [
+        ln.strip()
+        for ln in order.splitlines()
+        if ln.strip() and re.match(r"^\d+\)\s+", ln.strip())
+    ][:4]
+
+    sid = _motion_stain_id(g)
+    danger: list[str] = []
+    if lang == "vi":
+        danger = [
+            "Không nước nóng",
+            "Không chà mạnh — ấn thấm",
+            "Còn vết → không sấy/ủi",
+        ]
+        extra = (STAIN_DONTS_VI.get(sid) or [])[:1]
+        for d in extra:
+            d = str(d).strip()
+            if d and d not in danger:
+                danger.append(d[:72])
+        head = "◆ 【Làm ngay】 (tối đa 4 bước)"
+        if not step_lines:
+            step_lines = ["1) Làm theo Step ở tin nhắn sau — đúng số thứ tự"]
+        ban = "⚠ Cấm (ngắn): " + " · ".join(danger[:3])
+        foot = "(Chi tiết Step / thời gian → tin nhắn sau)"
+    elif lang == "en":
+        danger = [
+            "No hot water",
+            "No hard rubbing — blot",
+            "Mark left → no dryer/iron",
+        ]
+        head = "◆ 【Do now】 (max 4 steps)"
+        if not step_lines:
+            step_lines = ["1) Follow numbered Steps in the next message"]
+        ban = "⚠ Don't (short): " + " · ".join(danger[:3])
+        foot = "(Full Steps / timing → next message)"
+    else:
+        danger = [
+            "온수 금지",
+            "세게 문지르지 마세요(꾹꾹 흡수)",
+            "잔색 있으면 건조기·다림질 금지",
+        ]
+        extra = (STAIN_DONTS_KO.get(sid) or [])[:1]
+        for d in extra:
+            d = str(d).strip()
+            # Keep short — drop long "→ …" tails for the card
+            short = d.split("→")[0].strip() if "→" in d else d
+            if short and short not in danger:
+                danger.append(short[:40])
+        head = "◆ 【지금 바로】 (최대 4손)"
+        if not step_lines:
+            step_lines = ["1) 다음 메시지 Step만 번호 순서대로 하세요"]
+        ban = "⚠ 금지(짧게): " + " · ".join(danger[:3])
+        foot = "(자세한 Step·시간은 다음 메시지)"
+
+    return "\n".join([head, *step_lines, ban, foot])
+
+
 def build_donts_block(graph: dict, lang: str = "ko") -> str:
     sid = _motion_stain_id(graph)
     if lang == "vi":
@@ -1676,6 +1741,14 @@ def inject_clarity_into_answer(
     if level in {"L2", "L3"} and not front_has_job:
         flow_bits.append(_SUPERVISOR[lang])
     sid = _motion_stain_id(g)
+
+    # Day-0 front card: actionable 3–6 lines before intake/outlook (msg2 keeps full SOP)
+    try:
+        front_sum = build_front_summary(g, lang)
+        if front_sum:
+            flow_bits.append(front_sum)
+    except Exception as _e:
+        print(f"[CLARITY] front_summary skip: {type(_e).__name__}: {_e}")
 
     # Mid-tier assembly (v40): conditional blocks — no full dump, no % rates
     _mid = None
